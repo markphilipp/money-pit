@@ -1,0 +1,60 @@
+name: Vercel Gate
+
+# Vercel fires this once a deployment finishes building. The job reports a named
+# status back, which is what Deployment Checks holds production promotion on —
+# so a build that fails here never gets aliased to money-pit.vercel.app.
+on:
+  repository_dispatch:
+    types: ['vercel.deployment.success']
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  e2e:
+    name: e2e against deployment
+    runs-on: ubuntu-latest
+    steps:
+      # Only `url` is documented; dumping the rest makes the payload shape
+      # visible the first time the gate runs.
+      - name: Dump dispatch payload
+        run: echo '${{ toJSON(github.event.client_payload) }}'
+
+      # Vercel sends a bare hostname in some contexts and a full URL in others.
+      - name: Resolve deployment URL
+        id: target
+        run: |
+          raw='${{ github.event.client_payload.url }}'
+          [[ "$raw" == http* ]] || raw="https://$raw"
+          echo "url=$raw" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.9
+      - run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+      - run: bunx playwright install --with-deps chromium
+
+      - run: bun run e2e
+        env:
+          E2E_BASE_URL: ${{ steps.target.outputs.url }}
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report-deployment
+          path: playwright-report
+          retention-days: 7
+
+      - name: Report status to Vercel
+        if: always()
+        uses: 'vercel/repository-dispatch/actions/status@v1'
+        with:
+          name: 'Vercel - money-pit: e2e'

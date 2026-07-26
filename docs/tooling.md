@@ -44,6 +44,30 @@ ships its own `404.html`, and a single-route app needs no redirect rules.
 CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
 and deploys.
 
+### Production gate — `.github/workflows/vercel-gate.yml`
+
+Vercel builds every push, but **Deployment Checks** hold the build back from the production alias
+until a named check reports green. The wiring:
+
+1. Vercel finishes a build and fires a `vercel.deployment.success` repository dispatch.
+2. `vercel-gate.yml` picks it up and runs Playwright against the deployment URL — `E2E_BASE_URL`
+   makes `playwright.config.ts` skip its local `bunx serve out` and target the live site instead.
+3. `vercel/repository-dispatch/actions/status@v1` reports the result back as
+   `Vercel - money-pit: e2e`.
+4. Vercel promotes to `money-pit.vercel.app` only if that check passed.
+
+This gate deliberately runs e2e only — `lint`, `typecheck` and `test` already have to pass before a
+commit can reach `main` (see the ruleset below), so the thing worth re-checking post-build is
+whether the deployed artifact actually works.
+
+The check has to report **once** before it can be selected under Project → Settings → Build and
+Deployment → Deployment Checks → Add Checks → GitHub. Until it's selected there, the gate runs and
+reports but doesn't block anything. Requiring a check that never reports would stall production
+promotion indefinitely, so add it only after a green run.
+
+`main` is protected by a repository ruleset requiring `lint`, `typecheck`, `test`, `build` and
+`e2e`, and blocking force-push and deletion. There are no bypass actors.
+
 If server code ever arrives — route handlers, server actions, middleware — drop `output: 'export'`
 and `images: { unoptimized: true }` from `next.config.ts`; the same Vercel project then builds a
 serverful deployment with no other changes.
