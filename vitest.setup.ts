@@ -14,6 +14,15 @@ if (typeof Blob.prototype.text !== 'function') {
   };
 }
 
+// jsdom has no ResizeObserver; the sticky-offset hook only needs it to exist.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 afterEach(() => {
   cleanup();
   sessionStorage.clear();
