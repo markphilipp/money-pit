@@ -16,6 +16,11 @@
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@radix-ui/react-context-menu": "^2.3.7",
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-popover": "^1.1.23",
+    "@radix-ui/react-tabs": "^1.1.21",
     "@tanstack/react-table": "^8.21.3",
     "chart.js": "^4.5.1",
     "next": "16.2.12",
@@ -23,6 +28,7 @@
     "react": "19.2.4",
     "react-chartjs-2": "^5.3.0",
     "react-dom": "19.2.4",
+    "react-querybuilder": "^8.21.0",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

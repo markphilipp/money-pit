@@ -12,16 +12,6 @@ export function StatsStrip({ stats }: { stats: Stats }) {
         <div className={styles.value}>{fmtMoney(stats.net)}</div>
       </div>
       <div className={styles.stat}>
-        <div className={styles.label}>Purchases</div>
-        <div className={styles.value}>{fmtMoney(stats.purchases)}</div>
-      </div>
-      <div className={styles.stat}>
-        <div className={styles.label}>Refunds</div>
-        <div className={styles.value}>
-          <span className={styles.neg}>{fmtMoney(stats.refunds)}</span>
-        </div>
-      </div>
-      <div className={styles.stat}>
         <div className={styles.label}>Transactions</div>
         <div className={styles.value}>{stats.count}</div>
       </div>

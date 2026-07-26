@@ -9,7 +9,6 @@ export interface ColumnMeta {
   sortKey?: SortKey;
   headerLabel?: string;
   align?: 'right';
-  filter?: 'person' | 'amount';
 }
 
 interface Options {
@@ -72,17 +71,12 @@ export function buildColumns({
     }),
     helper.display({
       id: 'person',
-      meta: { sortKey: 'person', headerLabel: 'Person', filter: 'person' } satisfies ColumnMeta,
+      meta: { sortKey: 'person', headerLabel: 'Person' } satisfies ColumnMeta,
       cell: ({ row }) => <span className={styles.person}>{personShort(row.original.person)}</span>,
     }),
     helper.display({
       id: 'amount',
-      meta: {
-        sortKey: 'amount',
-        headerLabel: 'Amount',
-        align: 'right',
-        filter: 'amount',
-      } satisfies ColumnMeta,
+      meta: { sortKey: 'amount', headerLabel: 'Amount', align: 'right' } satisfies ColumnMeta,
       cell: ({ row }) => (
         <span className={`${styles.amt} ${row.original.isCredit ? styles.credit : ''}`}>
           {fmtMoney(row.original.amount)}

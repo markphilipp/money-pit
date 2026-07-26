@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
 import { fmtMoney } from '@/lib/format';
+import { checklistValues } from '@/lib/rules/engine';
 import { selectPersonTotals } from '@/store/selectors';
 import { useAppState, useFiltered, usePersonColors } from '@/store/hooks';
 import { useAppStore } from '@/store/useAppStore';
@@ -12,11 +13,11 @@ import styles from './Chart.module.css';
 
 export function PersonChart() {
   const state = useAppState();
-  const setFilter = useAppStore((s) => s.setFilter);
+  const togglePersonFilter = useAppStore((s) => s.togglePersonFilter);
   const personColors = usePersonColors();
   const source = useFiltered({ ignorePerson: true });
   const totals = useMemo(() => selectPersonTotals(source, personColors), [source, personColors]);
-  const active = state.filters.person;
+  const selected = checklistValues(state.filters.columnFilters, 'person');
   const values = totals.map((p) => p.total);
 
   const data: ChartData<'doughnut', number[], string> = {
@@ -25,7 +26,9 @@ export function PersonChart() {
       {
         label: 'Spend',
         data: values,
-        backgroundColor: totals.map((p) => shade(p.color, !active || active === p.person)),
+        backgroundColor: totals.map((p) =>
+          shade(p.color, selected.length === 0 || selected.includes(p.person)),
+        ),
         borderColor: '#FFFFFF',
         borderWidth: 2,
       },
@@ -54,8 +57,7 @@ export function PersonChart() {
     onClick: (_e, elements) => {
       const hit = elements[0] as { index: number } | undefined;
       const person = hit ? totals[hit.index] : undefined;
-      if (!person) return;
-      setFilter({ person: active === person.person ? null : person.person });
+      if (person) togglePersonFilter(person.person);
     },
   };
 

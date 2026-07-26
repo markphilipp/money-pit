@@ -1,6 +1,6 @@
 .stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 12px;
   margin: 22px 0;
 }
@@ -29,8 +29,4 @@
 
 .small {
   font-size: 16px;
-}
-
-.neg {
-  color: var(--green);
 }

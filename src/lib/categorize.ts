@@ -1,13 +1,10 @@
 import type { CategoryRule, RawStatementRow, Transaction } from './types';
 import { OTHER_ID } from './types';
+import { matchesGroup, type MatchTarget } from './rules/engine';
 import { rowKey, txnId } from './hash';
 
-export function matchRule(description: string, rules: CategoryRule[]): string {
-  const upper = description.toUpperCase();
-  for (const rule of rules) {
-    if (rule.keywords.some((k) => k && upper.includes(k.toUpperCase()))) return rule.id;
-  }
-  return OTHER_ID;
+export function matchCategory(txn: MatchTarget, rules: CategoryRule[]): string {
+  return rules.find((rule) => matchesGroup(txn, rule.conditions))?.id ?? OTHER_ID;
 }
 
 export function parseAmount(row: RawStatementRow): number {
@@ -36,14 +33,7 @@ export function toTransactions(
 
     const id = txnId(row, ordinal);
     const amount = parseAmount(row);
-    const override = overrides[id];
-    const categoryId = override
-      ? ruleIds.has(override)
-        ? override
-        : OTHER_ID
-      : matchRule(row.description, rules);
-
-    return {
+    const base = {
       id,
       status: row.status,
       date: parseDate(row.dateStr),
@@ -52,7 +42,16 @@ export function toTransactions(
       amount,
       isCredit: amount < 0,
       person: row.person,
-      categoryId,
+    };
+
+    const override = overrides[id];
+    return {
+      ...base,
+      categoryId: override
+        ? ruleIds.has(override)
+          ? override
+          : OTHER_ID
+        : matchCategory(base, rules),
     };
   });
 }

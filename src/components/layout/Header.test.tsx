@@ -60,7 +60,7 @@ describe('Header', () => {
 });
 
 describe('StatsStrip', () => {
-  it('formats the five summary cards', () => {
+  it('formats the three summary cards', () => {
     render(
       <StatsStrip
         stats={{
@@ -74,8 +74,8 @@ describe('StatsStrip', () => {
     );
 
     expect(screen.getByText('$251.47')).toBeInTheDocument();
-    expect(screen.getByText('$253.62')).toBeInTheDocument();
-    expect(screen.getByText('−$2.15')).toBeInTheDocument();
+    expect(screen.queryByText('$253.62')).not.toBeInTheDocument();
+    expect(screen.queryByText('−$2.15')).not.toBeInTheDocument();
     expect(screen.getByText('6')).toBeInTheDocument();
     expect(screen.getByText('Groceries')).toBeInTheDocument();
   });

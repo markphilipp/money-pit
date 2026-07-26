@@ -17,7 +17,19 @@ test('lands on the empty state, then loads two statements and dedupes the overla
   await expect(page.getByRole('row', { name: /SPOTIFY/ })).toHaveCount(1);
 
   await expect(page.getByText('Net spend')).toBeVisible();
+  await expect(page.getByText('Purchases')).toHaveCount(0);
+  await expect(page.getByText('Refunds')).toHaveCount(0);
   await expect(page.locator('canvas')).toHaveCount(2);
+  await expect(page.locator('tfoot')).toContainText('Total');
+});
+
+test('offers the account menu on the empty state', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByText('Drop statement CSVs here')).toBeVisible();
+
+  await page.getByLabel('Account menu').click();
+  await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: /Sign in/ })).toBeDisabled();
 });
 
 test('reports a bad file inline and still loads a good one', async ({ page }) => {

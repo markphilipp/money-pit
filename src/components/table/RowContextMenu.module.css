@@ -1,0 +1,28 @@
+.menu {
+  min-width: 210px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 6px;
+  box-shadow: 0 8px 24px rgb(30 42 38 / 18%);
+  font-size: 13px;
+  z-index: 33;
+}
+
+.item {
+  padding: 7px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  outline: none;
+}
+
+.item[data-highlighted] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.separator {
+  height: 1px;
+  background: var(--grid);
+  margin: 5px 4px;
+}

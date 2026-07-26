@@ -7,6 +7,8 @@ import { TransactionTable } from './TransactionTable';
 
 const bodyRows = () => within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row');
 const firstCellTexts = () => bodyRows().map((r) => within(r).getAllByRole('cell')[1].textContent);
+const openMenu = (user: ReturnType<typeof userEvent.setup>, column: string) =>
+  user.click(screen.getByRole('button', { name: `${column} column menu` }));
 
 beforeEach(async () => {
   resetStore();
@@ -33,46 +35,75 @@ describe('TransactionTable', () => {
     expect(within(creditRow).getByText('−$2.15').className).toMatch(/credit/);
   });
 
-  it('sorts by a header click and flips on the second', async () => {
+  it('totals the visible rows in the footer', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
+    const footer = screen.getAllByRole('rowgroup')[2];
+    expect(within(footer).getByText('Total')).toBeInTheDocument();
+    expect(within(footer).getByText('$251.47')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Sort by Amount' }));
-    expect(bodyRows()[0]).toHaveTextContent('HARRIS TEETER');
-
-    await user.click(screen.getByRole('button', { name: 'Sort by Amount' }));
-    expect(bodyRows()[0]).toHaveTextContent('Merchant Offers Credit');
-
-    await user.click(screen.getByRole('button', { name: 'Sort by Description' }));
-    expect(bodyRows()[0]).toHaveTextContent('AMAZON');
+    await user.type(screen.getByLabelText('Search description'), 'lowes');
+    expect(within(footer).getByText('$86.14')).toBeInTheDocument();
   });
 
-  it('filters by person from the column header without sorting', async () => {
+  it('sorts from the column menu in the direction asked for', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
-    await user.selectOptions(screen.getByLabelText('Filter by person'), 'JAMIE SAMPLE');
+    await openMenu(user, 'Amount');
+    await user.click(screen.getByRole('menuitem', { name: 'Sort descending' }));
+    expect(bodyRows()[0]).toHaveTextContent('HARRIS TEETER');
+
+    await openMenu(user, 'Amount');
+    await user.click(screen.getByRole('menuitem', { name: 'Sort ascending' }));
+    expect(bodyRows()[0]).toHaveTextContent('Merchant Offers Credit');
+    expect(useAppStore.getState().sort).toEqual({ key: 'amount', dir: 1 });
+  });
+
+  it('filters by a person checklist without sorting', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await openMenu(user, 'Person');
+    await user.click(screen.getByRole('checkbox', { name: 'Jamie' }));
 
     expect(bodyRows()).toHaveLength(2);
     expect(useAppStore.getState().sort).toEqual({ key: 'date', dir: -1 });
   });
 
-  it('filters on absolute amount from the column header', async () => {
+  it('filters on an amount range from the column menu', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
-    await user.type(screen.getByLabelText('Minimum amount'), '50');
+    await openMenu(user, 'Amount');
+    await user.selectOptions(screen.getByLabelText('Amount filter operator'), 'between');
+    await user.type(screen.getByLabelText('Amount filter value'), '50');
     expect(bodyRows()).toHaveLength(2);
 
-    await user.type(screen.getByLabelText('Maximum amount'), '100');
+    await user.type(screen.getByLabelText('Amount filter upper value'), '100');
     expect(bodyRows()).toHaveLength(1);
     expect(bodyRows()[0]).toHaveTextContent('LOWES');
   });
 
-  it('shows a helpful row when nothing matches', async () => {
+  it('clears a column filter again from the menu', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
-    await user.type(screen.getByLabelText('Minimum amount'), '9999');
+
+    await openMenu(user, 'Category');
+    await user.click(screen.getByRole('checkbox', { name: 'Groceries' }));
+    expect(bodyRows()).toHaveLength(1);
+    await user.keyboard('{Escape}');
+
+    await openMenu(user, 'Category');
+    await user.click(screen.getByRole('menuitem', { name: 'Clear filter' }));
+    expect(bodyRows()).toHaveLength(6);
+  });
+
+  it('shows a row when nothing matches', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+    await openMenu(user, 'Amount');
+    await user.type(screen.getByLabelText('Amount filter value'), '9999');
     expect(screen.getByText(/No transactions match these filters/)).toBeInTheDocument();
   });
 
@@ -116,7 +147,9 @@ describe('TransactionTable', () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
-    await user.selectOptions(screen.getByLabelText('Filter by person'), 'JAMIE SAMPLE');
+    await openMenu(user, 'Person');
+    await user.click(screen.getByRole('checkbox', { name: 'Jamie' }));
+    await user.keyboard('{Escape}');
     await user.click(screen.getByLabelText('Select all visible rows'));
 
     expect(useAppStore.getState().selectedIds.size).toBe(2);
@@ -134,12 +167,14 @@ describe('TransactionTable', () => {
     expect(selectAll.checked).toBe(false);
   });
 
-  it('bulk-changes the selection and clears it', async () => {
+  it('bulk-changes the selection and offers no clear button', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));
     await user.click(within(bodyRows()[1]).getByRole('checkbox'));
+    expect(screen.queryByRole('button', { name: /clear selection/i })).not.toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Change category' }));
     await user.click(screen.getByRole('option', { name: /^Pets/ }));
 
@@ -148,21 +183,58 @@ describe('TransactionTable', () => {
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });
 
-  it('clears a selection from the bulk bar', async () => {
+  it('drafts a rule from the row context menu', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.pointer({ keys: '[MouseRight]', target: bodyRows()[0] });
+    await user.click(screen.getByRole('menuitem', { name: 'Create rule from transaction' }));
+
+    expect(screen.getByDisplayValue('APPLE.COM/BILL CUPERTINO CA')).toBeInTheDocument();
+  });
+
+  it('drafts one condition per selected row from the bulk bar', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));
-    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+    await user.click(within(bodyRows()[1]).getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Create rule' }));
 
+    expect(screen.getByDisplayValue('APPLE.COM/BILL CUPERTINO CA')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('AMAZON MKTPL*DEMO1234 SEATTLE WA')).toBeInTheDocument();
+  });
+
+  it('selects a row from its context menu', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.pointer({ keys: '[MouseRight]', target: bodyRows()[1] });
+    await user.click(screen.getByRole('menuitem', { name: 'Select row' }));
+
+    expect(useAppStore.getState().selectedIds.size).toBe(1);
+  });
+
+  it('resets filters and selection from the header', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.type(screen.getByLabelText('Search description'), 'lowes');
+    await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+    expect(bodyRows()).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Reset' }));
+
+    expect(bodyRows()).toHaveLength(6);
     expect(useAppStore.getState().selectedIds.size).toBe(0);
   });
 
   it('shows payments once the credits toggle is on', async () => {
+    const user = userEvent.setup();
     render(<TransactionTable />);
     expect(screen.queryByText(/ONLINE PAYMENT/)).not.toBeInTheDocument();
 
-    useAppStore.getState().setFilter({ showCredits: true });
+    await user.click(screen.getByLabelText('Show payments & credits'));
     expect(await screen.findByText(/ONLINE PAYMENT/)).toBeInTheDocument();
   });
 });

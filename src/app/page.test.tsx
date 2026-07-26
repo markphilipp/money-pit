@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ChartOptions } from 'chart.js';
+import { keywordsToGroup } from '@/lib/rules/engine';
 import { useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV } from '@/test/fixtures';
 import Home from './page';
@@ -39,7 +40,7 @@ describe('page', () => {
     await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
 
     expect(await screen.findByRole('heading', { name: /Transactions/ })).toBeInTheDocument();
-    expect(screen.getByText('$251.47')).toBeInTheDocument();
+    expect(screen.getAllByText('$251.47')).toHaveLength(2); // net spend tile + table totals row
     expect(screen.getByText('(6)')).toBeInTheDocument();
   });
 
@@ -92,14 +93,26 @@ describe('page', () => {
     await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
-    await user.click(screen.getByRole('button', { name: /Category rules/ }));
-    // Home Improvement sits above Groceries, so claiming the keyword there re-categorizes the row
-    const keywords = screen.getByLabelText('Keywords for Home Improvement');
-    await user.clear(keywords);
-    await user.type(keywords, 'HARRIS TEETER');
+    // Home Improvement sits above Groceries, so claiming the merchant there re-categorizes the row
+    act(() =>
+      useAppStore.getState().setRule('home', {
+        conditions: keywordsToGroup(['HARRIS TEETER']),
+      }),
+    );
 
     const groceryRow = tableRows().find((r) => r.textContent?.includes('HARRIS TEETER'))!;
     expect(within(groceryRow).getByTitle('Change category')).toHaveTextContent('Home Improvement');
+  });
+
+  it('has no in-page rules panel or filter bar left', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Home />);
+    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    await screen.findByRole('heading', { name: /Transactions/ });
+
+    expect(screen.queryByRole('button', { name: /Category rules/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Purchases')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refunds')).not.toBeInTheDocument();
   });
 
   it('returns to the empty state after starting over', async () => {

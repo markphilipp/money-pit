@@ -3,12 +3,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { Transaction } from '@/lib/types';
-import { useAppState, useSortedFiltered } from '@/store/hooks';
-import { useAppStore } from '@/store/useAppStore';
+import type { RuleGroup } from '@/lib/rules/types';
+import { transactionsToDraftGroup } from '@/lib/rules/engine';
+import { fmtMoney, personShort } from '@/lib/format';
+import { RuleBuilderModal } from '@/components/rules/RuleBuilderModal';
+import { useAppState, usePersons, useSortedFiltered, useTransactions } from '@/store/hooks';
+import { selectVisibleTotal } from '@/store/selectors';
+import { emptyFilters, useAppStore } from '@/store/useAppStore';
 import { BulkBar } from './BulkBar';
 import { CategoryPicker } from './CategoryPicker';
+import { ColumnMenu } from './ColumnMenu';
+import { RowContextMenu } from './RowContextMenu';
 import { buildColumns, type ColumnMeta } from './columns';
-import { AmountFilter, PersonFilter } from './HeaderFilters';
 import styles from './Table.module.css';
 
 interface PickerState {
@@ -21,12 +27,17 @@ interface PickerState {
 export function TransactionTable() {
   const state = useAppState();
   const rows = useSortedFiltered();
+  const allTransactions = useTransactions();
+  const persons = usePersons();
+  const setFilter = useAppStore((s) => s.setFilter);
+  const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setSort = useAppStore((s) => s.setSort);
   const setOverride = useAppStore((s) => s.setOverride);
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
   const clearSelection = useAppStore((s) => s.clearSelection);
   const [picker, setPicker] = useState<PickerState | null>(null);
+  const [draft, setDraft] = useState<RuleGroup | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
 
   const rulesById = useMemo(() => new Map(state.rules.map((r) => [r.id, r])), [state.rules]);
@@ -66,29 +77,61 @@ export function TransactionTable() {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
   }, [someSelected]);
 
+  /** Acting inside a selection applies to the whole selection, otherwise to that row alone. */
+  const targetsFor = (id: string) => (state.selectedIds.has(id) ? [...state.selectedIds] : [id]);
+
+  const draftFrom = (ids: string[]) => {
+    const byId = new Map(allTransactions.map((t) => [t.id, t]));
+    setDraft(
+      transactionsToDraftGroup(ids.map((id) => byId.get(id)).filter(Boolean) as Transaction[]),
+    );
+  };
+
   return (
-    <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+    <div className={`card ${styles.tableCard}`}>
       <div className={styles.head}>
         <h2>
           Transactions <span className={styles.count}>({rows.length})</span>
         </h2>
-        <span className="sub">
-          Click a category pill to reassign it · check rows to bulk-edit · click headers to sort
-        </span>
-      </div>
+        <input
+          className={styles.search}
+          type="text"
+          aria-label="Search description"
+          placeholder="Search descriptions…"
+          value={state.filters.search}
+          onChange={(e) => setFilter({ search: e.target.value })}
+        />
+        <label className="toggle">
+          <input
+            type="checkbox"
+            checked={state.filters.showCredits}
+            onChange={(e) => setFilter({ showCredits: e.target.checked })}
+          />
+          Show payments &amp; credits
+        </label>
+        <button
+          className="btn-clear"
+          onClick={() => {
+            setFilter(emptyFilters);
+            clearSelection();
+          }}
+        >
+          Reset
+        </button>
 
-      <BulkBar
-        count={state.selectedIds.size}
-        onClear={clearSelection}
-        onChangeCategory={(anchor) =>
-          setPicker({
-            rect: anchor.getBoundingClientRect(),
-            currentCategoryId: null,
-            targetIds: [...state.selectedIds],
-            bulk: true,
-          })
-        }
-      />
+        <BulkBar
+          count={state.selectedIds.size}
+          onChangeCategory={(anchor) =>
+            setPicker({
+              rect: anchor.getBoundingClientRect(),
+              currentCategoryId: null,
+              targetIds: [...state.selectedIds],
+              bulk: true,
+            })
+          }
+          onCreateRule={() => draftFrom([...state.selectedIds])}
+        />
+      </div>
 
       <div className={styles.scroll}>
         <table className={styles.table}>
@@ -111,25 +154,33 @@ export function TransactionTable() {
                       </th>
                     );
                   }
-                  const active = state.sort.key === meta.sortKey;
+                  const columnId = meta.sortKey;
                   return (
                     <th
                       key={header.id}
                       scope="col"
                       className={meta.align === 'right' ? styles.right : undefined}
                     >
-                      <button
-                        className={styles.sortBtn}
-                        onClick={() => setSort(meta.sortKey!)}
-                        aria-label={`Sort by ${meta.headerLabel}`}
-                      >
-                        {meta.headerLabel}
-                        <span className={styles.arrow}>
-                          {active ? (state.sort.dir === 1 ? '▲' : '▼') : ''}
-                        </span>
-                      </button>
-                      {meta.filter === 'person' && <PersonFilter />}
-                      {meta.filter === 'amount' && <AmountFilter />}
+                      <ColumnMenu
+                        label={meta.headerLabel ?? columnId}
+                        columnId={columnId}
+                        sort={{ active: state.sort.key === columnId, dir: state.sort.dir }}
+                        onSort={(dir) => setSort(columnId, dir)}
+                        filter={state.filters.columnFilters[columnId] ?? null}
+                        onFilter={(filter) => setColumnFilter(columnId, filter)}
+                        options={
+                          columnId === 'person'
+                            ? persons.map((p) => ({ value: p.name, label: personShort(p.name) }))
+                            : columnId === 'category'
+                              ? state.rules.map((r) => ({
+                                  value: r.id,
+                                  label: r.name,
+                                  color: r.color,
+                                }))
+                              : undefined
+                        }
+                        align={meta.align}
+                      />
                     </th>
                   );
                 })}
@@ -140,45 +191,61 @@ export function TransactionTable() {
             {rows.length === 0 && (
               <tr>
                 <td colSpan={columns.length}>
-                  <div className={styles.empty}>
-                    No transactions match these filters. Try widening the amount range or clearing a
-                    category.
-                  </div>
+                  <div className={styles.empty}>No transactions match these filters.</div>
                 </td>
               </tr>
             )}
             {table.getRowModel().rows.map((row) => (
-              <tr
+              <RowContextMenu
                 key={row.id}
-                className={state.selectedIds.has(row.original.id) ? styles.selected : undefined}
+                selected={state.selectedIds.has(row.original.id)}
+                onCreateRule={() => draftFrom(targetsFor(row.original.id))}
+                onToggleSelect={() => toggleSelected(row.original.id)}
+                onChangeCategory={({ x, y }) => {
+                  const targetIds = targetsFor(row.original.id);
+                  setPicker({
+                    rect: new DOMRect(x, y, 0, 0),
+                    currentCategoryId: targetIds.length > 1 ? null : row.original.categoryId,
+                    targetIds,
+                    bulk: targetIds.length > 1,
+                  });
+                }}
               >
-                {row.getVisibleCells().map((cell) => {
-                  const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
-                  return (
-                    <td
-                      key={cell.id}
-                      className={
-                        meta?.sortKey
-                          ? meta.align === 'right'
-                            ? styles.right
-                            : undefined
-                          : styles.sel
-                      }
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  );
-                })}
-              </tr>
+                <tr
+                  className={state.selectedIds.has(row.original.id) ? styles.selected : undefined}
+                >
+                  {row.getVisibleCells().map((cell) => {
+                    const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
+                    return (
+                      <td
+                        key={cell.id}
+                        className={
+                          meta?.sortKey
+                            ? meta.align === 'right'
+                              ? styles.right
+                              : undefined
+                            : styles.sel
+                        }
+                      >
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    );
+                  })}
+                </tr>
+              </RowContextMenu>
             ))}
           </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={2} />
+              <td className={styles.totalLabel}>Total</td>
+              <td colSpan={2} />
+              <td className={`${styles.right} ${styles.totalValue}`}>
+                {fmtMoney(selectVisibleTotal(rows))}
+              </td>
+            </tr>
+          </tfoot>
         </table>
-      </div>
-
-      <div className={styles.footNote}>
-        Auto-categorized by merchant keywords — click any category pill to correct it. Statement
-        payments are excluded from charts and totals; toggle “Show payments &amp; credits” to see
-        them in the table.
       </div>
 
       {picker && (
@@ -193,6 +260,12 @@ export function TransactionTable() {
           }}
         />
       )}
+
+      <RuleBuilderModal
+        open={draft !== null}
+        draft={draft ? { conditions: draft } : undefined}
+        onClose={() => setDraft(null)}
+      />
     </div>
   );
 }

@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { fmtMoney } from '@/lib/format';
+import { checklistValues } from '@/lib/rules/engine';
 import { selectCategoryTotals } from '@/store/selectors';
 import { useAppState, useFiltered } from '@/store/hooks';
 import { useAppStore } from '@/store/useAppStore';
@@ -22,10 +23,12 @@ export function CategoryChart() {
   const toggleCategoryFilter = useAppStore((s) => s.toggleCategoryFilter);
   const source = useFiltered({ ignoreCategory: true });
   const totals = useMemo(() => selectCategoryTotals(source, state.rules), [source, state.rules]);
-  const selected = state.filters.categoryIds;
+  const selected = checklistValues(state.filters.columnFilters, 'category');
   const isBar = state.chartMode === 'bar';
 
-  const colors = totals.map((c) => shade(c.color, !selected.size || selected.has(c.id)));
+  const colors = totals.map((c) =>
+    shade(c.color, selected.length === 0 || selected.includes(c.id)),
+  );
   const values = totals.map((c) => c.total);
 
   const labels = totals.map((c) => c.name);

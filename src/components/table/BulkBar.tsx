@@ -2,13 +2,14 @@
 
 import styles from './BulkBar.module.css';
 
-interface Props {
+interface BulkBarProps {
   count: number;
   onChangeCategory: (anchor: HTMLElement) => void;
-  onClear: () => void;
+  onCreateRule: () => void;
 }
 
-export function BulkBar({ count, onChangeCategory, onClear }: Props) {
+/** Overlays the table card header (which must be `position: relative`) so nothing shifts. */
+export function BulkBar({ count, onChangeCategory, onCreateRule }: BulkBarProps) {
   if (count === 0) return null;
   return (
     <div className={styles.bar}>
@@ -16,8 +17,8 @@ export function BulkBar({ count, onChangeCategory, onClear }: Props) {
       <button className={styles.btn} onClick={(e) => onChangeCategory(e.currentTarget)}>
         Change category
       </button>
-      <button className={`${styles.btn} ${styles.ghost}`} onClick={onClear}>
-        Clear selection
+      <button className={styles.btn} onClick={onCreateRule}>
+        Create rule
       </button>
     </div>
   );

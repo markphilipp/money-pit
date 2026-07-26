@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Barlow_Condensed, IBM_Plex_Mono, Inter } from 'next/font/google';
+import { UserMenu } from '@/components/layout/UserMenu';
 import './globals.css';
 
 const inter = Inter({
@@ -27,7 +28,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${condensed.variable} ${mono.variable}`}>
-      <body>{children}</body>
+      <body>
+        <UserMenu />
+        {children}
+      </body>
     </html>
   );
 }

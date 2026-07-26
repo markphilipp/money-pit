@@ -1,3 +1,5 @@
+import type { ColumnFilter, ColumnId, RuleGroup } from './rules/types';
+
 export interface RawStatementRow {
   status: string;
   dateStr: string;
@@ -23,17 +25,14 @@ export interface CategoryRule {
   id: string;
   name: string;
   color: string;
-  keywords: string[];
+  conditions: RuleGroup;
   builtin?: boolean;
 }
 
 export interface FilterState {
   search: string;
-  person: string | null;
-  amountMin: number | null;
-  amountMax: number | null;
-  categoryIds: Set<string>;
   showCredits: boolean;
+  columnFilters: Partial<Record<ColumnId, ColumnFilter>>;
 }
 
 export type SortKey = 'date' | 'description' | 'category' | 'person' | 'amount';

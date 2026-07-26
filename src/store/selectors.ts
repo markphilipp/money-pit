@@ -1,6 +1,7 @@
 import type { CategoryRule, Transaction } from '@/lib/types';
 import { PAYMENTS_ID } from '@/lib/types';
 import { toTransactions } from '@/lib/categorize';
+import { matchesColumnFilter } from '@/lib/rules/engine';
 import { personShort } from '@/lib/format';
 import type { AppState } from './useAppStore';
 
@@ -35,18 +36,23 @@ export interface FilterOpts {
 }
 
 export function selectFiltered(state: AppState, opts: FilterOpts = {}): Transaction[] {
-  const { search, person, amountMin, amountMax, categoryIds, showCredits } = state.filters;
+  const { search, showCredits, columnFilters } = state.filters;
   const needle = search.trim().toUpperCase();
-  return selectTransactions(state).filter((t) => {
-    if (t.categoryId === PAYMENTS_ID && !showCredits) return false;
-    if (!opts.ignorePerson && person && t.person !== person) return false;
-    if (!opts.ignoreCategory && categoryIds.size && !categoryIds.has(t.categoryId)) return false;
-    if (needle && !t.description.toUpperCase().includes(needle)) return false;
-    const abs = Math.abs(t.amount);
-    if (amountMin != null && abs < amountMin) return false;
-    if (amountMax != null && abs > amountMax) return false;
+  const active = Object.values(columnFilters).filter((f) => {
+    if (!f) return false;
+    if (opts.ignoreCategory && f.column === 'category') return false;
+    if (opts.ignorePerson && f.column === 'person') return false;
     return true;
   });
+  return selectTransactions(state).filter((t) => {
+    if (t.categoryId === PAYMENTS_ID && !showCredits) return false;
+    if (needle && !t.description.toUpperCase().includes(needle)) return false;
+    return active.every((f) => matchesColumnFilter(t, f, t.categoryId));
+  });
+}
+
+export function selectVisibleTotal(txns: Transaction[]): number {
+  return +txns.reduce((sum, t) => sum + t.amount, 0).toFixed(2);
 }
 
 function sumBy<K extends string>(txns: Transaction[], key: (t: Transaction) => K) {

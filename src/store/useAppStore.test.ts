@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { useAppStore } from './useAppStore';
+import { keywordsToGroup } from '@/lib/rules/engine';
+import { emptyFilters, useAppStore } from './useAppStore';
 import {
   selectCategoryTotals,
   selectFiltered,
   selectPersons,
   selectStats,
   selectTransactions,
+  selectVisibleTotal,
   sortTransactions,
 } from './selectors';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV, seedStore } from '@/test/fixtures';
@@ -58,16 +60,43 @@ describe('filters', () => {
     expect(selectFiltered(state())).toHaveLength(1);
   });
 
-  it('filters by person', () => {
-    state().setFilter({ person: 'JAMIE SAMPLE' });
+  it('filters by a person checklist', () => {
+    state().setColumnFilter('person', { column: 'person', values: ['JAMIE SAMPLE'] });
     expect(selectFiltered(state()).every((t) => t.person === 'JAMIE SAMPLE')).toBe(true);
   });
 
-  it('filters on absolute amount', () => {
-    state().setFilter({ showCredits: true, amountMin: 100 });
+  it('filters on absolute amount through a column filter', () => {
+    state().setFilter({ showCredits: true });
+    state().setColumnFilter('amount', { column: 'amount', operator: 'gte', value: 100 });
     const amounts = selectFiltered(state()).map((t) => Math.abs(t.amount));
     expect(amounts.every((a) => a >= 100)).toBe(true);
     expect(amounts).toContain(1500);
+  });
+
+  it('filters by description operator and by date', () => {
+    state().setColumnFilter('description', {
+      column: 'description',
+      operator: 'endsWith',
+      value: 'NC',
+    });
+    expect(selectFiltered(state()).length).toBe(3);
+
+    state().setColumnFilter('description', null);
+    state().setColumnFilter('date', { column: 'date', operator: 'on', value: '2026-07-01' });
+    expect(selectFiltered(state())).toHaveLength(2);
+  });
+
+  it('replaces a filter on the same column and clears it with null', () => {
+    state().setColumnFilter('amount', { column: 'amount', operator: 'gte', value: 100 });
+    state().setColumnFilter('amount', { column: 'amount', operator: 'lt', value: 10 });
+    expect(state().filters.columnFilters.amount).toEqual({
+      column: 'amount',
+      operator: 'lt',
+      value: 10,
+    });
+
+    state().setColumnFilter('amount', null);
+    expect(state().filters.columnFilters).toEqual({});
   });
 
   it('skips its own dimension when a chart asks it to', () => {
@@ -75,15 +104,28 @@ describe('filters', () => {
     expect(selectFiltered(state())).toHaveLength(1);
     expect(selectFiltered(state(), { ignoreCategory: true }).length).toBeGreaterThan(1);
 
-    state().setFilter({ person: 'ALEX SAMPLE' });
+    state().togglePersonFilter('ALEX SAMPLE');
     const ignoringPerson = selectFiltered(state(), { ignorePerson: true, ignoreCategory: true });
     expect(ignoringPerson.some((t) => t.person === 'JAMIE SAMPLE')).toBe(true);
   });
 
-  it('toggles a category filter off again', () => {
+  it('accumulates then drops the category checklist as it is toggled', () => {
     state().toggleCategoryFilter('amazon');
+    state().toggleCategoryFilter('pets');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['amazon', 'pets'],
+    });
+
     state().toggleCategoryFilter('amazon');
-    expect(state().filters.categoryIds.size).toBe(0);
+    state().toggleCategoryFilter('pets');
+    expect(state().filters.columnFilters.category).toBeUndefined();
+  });
+
+  it('totals only the visible rows', () => {
+    expect(selectVisibleTotal(selectFiltered(state()))).toBeCloseTo(251.47, 2);
+    state().setColumnFilter('category', { column: 'category', values: ['grocery'] });
+    expect(selectVisibleTotal(selectFiltered(state()))).toBe(118.37);
   });
 });
 
@@ -101,10 +143,10 @@ describe('overrides and rules', () => {
     expect(ids.every((id) => byId.get(id)?.categoryId === 'pets')).toBe(true);
   });
 
-  it('re-categorizes when a rule gains a keyword, leaving overrides alone', () => {
+  it('re-categorizes when a rule gains a condition, leaving overrides alone', () => {
     const amazonTxn = selectTransactions(state()).find((t) => t.categoryId === 'amazon')!;
     state().setOverride([amazonTxn.id], 'pets');
-    state().setRule('grocery', { keywords: ['HARRIS TEETER', 'AMAZON'] });
+    state().setRule('grocery', { conditions: keywordsToGroup(['HARRIS TEETER', 'AMAZON']) });
 
     const after = selectTransactions(state()).find((t) => t.id === amazonTxn.id)!;
     expect(after.categoryId).toBe('pets');
@@ -113,12 +155,34 @@ describe('overrides and rules', () => {
 
   it('drops rows to other when their overridden rule is deleted', () => {
     const txn = selectTransactions(state())[0];
-    state().addRule({ id: 'travel', name: 'Travel', color: '#111', keywords: [] });
+    state().addRule({
+      id: 'travel',
+      name: 'Travel',
+      color: '#111',
+      conditions: keywordsToGroup([]),
+    });
     state().setOverride([txn.id], 'travel');
     expect(selectTransactions(state())[0].categoryId).toBe('travel');
 
     state().deleteRule('travel');
     expect(selectTransactions(state())[0].categoryId).toBe('other');
+  });
+
+  it('strips a deleted rule from the category checklist', () => {
+    state().addRule({
+      id: 'travel',
+      name: 'Travel',
+      color: '#111',
+      conditions: keywordsToGroup(['DELTA']),
+    });
+    state().toggleCategoryFilter('travel');
+    state().toggleCategoryFilter('pets');
+
+    state().deleteRule('travel');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['pets'],
+    });
   });
 
   it('refuses to delete builtin rules', () => {
@@ -128,7 +192,12 @@ describe('overrides and rules', () => {
   });
 
   it('reorders rules so an earlier rule wins, keeping builtins last', () => {
-    state().addRule({ id: 'megastore', name: 'Megastore', color: '#111', keywords: ['MKTPL'] });
+    state().addRule({
+      id: 'megastore',
+      name: 'Megastore',
+      color: '#111',
+      conditions: keywordsToGroup(['MKTPL']),
+    });
     expect(
       selectTransactions(state()).find((t) => t.description.includes('AMAZON'))?.categoryId,
     ).toBe('amazon');
@@ -171,6 +240,15 @@ describe('selection and sorting', () => {
     expect(state().sort).toEqual({ key: 'amount', dir: -1 });
   });
 
+  it('honours an explicit direction without toggling', () => {
+    state().setSort('amount', 1);
+    expect(state().sort).toEqual({ key: 'amount', dir: 1 });
+    state().setSort('amount', 1);
+    expect(state().sort).toEqual({ key: 'amount', dir: 1 });
+    state().setSort('amount', -1);
+    expect(state().sort).toEqual({ key: 'amount', dir: -1 });
+  });
+
   it('sorts by the requested key', () => {
     const rows = selectFiltered(state());
     const byAmount = sortTransactions(rows, { key: 'amount', dir: -1 }, state().rules);
@@ -208,7 +286,7 @@ describe('aggregates', () => {
 });
 
 describe('session persistence', () => {
-  it('round-trips rows, overrides, chart mode and the category filter Set', async () => {
+  it('round-trips rows, overrides, chart mode and column filters', async () => {
     await seedStore();
     const txn = selectTransactions(state())[0];
     state().setOverride([txn.id], 'pets');
@@ -217,20 +295,20 @@ describe('session persistence', () => {
 
     const stored = sessionStorage.getItem('money-pit');
     expect(stored).toBeTruthy();
-    expect(JSON.parse(stored!).state.filters.categoryIds).toEqual(['amazon']);
-
-    useAppStore.setState({
-      rawRows: [],
-      overrides: {},
-      chartMode: 'donut',
-      filters: { ...state().filters, categoryIds: new Set() },
+    expect(JSON.parse(stored!).state.filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['amazon'],
     });
+
+    useAppStore.setState({ rawRows: [], overrides: {}, chartMode: 'donut', filters: emptyFilters });
     sessionStorage.setItem('money-pit', stored!); // the setState above re-persisted the blank state
     await useAppStore.persist.rehydrate();
 
     expect(state().chartMode).toBe('bar');
-    expect(state().filters.categoryIds).toBeInstanceOf(Set);
-    expect([...state().filters.categoryIds]).toEqual(['amazon']);
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['amazon'],
+    });
     expect(selectTransactions(state())[0].categoryId).toBe('pets');
   });
 
@@ -239,7 +317,7 @@ describe('session persistence', () => {
     state().resetAll();
     expect(state().rawRows).toHaveLength(0);
     expect(state().overrides).toEqual({});
-    expect(state().filters.categoryIds.size).toBe(0);
+    expect(state().filters.columnFilters).toEqual({});
     expect(state().rules).toHaveLength(12);
   });
 });

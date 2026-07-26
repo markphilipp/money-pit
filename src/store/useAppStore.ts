@@ -10,8 +10,10 @@ import type {
   SortState,
 } from '@/lib/types';
 import { OTHER_ID } from '@/lib/types';
+import type { ColumnFilter, ColumnId } from '@/lib/rules/types';
 import { CsvFormatError, mergeRows, parseStatementCsv } from '@/lib/csv';
 import { defaultRules } from '@/lib/defaultRules';
+import { checklistValues } from '@/lib/rules/engine';
 
 export interface UploadResult {
   ok: string[];
@@ -20,11 +22,8 @@ export interface UploadResult {
 
 export const emptyFilters: FilterState = {
   search: '',
-  person: null,
-  amountMin: null,
-  amountMax: null,
-  categoryIds: new Set<string>(),
   showCredits: false,
+  columnFilters: {},
 };
 
 export interface AppState {
@@ -43,9 +42,11 @@ export interface AppState {
   reorderRules: (id: string, direction: -1 | 1) => void;
   setOverride: (ids: string[], categoryId: string) => void;
   setFilter: (patch: Partial<FilterState>) => void;
+  setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
+  togglePersonFilter: (person: string) => void;
   setChartMode: (mode: ChartMode) => void;
-  setSort: (key: SortKey) => void;
+  setSort: (key: SortKey, dir?: 1 | -1) => void;
   toggleSelected: (id: string) => void;
   selectAll: (ids: string[], selected: boolean) => void;
   clearSelection: () => void;
@@ -67,20 +68,30 @@ type PersistedState = Pick<
   'rawRows' | 'rules' | 'overrides' | 'filters' | 'chartMode' | 'sort'
 >;
 
-type SerializedState = Omit<PersistedState, 'filters'> & {
-  filters: Omit<FilterState, 'categoryIds'> & { categoryIds: string[] };
-};
-
 const noopStorage = {
   getItem: () => null,
   setItem: () => undefined,
   removeItem: () => undefined,
 };
 
-const storage = createJSONStorage<PersistedState>(
-  () => (typeof window === 'undefined' ? noopStorage : window.sessionStorage),
-  { replacer: (_key, value) => (value instanceof Set ? [...value] : value) },
+const storage = createJSONStorage<PersistedState>(() =>
+  typeof window === 'undefined' ? noopStorage : window.sessionStorage,
 );
+
+/** Checklist filters drop out entirely once empty so `columnFilters` stays a set of live filters. */
+function withChecklist(
+  filters: FilterState,
+  column: 'category' | 'person',
+  values: string[],
+): FilterState {
+  const columnFilters = { ...filters.columnFilters };
+  if (values.length) columnFilters[column] = { column, values };
+  else delete columnFilters[column];
+  return { ...filters, columnFilters };
+}
+
+const currentChecklist = (filters: FilterState, column: 'category' | 'person') =>
+  checklistValues(filters.columnFilters, column);
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -123,14 +134,11 @@ export const useAppStore = create<AppState>()(
             ? s
             : {
                 rules: s.rules.filter((r) => r.id !== id),
-                filters: s.filters.categoryIds.has(id)
-                  ? {
-                      ...s.filters,
-                      categoryIds: new Set(
-                        [...s.filters.categoryIds].filter((c) => c !== id),
-                      ) as Set<string>,
-                    }
-                  : s.filters,
+                filters: withChecklist(
+                  s.filters,
+                  'category',
+                  currentChecklist(s.filters, 'category').filter((c) => c !== id),
+                ),
               },
         ),
 
@@ -155,20 +163,45 @@ export const useAppStore = create<AppState>()(
 
       setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
 
+      setColumnFilter: (column, filter) =>
+        set((s) => {
+          const columnFilters = { ...s.filters.columnFilters };
+          if (filter) columnFilters[column] = filter;
+          else delete columnFilters[column];
+          return { filters: { ...s.filters, columnFilters } };
+        }),
+
       toggleCategoryFilter: (id) =>
         set((s) => {
-          const categoryIds = new Set(s.filters.categoryIds);
-          if (categoryIds.has(id)) categoryIds.delete(id);
-          else categoryIds.add(id);
-          return { filters: { ...s.filters, categoryIds } };
+          const values = currentChecklist(s.filters, 'category');
+          return {
+            filters: withChecklist(
+              s.filters,
+              'category',
+              values.includes(id) ? values.filter((c) => c !== id) : [...values, id],
+            ),
+          };
+        }),
+
+      togglePersonFilter: (person) =>
+        set((s) => {
+          const values = currentChecklist(s.filters, 'person');
+          return {
+            filters: withChecklist(
+              s.filters,
+              'person',
+              values.includes(person) ? values.filter((p) => p !== person) : [...values, person],
+            ),
+          };
         }),
 
       setChartMode: (chartMode) => set({ chartMode }),
 
-      setSort: (key) =>
+      setSort: (key, dir) =>
         set((s) => ({
-          sort:
-            s.sort.key === key
+          sort: dir
+            ? { key, dir }
+            : s.sort.key === key
               ? { key, dir: (s.sort.dir * -1) as 1 | -1 }
               : { key, dir: key === 'date' || key === 'amount' ? -1 : 1 },
         })),
@@ -193,12 +226,7 @@ export const useAppStore = create<AppState>()(
 
       clearSelection: () => set({ selectedIds: new Set<string>() }),
 
-      resetAll: () =>
-        set({
-          ...initialState,
-          filters: { ...emptyFilters, categoryIds: new Set<string>() },
-          selectedIds: new Set<string>(),
-        }),
+      resetAll: () => set({ ...initialState, selectedIds: new Set<string>() }),
     }),
     {
       name: 'money-pit',
@@ -212,16 +240,12 @@ export const useAppStore = create<AppState>()(
         sort: s.sort,
       }),
       merge: (persisted, current) => {
-        const raw = persisted as Partial<SerializedState> | undefined;
+        const raw = persisted as Partial<PersistedState> | undefined;
         if (!raw) return current;
         return {
           ...current,
           ...raw,
-          filters: {
-            ...emptyFilters,
-            ...raw.filters,
-            categoryIds: new Set(raw.filters?.categoryIds ?? []),
-          },
+          filters: { ...emptyFilters, ...raw.filters },
         };
       },
       // static export prerenders with empty state; rehydrate after mount instead (see useHydrated)

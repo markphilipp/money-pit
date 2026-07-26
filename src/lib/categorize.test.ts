@@ -1,28 +1,48 @@
 import { describe, expect, it } from 'vitest';
-import { matchRule, parseAmount, parseDate, toTransactions } from './categorize';
+import { matchCategory, parseAmount, parseDate, toTransactions } from './categorize';
 import { parseStatementCsv } from './csv';
 import { defaultRules } from './defaultRules';
+import { keywordsToGroup } from './rules/engine';
 import type { CategoryRule } from './types';
 import { SAMPLE_CSV } from '@/test/fixtures';
 
 const rows = parseStatementCsv(SAMPLE_CSV);
 
-describe('matchRule', () => {
+const target = (description: string) => ({
+  description,
+  amount: 20,
+  person: 'ALEX SAMPLE',
+  date: new Date(2026, 6, 3),
+});
+
+describe('matchCategory', () => {
   it('matches case-insensitively on a substring', () => {
-    expect(matchRule('McDonalds 00001 CHARLOTTE NC', defaultRules)).toBe('dining');
+    expect(matchCategory(target('McDonalds 00001 CHARLOTTE NC'), defaultRules)).toBe('dining');
   });
 
   it('falls back to other when nothing matches', () => {
-    expect(matchRule('SOME UNKNOWN MERCHANT', defaultRules)).toBe('other');
+    expect(matchCategory(target('SOME UNKNOWN MERCHANT'), defaultRules)).toBe('other');
   });
 
   it('lets the first rule in array order win', () => {
     const rules: CategoryRule[] = [
-      { id: 'first', name: 'First', color: '#000', keywords: ['AMAZON'] },
-      { id: 'second', name: 'Second', color: '#111', keywords: ['AMAZON'] },
+      { id: 'first', name: 'First', color: '#000', conditions: keywordsToGroup(['AMAZON']) },
+      { id: 'second', name: 'Second', color: '#111', conditions: keywordsToGroup(['AMAZON']) },
     ];
-    expect(matchRule('AMAZON MKTPL', rules)).toBe('first');
-    expect(matchRule('AMAZON MKTPL', rules.slice().reverse())).toBe('second');
+    expect(matchCategory(target('AMAZON MKTPL'), rules)).toBe('first');
+    expect(matchCategory(target('AMAZON MKTPL'), rules.slice().reverse())).toBe('second');
+  });
+
+  it('matches on non-description fields too', () => {
+    const rules: CategoryRule[] = [
+      {
+        id: 'big',
+        name: 'Big',
+        color: '#000',
+        conditions: { combinator: 'and', rules: [{ field: 'amount', operator: 'gte', value: 20 }] },
+      },
+    ];
+    expect(matchCategory(target('ANYTHING'), rules)).toBe('big');
   });
 });
 
@@ -71,7 +91,7 @@ describe('toTransactions', () => {
 
   it('re-categorizes when rules change', () => {
     const custom: CategoryRule[] = [
-      { id: 'fruit', name: 'Fruit', color: '#111', keywords: ['APPLE'] },
+      { id: 'fruit', name: 'Fruit', color: '#111', conditions: keywordsToGroup(['APPLE']) },
       ...defaultRules,
     ];
     expect(toTransactions(rows, custom, {})[0].categoryId).toBe('fruit');

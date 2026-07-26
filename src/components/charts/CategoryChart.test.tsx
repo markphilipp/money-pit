@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ChartData, ChartOptions } from 'chart.js';
+import { checklistValues } from '@/lib/rules/engine';
 import { useAppStore } from '@/store/useAppStore';
 import { resetStore, seedStore } from '@/test/fixtures';
 import { CategoryChart } from './CategoryChart';
@@ -28,6 +29,7 @@ vi.mock('react-chartjs-2', () => {
 });
 
 const last = () => captured.at(-1)!;
+const personFilter = () => checklistValues(useAppStore.getState().filters.columnFilters, 'person');
 const clickSlice = (index: number) => {
   const onClick = last().options.onClick as (e: unknown, els: { index: number }[]) => void;
   act(() => onClick(null, [{ index }]));
@@ -66,7 +68,10 @@ describe('CategoryChart', () => {
 
     clickSlice(0);
 
-    expect(useAppStore.getState().filters.categoryIds).toEqual(new Set(['grocery']));
+    expect(useAppStore.getState().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['grocery'],
+    });
     const colors = last().data.datasets[0].backgroundColor as string[];
     expect(colors[0]).toBe('#2E7D5B');
     expect(colors[1]).toBe('#E8641B40');
@@ -76,9 +81,12 @@ describe('CategoryChart', () => {
   it('toggles a category filter off when the slice is clicked again', () => {
     render(<CategoryChart />);
     clickSlice(2);
-    expect(useAppStore.getState().filters.categoryIds).toEqual(new Set(['amazon']));
+    expect(useAppStore.getState().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['amazon'],
+    });
     clickSlice(2);
-    expect(useAppStore.getState().filters.categoryIds.size).toBe(0);
+    expect(useAppStore.getState().filters.columnFilters.category).toBeUndefined();
   });
 
   it('switches to horizontal bars and persists the choice', async () => {
@@ -104,14 +112,14 @@ describe('PersonChart', () => {
   it('filters by person on click and clears on a second click', () => {
     render(<PersonChart />);
     clickSlice(1);
-    expect(useAppStore.getState().filters.person).toBe('JAMIE SAMPLE');
+    expect(personFilter()).toEqual(['JAMIE SAMPLE']);
 
     const colors = last().data.datasets[0].backgroundColor as string[];
     expect(colors).toEqual(['#E8641B40', '#1F6F8B']);
 
     clickSlice(0);
-    expect(useAppStore.getState().filters.person).toBe('ALEX SAMPLE');
+    expect(personFilter()).toEqual(['JAMIE SAMPLE', 'ALEX SAMPLE']);
     clickSlice(0);
-    expect(useAppStore.getState().filters.person).toBeNull();
+    expect(personFilter()).toEqual(['JAMIE SAMPLE']);
   });
 });
