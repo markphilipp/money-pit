@@ -2,43 +2,67 @@
 
 ## What this is
 
-money-pit: a client-only spending dashboard. Upload credit-card statement CSVs, auto-categorize by
-merchant keyword, chart by category/cardholder, correct rows manually. No backend — everything runs
-in the browser, state lives in `sessionStorage` only. See `README.md` for the full feature/CSV-format
-rundown.
+money-pit ("The Money Pit"): a client-only spending dashboard. Upload credit-card statement CSVs,
+auto-categorize them with rules, chart by category/cardholder, correct rows by hand. No backend —
+everything runs in the browser and state lives in `sessionStorage` only. This file and `docs/` are
+the source of truth — `README.md` is an intentionally bare placeholder while the app is still
+changing shape, so don't mine it for detail or expand it without being asked.
 
 ## Stack
 
-- Next.js 16 App Router, static export (`output: 'export'`) — deploys as a static bundle to Netlify.
-- React 19, Zustand store (`src/store`), CSS Modules over tokens in `src/app/globals.css`.
-- Chart.js 4 via react-chartjs-2, TanStack Table v8, react-querybuilder, Radix UI primitives.
-- Vitest + React Testing Library for unit/integration tests, Playwright for e2e.
-
-## Layout
-
-- `src/lib/` — pure domain logic (CSV parsing, categorization, hashing/ids, formatting). No React.
-  Heavily unit-tested; this is where business rules should live.
-- `src/store/` — Zustand store + selectors. `Transaction[]` is derived from raw CSV rows + rules +
-  manual overrides, not stored directly — don't add derived fields to persisted state.
-- `src/components/` — grouped by feature area (`charts`, `table`, `rules`, `upload`, `layout`,
-  `common`).
-- `prototype/` — original single-file dashboard kept for visual reference; `prototype/data.js` (real
-  statement data) is gitignored, don't commit real financial data anywhere in the repo.
-- `e2e/fixtures/` — synthetic CSV fixtures ("Alex/Jamie Sample" data). Keep all committed fixtures
-  synthetic.
+Next.js 16 App Router with `output: 'export'` (static bundle on Netlify), React 19, Zustand,
+CSS Modules over tokens in `src/app/globals.css`. Chart.js 4 via react-chartjs-2, TanStack Table v8,
+react-querybuilder, Radix UI. Vitest + React Testing Library, Playwright for e2e. **bun** is the
+package manager.
 
 ## Commands
 
-- `bun run dev` / `bun run build` / `bun run start`
-- `bun run lint`, `bun run typecheck`, `bun run test`, `bun run test:coverage`
-- `bun run e2e` — requires `bun run build` first (serves from `out/`)
-- `bun run format`
+```bash
+bun run dev            # next dev
+bun run build          # static export to out/
+bun run start          # serve out/
+bun run lint           # eslint
+bun run typecheck      # tsc --noEmit
+bun run test           # vitest run  (also test:watch, test:coverage)
+bun run e2e            # playwright — needs `bun run build` first, it serves out/
+bun run format         # prettier
+```
 
-## Conventions
+Use `bun` / `bunx`, never `npm` / `npx`. `package-lock.json`, `yarn.lock` and `pnpm-lock.yaml` are
+gitignored on purpose — `bun.lock` is the only lockfile.
 
-- Testing trophy: most weight on `src/lib` unit tests and RTL integration tests wired to the real
-  store; Playwright only for what needs a real browser (file inputs, canvas, reload persistence).
-- No network calls, no analytics, no telemetry — privacy is a hard constraint of this app, not just
-  a feature.
-- CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests, build, e2e on every PR and push to
-  `main`.
+## Hard rules
+
+- **No network calls, no analytics, no telemetry, no backend.** Privacy is a constraint of this app,
+  not a feature. A change that sends statement data anywhere is wrong by definition.
+- **Never commit real financial data.** `statements/`, `*.csv` (except `e2e/fixtures/*.csv`) and
+  `prototype/data.js` are gitignored. Every committed fixture uses synthetic "Alex/Jamie Sample"
+  data.
+- **Don't add derived fields to persisted state.** `Transaction[]` is derived from raw CSV rows +
+  rules + overrides on read; only the raw inputs are persisted.
+- Business rules belong in `src/lib/` (pure, no React), not in components.
+
+## Layout
+
+```
+src/lib/          pure domain logic: CSV parsing, categorization, rule engine, ids, formatting
+src/store/        Zustand store, selectors, React hooks
+src/components/   by feature area: charts, table, rules, upload, layout, common
+src/hooks/        shared React hooks (sticky-offset measurement)
+src/app/          App Router entry, global tokens, page composition
+e2e/              Playwright specs + synthetic CSV fixtures
+prototype/        original single-file dashboard, kept for visual reference only
+docs/             the sub-documents below
+```
+
+## Where to look
+
+Read the doc for the area you're touching; skip the rest.
+
+| Doc                                          | Read it when                                                                                                                                      |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [docs/architecture.md](docs/architecture.md) | Touching `src/store/`, adding state, wiring a component to data, or wondering why something re-renders or fails to persist.                       |
+| [docs/data-model.md](docs/data-model.md)     | Touching `src/lib/` — CSV format, dedupe on re-upload, transaction ids, categorization precedence, the rule/filter condition engine.              |
+| [docs/ui.md](docs/ui.md)                     | Touching `src/components/` or `src/app/` — component map, the sticky charts/header layout, charts, table, rules UI, styling tokens, brand assets. |
+| [docs/testing.md](docs/testing.md)           | Writing or fixing tests, or deciding which layer a test belongs in.                                                                               |
+| [docs/tooling.md](docs/tooling.md)           | Touching config, CI, deploy, or working inside a git worktree.                                                                                    |
