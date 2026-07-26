@@ -8,6 +8,8 @@ const eslintConfig = defineConfig([
   ...nextTs,
   prettier,
   globalIgnores([
+    '**/.worktrees/**',
+    '**/worktrees/**',
     '.next/**',
     'out/**',
     'build/**',
