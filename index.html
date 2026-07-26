@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Statement Breakdown — Jun 4 to Jul 3, 2026</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2F4F1;
+    --grid:#DDE3DC;
+    --ink:#1E2A26;
+    --ink-soft:#5B6A64;
+    --line:#C6CFC7;
+    --accent:#E8641B;       /* chalk-line orange */
+    --accent-soft:#FBE6D8;
+    --card:#FFFFFF;
+    --green:#2E7D5B;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:'Inter',system-ui,sans-serif;
+    color:var(--ink);
+    background-color:var(--paper);
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+    background-size:28px 28px;
+    min-height:100vh;
+    padding:28px 20px 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  header{margin-bottom:26px}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px;
+  }
+  h1{
+    font-family:'Barlow Condensed',sans-serif;font-weight:700;font-size:clamp(34px,5vw,52px);
+    line-height:1;letter-spacing:.01em;text-transform:uppercase;
+  }
+  h1 .thin{color:var(--ink-soft);font-weight:500}
+  .rule{height:3px;background:var(--accent);width:72px;margin-top:12px;border-radius:2px}
+
+  /* summary strip */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:22px 0}
+  .stat{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .stat .label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .stat .value{font-family:'IBM Plex Mono',monospace;font-size:22px;font-weight:600;margin-top:4px}
+  .stat .value.small{font-size:16px}
+  .stat .value .neg{color:var(--green)}
+
+  /* filter bar */
+  .filters{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-bottom:22px;
+  }
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .field input,.field select{
+    font-family:'Inter',sans-serif;font-size:14px;padding:8px 10px;border:1px solid var(--line);
+    border-radius:6px;background:#fff;color:var(--ink);min-width:120px;
+  }
+  .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px}
+  .field.search input{min-width:200px}
+  .amt-pair{display:flex;gap:6px}
+  .amt-pair input{min-width:90px;width:90px;font-family:'IBM Plex Mono',monospace}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft);padding-bottom:8px;cursor:pointer;user-select:none}
+  .toggle input{accent-color:var(--accent);width:16px;height:16px;cursor:pointer}
+  .btn-clear{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.06em;
+    background:none;border:1px dashed var(--ink-soft);color:var(--ink-soft);
+    padding:8px 14px;border-radius:6px;cursor:pointer;text-transform:uppercase;
+  }
+  .btn-clear:hover{border-color:var(--accent);color:var(--accent)}
+
+  /* category picker popover */
+  .picker{
+    position:absolute;z-index:50;background:var(--card);border:1px solid var(--ink);
+    border-radius:8px;box-shadow:0 8px 24px rgba(30,42,38,.18);width:240px;display:none;
+    overflow:hidden;
+  }
+  .picker.open{display:block}
+  .picker input{
+    width:100%;border:none;border-bottom:1px solid var(--line);padding:10px 12px;
+    font-family:'Inter',sans-serif;font-size:13px;outline:none;
+  }
+  .picker-list{max-height:240px;overflow-y:auto;padding:4px}
+  .picker-item{
+    display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+    font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 10px;
+    border:none;background:none;border-radius:6px;cursor:pointer;color:var(--ink);
+  }
+  .picker-item:hover,.picker-item.hl{background:var(--accent-soft)}
+  .picker-item .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+  .picker-item .check{margin-left:auto;color:var(--accent);font-weight:600}
+  .picker-empty{padding:12px;font-size:12px;color:var(--ink-soft);text-align:center}
+
+  /* selectable rows + bulk bar */
+  td.sel,th.sel{width:34px;text-align:center;padding-left:14px;padding-right:6px}
+  input[type=checkbox].row-ck{accent-color:var(--accent);width:15px;height:15px;cursor:pointer}
+  tbody tr.selected{background:var(--accent-soft)}
+  .bulk-bar{
+    display:none;align-items:center;gap:12px;flex-wrap:wrap;
+    margin:0 18px 12px;padding:10px 14px;border:1px dashed var(--accent);
+    border-radius:8px;background:var(--accent-soft);font-size:13px;
+  }
+  .bulk-bar.show{display:flex}
+  .bulk-bar .count{font-family:'IBM Plex Mono',monospace;font-weight:600}
+  .bulk-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;letter-spacing:.04em;
+    text-transform:uppercase;padding:7px 12px;border-radius:6px;cursor:pointer;
+    border:1px solid var(--ink);background:var(--ink);color:#fff;
+  }
+  .bulk-btn.ghost{background:none;color:var(--ink-soft);border-color:var(--ink-soft)}
+  .bulk-btn:hover{border-color:var(--accent);background:var(--accent);color:#fff}
+  .bulk-btn.ghost:hover{background:none;color:var(--accent)}
+  .cat-tag{cursor:pointer;background:none}
+  .cat-tag:hover{border-color:var(--accent);color:var(--accent)}
+  .cat-tag:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+  /* charts */
+  .charts{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:22px}
+  @media(max-width:820px){.charts{grid-template-columns:1fr}}
+  .card{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;
+  }
+  .card h2{
+    font-family:'Barlow Condensed',sans-serif;font-weight:600;font-size:20px;
+    text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;
+  }
+  .card .sub{font-size:12px;color:var(--ink-soft);margin-bottom:12px}
+  .card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+  .seg{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;flex-shrink:0}
+  .seg-btn{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;padding:6px 11px;border:none;background:var(--card);
+    color:var(--ink-soft);cursor:pointer;
+  }
+  .seg-btn + .seg-btn{border-left:1px solid var(--line)}
+  .seg-btn:hover{color:var(--accent)}
+  .seg-btn.active{background:var(--ink);color:#fff}
+  .chart-box{position:relative;height:300px}
+
+  /* table */
+  .table-card{padding:0;overflow:hidden}
+  .table-head{padding:18px 18px 10px;display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
+  .table-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{
+    font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--ink-soft);text-align:left;padding:8px 14px;border-top:1px solid var(--line);
+    border-bottom:2px solid var(--ink);cursor:pointer;white-space:nowrap;user-select:none;
+  }
+  thead th:hover{color:var(--accent)}
+  thead th .arrow{font-size:10px}
+  tbody td{padding:9px 14px;border-bottom:1px solid var(--grid);vertical-align:top}
+  tbody tr:hover{background:var(--accent-soft)}
+  td.amt{font-family:'IBM Plex Mono',monospace;text-align:right;white-space:nowrap;font-weight:500}
+  td.amt.credit{color:var(--green)}
+  .cat-tag{
+    display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);white-space:nowrap;
+  }
+  .cat-tag .dot{width:7px;height:7px;border-radius:50%}
+  .person{font-size:12px;color:var(--ink-soft);white-space:nowrap}
+  .empty{padding:40px;text-align:center;color:var(--ink-soft);font-size:14px}
+  .foot-note{padding:12px 18px;font-size:12px;color:var(--ink-soft);border-top:1px solid var(--grid)}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Statement · Closed Jul 03 2026</div>
+    <h1>Spending <span class="thin">Breakdown</span></h1>
+    <div class="rule"></div>
+  </header>
+
+  <div class="stats" id="stats"></div>
+
+  <div class="filters">
+    <div class="field search">
+      <label for="f-search">Search description</label>
+      <input id="f-search" type="text" placeholder="e.g. amazon, mcdonalds…">
+    </div>
+    <div class="field">
+      <label for="f-person">Person</label>
+      <select id="f-person"><option value="">All</option></select>
+    </div>
+    <div class="field">
+      <label>Amount ($)</label>
+      <div class="amt-pair">
+        <input id="f-min" type="number" placeholder="min" step="0.01">
+        <input id="f-max" type="number" placeholder="max" step="0.01">
+      </div>
+    </div>
+    <label class="toggle"><input id="f-credits" type="checkbox"> Show payments &amp; credits</label>
+    <button class="btn-clear" id="btn-clear">Reset</button>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <div class="card-top">
+        <div>
+          <h2>By Category</h2>
+          <div class="sub" id="cat-sub">Click slices to toggle category filters — everything below updates. Selected slices stay bright.</div>
+        </div>
+        <div class="seg" role="group" aria-label="Chart type">
+          <button class="seg-btn active" data-mode="donut">Donut</button>
+          <button class="seg-btn" data-mode="bar">Bars</button>
+        </div>
+      </div>
+      <div class="chart-box"><canvas id="pie-cat"></canvas></div>
+    </div>
+    <div class="card">
+      <h2>By Person</h2>
+      <div class="sub">Click a slice to filter by cardholder; click again to clear. Syncs with the Person dropdown.</div>
+      <div class="chart-box"><canvas id="pie-person"></canvas></div>
+    </div>
+  </div>
+
+  <div class="card table-card">
+    <div class="table-head">
+      <h2>Transactions <span id="txn-count" style="color:var(--ink-soft);font-size:15px"></span></h2>
+      <span class="sub" style="margin:0">Click a category pill to reassign it · check rows to bulk-edit · click headers to sort</span>
+    </div>
+    <div class="bulk-bar" id="bulk-bar">
+      <span class="count"><span id="sel-count">0</span> selected</span>
+      <button class="bulk-btn" id="bulk-change">Change category</button>
+      <button class="bulk-btn ghost" id="bulk-clear">Clear selection</button>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="sel"><input type="checkbox" class="row-ck" id="ck-all" aria-label="Select all visible rows"></th>
+            <th data-sort="date">Date <span class="arrow" id="ar-date">▼</span></th>
+            <th data-sort="desc">Description <span class="arrow" id="ar-desc"></span></th>
+            <th data-sort="cat">Category <span class="arrow" id="ar-cat"></span></th>
+            <th data-sort="person">Person <span class="arrow" id="ar-person"></span></th>
+            <th data-sort="amount" style="text-align:right">Amount <span class="arrow" id="ar-amount"></span></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="foot-note">Auto-categorized by merchant keywords — click any category pill to correct it. Statement payments are excluded from charts and totals; toggle "Show payments &amp; credits" to see them in the table.</div>
+  </div>
+</div>
+
+<div class="picker" id="picker" role="listbox" aria-label="Choose category">
+  <input type="text" id="picker-search" placeholder="Search categories…" autocomplete="off">
+  <div class="picker-list" id="picker-list"></div>
+</div>
+
+<script id="csv-data" type="text/plain">
+Status,Date,Description,Debit,Credit,Member Name
+Cleared,07/03/2026,"APPLE.COM/BILL CUPERTINO CA",4.99,,ALEX SAMPLE
+Cleared,07/02/2026,"AMAZON MKTPL*DEMO1234 SEATTLE WA",32.50,,JAMIE SAMPLE
+Cleared,07/01/2026,"HARRIS TEETER #0042 CHARLOTTE NC",118.37,,ALEX SAMPLE
+Cleared,07/01/2026,"McDonalds 00001 CHARLOTTE NC",11.62,,JAMIE SAMPLE
+Cleared,06/30/2026,"ONLINE PAYMENT, THANK YOU",,-1500.00,ALEX SAMPLE
+Cleared,06/29/2026,"LOWES #01111 BELMONT NC",86.14,,ALEX SAMPLE
+Cleared,06/28/2026,"SPOTIFY USA NEW YORK NY",13.93,,JAMIE SAMPLE
+Cleared,06/27/2026,"TESLA SUBSCRIPTION US PALO ALTO CA",99.00,,ALEX SAMPLE
+Cleared,06/26/2026,"WALMART.COM WALMART.COM AR",64.20,,JAMIE SAMPLE
+Cleared,06/25/2026,"DUKE-ENERGY PAYMENT NC",142.55,,ALEX SAMPLE
+Cleared,06/24/2026,"TACO BELL 00002 CHARLOTTE NC",9.84,,JAMIE SAMPLE
+Cleared,06/23/2026,"WHOLE PET SUPPLY CHARLOTTE NC",47.90,,ALEX SAMPLE
+Cleared,06/22/2026,"CVS/PHARMACY #00003 BELMONT NC",23.11,,JAMIE SAMPLE
+Cleared,06/21/2026,"AMAZON MKTPL*DEMO5678 SEATTLE WA",18.75,,ALEX SAMPLE
+Cleared,06/20/2026,"QT 900 GASTONIA NC",41.03,,JAMIE SAMPLE
+Cleared,06/19/2026,"FABLETICS.COM EL SEGUNDO CA",59.95,,ALEX SAMPLE
+Cleared,06/18/2026,"SPECTRUM CHARLOTTE NC",89.99,,ALEX SAMPLE
+Cleared,06/17/2026,"JERSEY MIKES 00004 CHARLOTTE NC",14.28,,JAMIE SAMPLE
+Cleared,06/16/2026,"Merchant Offers Credit NY",,-2.15,ALEX SAMPLE
+Cleared,06/15/2026,"HULU 123-456-7890 CA",17.99,,JAMIE SAMPLE
+Cleared,06/14/2026,"ADVANCE AUTO PARTS #00005 BELMONT NC",36.47,,ALEX SAMPLE
+Cleared,06/13/2026,"AMAZON MKTPL*DEMO9012 SEATTLE WA",52.09,,JAMIE SAMPLE
+Cleared,06/12/2026,"HARRIS TEETER #0042 CHARLOTTE NC",97.63,,ALEX SAMPLE
+Cleared,06/11/2026,"INSOMNIA COOKIES - CHA CHARLOTTE NC",21.40,,JAMIE SAMPLE
+Cleared,06/10/2026,"LOWES #01111 BELMONT NC",203.88,,ALEX SAMPLE
+</script>
+
+<script src="data.js"></script>
+<script>
+/* ---------- categorization rules (first match wins) ---------- */
+const CATEGORIES = [
+  { id:'home',    name:'Home Improvement', color:'#E8641B',
+    match:['LOWE','LOWES','GCX','LANIER MATERIAL','TURF BROTHERS','DO MY OWN'] },
+  { id:'grocery', name:'Groceries',        color:'#2E7D5B',
+    match:['WALMART.COM','WALMART ','HARRIS TEETER','WALMART+ INHOME'] },
+  { id:'dining',  name:'Dining & Fast Food', color:'#C94F3D',
+    match:['MCDONALD','TACO BELL','ARBYS','KFC','JERSEY MIKE',"PAL'S",'TST*','FIREHOUSE RESTAURA','INSOMNIA COOKIES','PROTAGONIST','LOWER LEFT BREWING','CANTEEN VENDING','USCONNECT'] },
+  { id:'amazon',  name:'Amazon',           color:'#D9A036',
+    match:['AMAZON','AMZN'] },
+  { id:'pets',    name:'Pets',             color:'#7B5CB8',
+    match:['WHOLE PET','SPARK PAWS'] },
+  { id:'subs',    name:'Subscriptions & Software', color:'#3A7CA5',
+    match:['APPLE.COM/BILL','PEACOCK','HULU','FOX ONE','SPOTIFY','NETLIFY','CURSOR','ANTHROPIC','EVOLVEAI','EXCALIDRAW','RING AI','NEEDLE','WALMART+ MEMBER'] },
+  { id:'auto',    name:'Auto & Fuel',      color:'#4A4E57',
+    match:['TESLA','ADVANCE AUTO','QT ','EXXON',"LOVE'S",'STATE FARM','NC DMV'] },
+  { id:'util',    name:'Utilities & Phone', color:'#1F6F8B',
+    match:['DUKE-ENERGY','AT&T','ATT*','SPECTRUM'] },
+  { id:'health',  name:'Health & Wellness', color:'#5F9E62',
+    match:['MINDFULHEALTH','LIFESTANCE','CVS/PHARMACY','ACTIVE N FIT'] },
+  { id:'care',    name:'Personal Care & Clothing', color:'#B85C8A',
+    match:['BLUE ORCHID','LILY CLEANERS','COLIN LESENGER','FABLETICS'] },
+  { id:'payment', name:'Payments',         color:'#9AA39C',
+    match:['ONLINE PAYMENT'] },
+  { id:'other',   name:'Other',            color:'#8A8F98', match:[] },
+];
+const catById = Object.fromEntries(CATEGORIES.map(c=>[c.id,c]));
+
+function categorize(desc){
+  const u = desc.toUpperCase();
+  for(const c of CATEGORIES){
+    if(c.match.some(k => u.includes(k))) return c.id;
+  }
+  return 'other';
+}
+
+/* ---------- parse embedded CSV ---------- */
+function parseCSV(text){
+  const rows=[]; let row=[], field='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){field+='"';i++;} else inQ=false; }
+      else field+=ch;
+    } else {
+      if(ch==='"') inQ=true;
+      else if(ch===','){ row.push(field); field=''; }
+      else if(ch==='\n'){ row.push(field); if(row.some(f=>f.trim()!=='')) rows.push(row); row=[]; field=''; }
+      else if(ch!=='\r') field+=ch;
+    }
+  }
+  if(field!==''||row.length){ row.push(field); if(row.some(f=>f.trim()!=='')) rows.push(row); }
+  return rows;
+}
+
+const raw = parseCSV((window.CSV_DATA || document.getElementById('csv-data').textContent).trim());
+const header = raw[0];
+const txns = raw.slice(1).map((r,i)=>{
+  const debit = parseFloat(r[3]||'0')||0;
+  const credit = parseFloat(r[4]||'0')||0;
+  const amount = debit !== 0 ? debit : credit;   // credits are negative
+  const [m,d,y] = r[1].split('/').map(Number);
+  return {
+    id:i, status:r[0], dateStr:r[1], date:new Date(y,m-1,d),
+    desc:r[2], amount, isCredit: amount<0,
+    person:r[5], cat:categorize(r[2]),
+  };
+});
+
+/* short display names */
+const personShort = p => p.split(' ')[0].charAt(0) + p.split(' ')[0].slice(1).toLowerCase();
+const persons = [...new Set(txns.map(t=>t.person))];
+
+/* ---------- state ---------- */
+const state = {
+  search:'', person:'', min:null, max:null,
+  showCredits:false, cats:new Set(), // empty = all
+  sortKey:'date', sortDir:-1,
+  selected:new Set(), // txn ids checked for bulk edit
+};
+
+/* ---------- filtering ---------- */
+function filtered(opts={}){
+  return txns.filter(t=>{
+    if(t.cat==='payment' && !state.showCredits) return false;
+    if(!opts.ignorePerson && state.person && t.person!==state.person) return false;
+    if(!opts.ignoreCats && state.cats.size && !state.cats.has(t.cat)) return false;
+    if(state.search && !t.desc.toUpperCase().includes(state.search.toUpperCase())) return false;
+    const abs=Math.abs(t.amount);
+    if(state.min!=null && abs<state.min) return false;
+    if(state.max!=null && abs>state.max) return false;
+    return true;
+  });
+}
+
+const DIM = '40'; /* ~25% alpha suffix for de-emphasized slices */
+
+const fmt = n => (n<0?'−$':'$') + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+/* ---------- charts ---------- */
+Chart.defaults.font.family = "'Inter', sans-serif";
+Chart.defaults.color = '#1E2A26';
+
+let catChartMode = 'donut';
+let pieCat = null;
+
+function handleCatClick(chart, els){
+  if(!els.length) return;
+  const label = chart.data.labels[els[0].index];
+  const cat = CATEGORIES.find(c=>c.name===label);
+  if(!cat) return;
+  state.cats.has(cat.id) ? state.cats.delete(cat.id) : state.cats.add(cat.id);
+  render();
+}
+
+const catTooltip = {callbacks:{label:(ctx)=>{
+  const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+  const v = ctx.parsed.x !== undefined && catChartMode==='bar' ? ctx.parsed.x : ctx.parsed;
+  const pct = total? (v/total*100).toFixed(1):0;
+  return ` ${fmt(v)} (${pct}%)`;
+}}};
+
+function buildCatChart(){
+  if(pieCat) pieCat.destroy();
+  const ctx = document.getElementById('pie-cat');
+  if(catChartMode === 'donut'){
+    pieCat = new Chart(ctx, {
+      type:'doughnut',
+      data:{labels:[],datasets:[{data:[],backgroundColor:[],borderColor:'#FFFFFF',borderWidth:2}]},
+      options:{
+        responsive:true, maintainAspectRatio:false, cutout:'55%',
+        plugins:{
+          legend:{position:'right',labels:{boxWidth:12,boxHeight:12,padding:10,font:{size:12}}},
+          tooltip:catTooltip
+        },
+        onClick:(evt,els)=>handleCatClick(pieCat,els)
+      }
+    });
+  } else {
+    pieCat = new Chart(ctx, {
+      type:'bar',
+      data:{labels:[],datasets:[{data:[],backgroundColor:[],borderRadius:4,borderSkipped:false}]},
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:catTooltip },
+        scales:{
+          x:{
+            grid:{color:'#DDE3DC'},
+            ticks:{font:{family:"'IBM Plex Mono', monospace",size:11},
+                   callback:v=>'$'+Number(v).toLocaleString()}
+          },
+          y:{ grid:{display:false}, ticks:{font:{size:12}} }
+        },
+        onClick:(evt,els)=>handleCatClick(pieCat,els)
+      }
+    });
+  }
+}
+buildCatChart();
+
+document.querySelectorAll('.seg-btn').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    if(btn.dataset.mode === catChartMode) return;
+    catChartMode = btn.dataset.mode;
+    document.querySelectorAll('.seg-btn').forEach(b=>b.classList.toggle('active', b===btn));
+    document.getElementById('cat-sub').textContent = catChartMode==='donut'
+      ? 'Click slices to toggle category filters — everything below updates. Selected slices stay bright.'
+      : 'Click bars to toggle category filters — everything below updates. Selected bars stay bright.';
+    buildCatChart();
+    render();
+  });
+});
+
+const piePerson = new Chart(document.getElementById('pie-person'), {
+  type:'doughnut',
+  data:{labels:[],datasets:[{data:[],backgroundColor:[],borderColor:'#FFFFFF',borderWidth:2}]},
+  options:{
+    responsive:true, maintainAspectRatio:false, cutout:'55%',
+    plugins:{
+      legend:{position:'right',labels:{boxWidth:12,boxHeight:12,padding:10,font:{size:12}}},
+      tooltip:{callbacks:{label:(ctx)=>{
+        const total = ctx.dataset.data.reduce((a,b)=>a+b,0);
+        const pct = total? (ctx.parsed/total*100).toFixed(1):0;
+        return ` ${fmt(ctx.parsed)} (${pct}%)`;
+      }}}
+    },
+    onClick:(evt,els)=>{
+      if(!els.length) return;
+      const full = piePerson.fullNames[els[0].index];
+      state.person = (state.person===full) ? '' : full;
+      document.getElementById('f-person').value = state.person;
+      render();
+    }
+  }
+});
+piePerson.fullNames = [];
+const PERSON_COLORS = ['#E8641B','#1F6F8B','#7B5CB8','#5F9E62'];
+/* pin each cardholder to one color for the whole session, regardless of sort order */
+const personColor = Object.fromEntries(persons.map((p,i)=>[p, PERSON_COLORS[i % PERSON_COLORS.length]]));
+
+/* ---------- rendering ---------- */
+const tbody = document.getElementById('tbody');
+
+function render(){
+  const list = filtered();                                    /* fully filtered — table + stats */
+  const chartable = list.filter(t=>t.cat!=='payment');
+
+  /* category pie: respect every filter EXCEPT category, so all slices stay
+     clickable; selected categories full color, others dimmed */
+  const catSource = filtered({ignoreCats:true}).filter(t=>t.cat!=='payment');
+  const byCat = {};
+  catSource.forEach(t=>{ byCat[t.cat]=(byCat[t.cat]||0)+t.amount; });
+  const entries = Object.entries(byCat).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  pieCat.data.labels = entries.map(([id])=>catById[id].name);
+  pieCat.data.datasets[0].data = entries.map(([,v])=>+v.toFixed(2));
+  pieCat.data.datasets[0].backgroundColor = entries.map(([id])=>
+    (!state.cats.size || state.cats.has(id)) ? catById[id].color : catById[id].color + DIM);
+  pieCat.update();
+
+  /* person pie: respect every filter EXCEPT person; same dimming treatment */
+  const personSource = filtered({ignorePerson:true}).filter(t=>t.cat!=='payment');
+  const byPerson = {};
+  personSource.forEach(t=>{ byPerson[t.person]=(byPerson[t.person]||0)+t.amount; });
+  const pEntries = Object.entries(byPerson).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]);
+  piePerson.fullNames = pEntries.map(([p])=>p);
+  piePerson.data.labels = pEntries.map(([p])=>personShort(p));
+  piePerson.data.datasets[0].data = pEntries.map(([,v])=>+v.toFixed(2));
+  piePerson.data.datasets[0].backgroundColor = pEntries.map(([p])=>{
+    const base = personColor[p];
+    return (!state.person || state.person===p) ? base : base + DIM;
+  });
+  piePerson.update();
+
+  /* stats */
+  const spend = chartable.filter(t=>!t.isCredit).reduce((a,t)=>a+t.amount,0);
+  const credits = chartable.filter(t=>t.isCredit).reduce((a,t)=>a+t.amount,0);
+  const net = spend + credits;
+  const count = chartable.length;
+  const topCat = entries.length ? catById[entries[0][0]].name : '—';
+  document.getElementById('stats').innerHTML = `
+    <div class="stat"><div class="label">Net spend</div><div class="value">${fmt(net)}</div></div>
+    <div class="stat"><div class="label">Purchases</div><div class="value">${fmt(spend)}</div></div>
+    <div class="stat"><div class="label">Refunds</div><div class="value"><span class="neg">${fmt(credits)}</span></div></div>
+    <div class="stat"><div class="label">Transactions</div><div class="value">${count}</div></div>
+    <div class="stat"><div class="label">Top category</div><div class="value small">${topCat}</div></div>`;
+
+  /* table */
+  const sorted = [...list].sort((a,b)=>{
+    const k = state.sortKey, dir = state.sortDir;
+    let va, vb;
+    if(k==='date'){ va=a.date; vb=b.date; }
+    else if(k==='amount'){ va=a.amount; vb=b.amount; }
+    else if(k==='desc'){ va=a.desc; vb=b.desc; }
+    else if(k==='cat'){ va=catById[a.cat].name; vb=catById[b.cat].name; }
+    else { va=a.person; vb=b.person; }
+    return (va<vb?-1:va>vb?1:0)*dir;
+  });
+
+  document.getElementById('txn-count').textContent = `(${sorted.length})`;
+  ['date','desc','cat','person','amount'].forEach(k=>{
+    document.getElementById('ar-'+k).textContent = state.sortKey===k ? (state.sortDir===1?'▲':'▼') : '';
+  });
+
+  if(!sorted.length){
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No transactions match these filters. Try widening the amount range or clearing a category.</div></td></tr>`;
+    updateBulkBar(sorted);
+    return;
+  }
+  tbody.innerHTML = sorted.map(t=>{
+    const c = catById[t.cat];
+    const sel = state.selected.has(t.id);
+    return `<tr class="${sel?'selected':''}" data-id="${t.id}">
+      <td class="sel"><input type="checkbox" class="row-ck row-select" data-id="${t.id}" ${sel?'checked':''} aria-label="Select row"></td>
+      <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px">${t.dateStr}</td>
+      <td>${t.desc}</td>
+      <td><button class="cat-tag" data-id="${t.id}" title="Change category"><span class="dot" style="background:${c.color}"></span>${c.name}</button></td>
+      <td class="person">${personShort(t.person)}</td>
+      <td class="amt ${t.isCredit?'credit':''}">${fmt(t.amount)}</td>
+    </tr>`;
+  }).join('');
+
+  /* wire up row checkboxes + pills */
+  tbody.querySelectorAll('.row-select').forEach(ck=>{
+    ck.addEventListener('change',()=>{
+      const id = +ck.dataset.id;
+      ck.checked ? state.selected.add(id) : state.selected.delete(id);
+      ck.closest('tr').classList.toggle('selected', ck.checked);
+      updateBulkBar(sorted);
+    });
+  });
+  tbody.querySelectorAll('.cat-tag').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      e.stopPropagation();
+      const id = +btn.dataset.id;
+      const txn = txns.find(t=>t.id===id);
+      openPicker(btn, txn.cat, catId=>{ txn.cat = catId; render(); });
+    });
+  });
+  updateBulkBar(sorted);
+}
+
+/* ---------- bulk selection ---------- */
+const bulkBar = document.getElementById('bulk-bar');
+const ckAll = document.getElementById('ck-all');
+
+function updateBulkBar(visible){
+  const n = state.selected.size;
+  document.getElementById('sel-count').textContent = n;
+  bulkBar.classList.toggle('show', n>0);
+  const visIds = visible.map(t=>t.id);
+  ckAll.checked = visIds.length>0 && visIds.every(id=>state.selected.has(id));
+  ckAll.indeterminate = !ckAll.checked && visIds.some(id=>state.selected.has(id));
+}
+
+ckAll.addEventListener('change',()=>{
+  const visible = currentSorted();
+  visible.forEach(t=> ckAll.checked ? state.selected.add(t.id) : state.selected.delete(t.id));
+  render();
+});
+
+function currentSorted(){ return filtered(); }
+
+document.getElementById('bulk-clear').addEventListener('click',()=>{
+  state.selected.clear(); render();
+});
+document.getElementById('bulk-change').addEventListener('click',e=>{
+  openPicker(e.currentTarget, null, catId=>{
+    txns.forEach(t=>{ if(state.selected.has(t.id)) t.cat = catId; });
+    state.selected.clear();
+    render();
+  });
+});
+
+/* ---------- searchable category picker ---------- */
+const picker = document.getElementById('picker');
+const pickerSearch = document.getElementById('picker-search');
+const pickerList = document.getElementById('picker-list');
+let pickerCb = null, pickerCurrent = null, pickerHl = 0;
+
+function pickerOptions(){
+  const q = pickerSearch.value.trim().toLowerCase();
+  return CATEGORIES.filter(c => c.id!=='payment' && (!q || c.name.toLowerCase().includes(q)));
+}
+function renderPickerList(){
+  const opts = pickerOptions();
+  if(pickerHl >= opts.length) pickerHl = Math.max(0, opts.length-1);
+  pickerList.innerHTML = opts.length ? opts.map((c,i)=>
+    `<button class="picker-item ${i===pickerHl?'hl':''}" data-cat="${c.id}" role="option">
+       <span class="dot" style="background:${c.color}"></span>${c.name}
+       ${c.id===pickerCurrent?'<span class="check">✓</span>':''}
+     </button>`).join('')
+    : `<div class="picker-empty">No matching category</div>`;
+  pickerList.querySelectorAll('.picker-item').forEach(btn=>{
+    btn.addEventListener('click',()=>choose(btn.dataset.cat));
+  });
+}
+function choose(catId){
+  const cb = pickerCb;
+  closePicker();
+  if(cb) cb(catId);
+}
+function openPicker(anchor, currentCat, cb){
+  pickerCb = cb; pickerCurrent = currentCat; pickerHl = 0;
+  pickerSearch.value = '';
+  renderPickerList();
+  picker.classList.add('open');
+  const r = anchor.getBoundingClientRect();
+  const pw = 240, ph = Math.min(picker.offsetHeight || 280, 300);
+  let left = r.left + window.scrollX;
+  let top = r.bottom + window.scrollY + 6;
+  if(left + pw > window.scrollX + document.documentElement.clientWidth - 8)
+    left = window.scrollX + document.documentElement.clientWidth - pw - 8;
+  if(r.bottom + ph > window.innerHeight - 8) top = r.top + window.scrollY - ph - 6;
+  picker.style.left = left + 'px';
+  picker.style.top = Math.max(top, window.scrollY + 8) + 'px';
+  pickerSearch.focus();
+}
+function closePicker(){
+  picker.classList.remove('open');
+  pickerCb = null; pickerCurrent = null;
+}
+pickerSearch.addEventListener('input',()=>{ pickerHl=0; renderPickerList(); });
+pickerSearch.addEventListener('keydown',e=>{
+  const opts = pickerOptions();
+  if(e.key==='ArrowDown'){ e.preventDefault(); pickerHl=Math.min(pickerHl+1,opts.length-1); renderPickerList(); }
+  else if(e.key==='ArrowUp'){ e.preventDefault(); pickerHl=Math.max(pickerHl-1,0); renderPickerList(); }
+  else if(e.key==='Enter'){ e.preventDefault(); if(opts[pickerHl]) choose(opts[pickerHl].id); }
+  else if(e.key==='Escape'){ closePicker(); }
+});
+document.addEventListener('click',e=>{
+  if(picker.classList.contains('open') && !picker.contains(e.target)
+     && !e.target.closest('.cat-tag') && e.target.id!=='bulk-change'
+     && !e.target.closest('#bulk-change')) closePicker();
+});
+
+/* ---------- filter wiring ---------- */
+persons.forEach(p=>{
+  const o=document.createElement('option'); o.value=p; o.textContent=personShort(p);
+  document.getElementById('f-person').appendChild(o);
+});
+document.getElementById('f-search').addEventListener('input',e=>{state.search=e.target.value;render();});
+document.getElementById('f-person').addEventListener('change',e=>{state.person=e.target.value;render();});
+document.getElementById('f-min').addEventListener('input',e=>{state.min=e.target.value===''?null:+e.target.value;render();});
+document.getElementById('f-max').addEventListener('input',e=>{state.max=e.target.value===''?null:+e.target.value;render();});
+document.getElementById('f-credits').addEventListener('change',e=>{state.showCredits=e.target.checked;render();});
+document.getElementById('btn-clear').addEventListener('click',()=>{
+  state.search=''; state.person=''; state.min=null; state.max=null;
+  state.showCredits=false; state.cats.clear(); state.selected.clear();
+  document.getElementById('f-search').value='';
+  document.getElementById('f-person').value='';
+  document.getElementById('f-min').value='';
+  document.getElementById('f-max').value='';
+  document.getElementById('f-credits').checked=false;
+  render();
+});
+document.querySelectorAll('thead th[data-sort]').forEach(th=>{
+  th.addEventListener('click',()=>{
+    const k = th.dataset.sort;
+    if(state.sortKey===k) state.sortDir*=-1;
+    else { state.sortKey=k; state.sortDir = k==='date'||k==='amount' ? -1 : 1; }
+    render();
+  });
+});
+
+render();
+</script>
+</body>
+</html>
