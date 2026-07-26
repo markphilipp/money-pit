@@ -52,11 +52,40 @@ test('creates a rule from a row and applies it immediately', async ({ page }) =>
   await row.click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
 
-  await expect(page.locator('input[value="Merchant Offers Credit NY"]')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'New rule from 1 transaction' })).toBeVisible();
+  await expect(page.getByTestId('value-editor')).toHaveValue('Merchant Offers');
   await page.getByLabel('Category name').fill('Merchant Credits');
-  await page.getByRole('button', { name: 'Save' }).click();
+  await page.getByRole('button', { name: 'Save rule' }).click();
 
   await expect(row.getByTitle('Change category')).toContainText('Merchant Credits');
+});
+
+test('suggests a merchant rule from several selected rows', async ({ page }) => {
+  await page.setInputFiles('input[type=file]', [fixture('merchants.csv')]);
+  await expect(page.getByRole('row', { name: /BLUE RIDGE BAKERY #0311/ })).toBeVisible();
+
+  for (const store of ['#0042', '#0117']) {
+    await page
+      .getByRole('row', { name: new RegExp(store) })
+      .getByRole('checkbox')
+      .check();
+  }
+  await page.getByRole('button', { name: 'Create rule' }).click();
+
+  const suggestion = page.getByRole('button', { name: /contains “BLUE RIDGE BAKERY”/ });
+  await expect(suggestion).toContainText('matches all 2 selected + 1 other');
+  await expect(suggestion).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByRole('heading', { name: 'Also matches 1 other transaction' }),
+  ).toBeVisible();
+
+  await expect(page.getByLabel('Category name')).toHaveValue('Blue Ridge Bakery');
+  await page.getByRole('button', { name: 'Save rule' }).click();
+
+  // the unselected third bakery row is categorized too — rules apply to the whole history
+  await expect(
+    page.getByRole('row', { name: /BLUE RIDGE BAKERY #0311/ }).getByTitle('Change category'),
+  ).toContainText('Blue Ridge Bakery');
 });
 
 test('manages rules from the user menu', async ({ page }) => {

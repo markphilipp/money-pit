@@ -143,6 +143,18 @@ describe('overrides and rules', () => {
     expect(ids.every((id) => byId.get(id)?.categoryId === 'pets')).toBe(true);
   });
 
+  it('hands rows back to the rules when their overrides are cleared', () => {
+    const ids = selectTransactions(state())
+      .slice(0, 2)
+      .map((t) => t.id);
+    state().setOverride(ids, 'pets');
+    state().clearOverrides(ids);
+
+    expect(state().overrides).toEqual({});
+    const byId = new Map(selectTransactions(state()).map((t) => [t.id, t]));
+    expect(ids.some((id) => byId.get(id)?.categoryId === 'pets')).toBe(false);
+  });
+
   it('re-categorizes when a rule gains a condition, leaving overrides alone', () => {
     const amazonTxn = selectTransactions(state()).find((t) => t.categoryId === 'amazon')!;
     state().setOverride([amazonTxn.id], 'pets');
@@ -228,6 +240,18 @@ describe('selection and sorting', () => {
     state().toggleSelected(ids[0]);
     state().clearSelection();
     expect(state().selectedIds.size).toBe(0);
+  });
+
+  it('opens and closes the rule editor without persisting it', () => {
+    const ids = selectFiltered(state())
+      .slice(0, 2)
+      .map((t) => t.id);
+    state().openRuleEditor(ids);
+    expect(state().ruleEditor).toEqual({ sourceIds: ids });
+    expect(sessionStorage.getItem('money-pit')).not.toContain('ruleEditor');
+
+    state().closeRuleEditor();
+    expect(state().ruleEditor).toBeNull();
   });
 
   it('flips direction when the same column is clicked twice', () => {

@@ -7,6 +7,7 @@ import { PersonChart } from '@/components/charts/PersonChart';
 import chartStyles from '@/components/charts/Chart.module.css';
 import { Header } from '@/components/layout/Header';
 import { StatsStrip } from '@/components/layout/StatsStrip';
+import { RuleEditorScreen } from '@/components/rules/RuleEditorScreen';
 import { TransactionTable } from '@/components/table/TransactionTable';
 import { EmptyState } from '@/components/upload/EmptyState';
 import { useHeightVar } from '@/hooks/useHeightVar';
@@ -23,6 +24,8 @@ export default function Home() {
   const chartsRef = useHeightVar('--charts-h');
 
   if (!hydrated) return <main className={`wrap ${styles.loading}`} aria-busy="true" />;
+  // The rule editor is a full takeover rather than a route — the app is a single static page.
+  if (state.ruleEditor) return <RuleEditorScreen />;
   if (state.rawRows.length === 0)
     return (
       <main className="wrap">

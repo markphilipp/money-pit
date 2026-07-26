@@ -38,7 +38,9 @@ each other. Environment is jsdom with globals on; `@/` resolves to `src/`.
 Chromium only. Specs run against the static export served from `out/` on port 3210, so
 **`bun run build` must run first**. Existing specs cover the empty state, multi-file upload with
 overlap dedupe, inline per-file errors, column-menu filtering + reload persistence, recategorizing
-from a pill, creating a rule from a row, managing rules from the account menu, and bulk selection.
+from a pill, creating a rule from a row, inducing a merchant rule from several selected rows
+(`merchants.csv` — three stores of one synthetic merchant), managing rules from the account menu,
+and bulk selection.
 
 `testDir: './e2e'` is the only scoping. Do not add a `testIgnore` for `**/.worktrees/**` —
 Playwright matches those against absolute paths, so a checkout that itself sits under `.worktrees/`

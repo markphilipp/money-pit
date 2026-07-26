@@ -21,7 +21,8 @@ prevent** — a stale persisted category would survive a rule edit and silently 
 charts.
 
 `selectedIds` is deliberately _not_ persisted: a `Set` doesn't survive JSON, and a selection
-outliving a reload is not useful.
+outliving a reload is not useful. `ruleEditor` isn't either — a reload should land on the dashboard,
+not resume a half-written rule.
 
 ## The store — `src/store/useAppStore.ts`
 
@@ -36,6 +37,10 @@ Actions worth knowing before you add one:
   bottom. First matching rule wins, so a new rule placed after `other` could never match.
 - `deleteRule` — also strips the deleted id out of the active category checklist filter, otherwise
   the table would filter on a category that no longer exists.
+- `openRuleEditor(ids)` / `closeRuleEditor()` — the app has one route, so the rule editor screen is
+  store state that `page.tsx` renders instead of the dashboard (see [ui.md](ui.md)).
+- `clearOverrides(ids)` — hands rows back to the rules. Used when saving a rule that would otherwise
+  be shadowed by manual categories on the very rows it was induced from.
 - `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
   `filters.columnFilters` entirely when they go empty, so `columnFilters` only ever holds live
   filters. Use `checklistValues()` from `src/lib/rules/engine.ts` to read them back; the map is
