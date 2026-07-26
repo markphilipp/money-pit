@@ -5,7 +5,7 @@ import { Header } from './Header';
 import { StatsStrip } from './StatsStrip';
 
 beforeEach(async () => {
-  resetStore();
+  await resetStore();
   await seedStore();
 });
 

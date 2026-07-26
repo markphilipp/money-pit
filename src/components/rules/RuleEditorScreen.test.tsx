@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HEADER, csvFile, resetStore } from '@/test/fixtures';
+import { routerMock } from '@/test/router';
 import { selectTransactions } from '@/store/selectors';
 import { useAppStore } from '@/store/useAppStore';
 import { RuleEditorScreen } from './RuleEditorScreen';
@@ -22,7 +23,7 @@ const idsFor = (descriptions: string[]) => {
 
 async function openEditor(descriptions: string[]) {
   await useAppStore.getState().uploadFiles([csvFile(BAKERY_CSV)]);
-  useAppStore.getState().openRuleEditor(idsFor(descriptions));
+  useAppStore.getState().setRuleSources(idsFor(descriptions));
 }
 
 const BAKERIES = ['BLUE RIDGE BAKERY #0042 CHARLOTTE NC', 'BLUE RIDGE BAKERY #0117 RALEIGH NC'];
@@ -114,7 +115,8 @@ describe('RuleEditorScreen', () => {
     await user.click(screen.getByRole('button', { name: 'Save rule' }));
 
     const state = useAppStore.getState();
-    expect(state.ruleEditor).toBeNull();
+    expect(state.ruleSources).toEqual([]);
+    expect(routerMock.push).toHaveBeenCalledWith('/');
     expect(state.selectedIds.size).toBe(0);
     expect(state.rules.find((r) => r.id === 'blue-ridge-bakery')).toBeTruthy();
 
@@ -153,14 +155,23 @@ describe('RuleEditorScreen', () => {
     expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets']);
   });
 
-  it('goes back to the dashboard without saving', async () => {
+  it('routes back to the dashboard without saving', async () => {
     const user = userEvent.setup();
     await openEditor(BAKERIES);
     render(<RuleEditorScreen />);
 
     await user.click(screen.getByRole('button', { name: '← Back' }));
 
-    expect(useAppStore.getState().ruleEditor).toBeNull();
+    expect(routerMock.push).toHaveBeenCalledWith('/');
+    expect(useAppStore.getState().ruleSources).toEqual([]);
     expect(useAppStore.getState().rules.some((r) => r.id === 'blue-ridge-bakery')).toBe(false);
+  });
+
+  it('falls back to a hand-written rule when nothing was selected', async () => {
+    await useAppStore.getState().uploadFiles([csvFile(BAKERY_CSV)]);
+    render(<RuleEditorScreen />);
+
+    expect(await screen.findByRole('heading', { name: 'New rule' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Suggested rules' })).not.toBeInTheDocument();
   });
 });

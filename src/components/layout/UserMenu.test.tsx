@@ -5,22 +5,22 @@ import { useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SECOND_CSV, seedStore } from '@/test/fixtures';
 import { UserMenu } from './UserMenu';
 
-beforeEach(() => {
-  resetStore();
+beforeEach(async () => {
+  await resetStore();
 });
 
 describe('UserMenu', () => {
-  it('opens the rules manager from the menu', async () => {
+  it('links to the rules route from the menu', async () => {
     const user = userEvent.setup();
     render(<UserMenu />);
 
     await user.click(screen.getByLabelText('Account menu'));
     expect(screen.getByRole('menuitem', { name: /Sign in/ })).toHaveAttribute('data-disabled', '');
 
-    await user.click(screen.getByRole('menuitem', { name: 'Category rules…' }));
-
-    expect(await screen.findByText('Category rules')).toBeInTheDocument();
-    expect(screen.getByLabelText('Edit Groceries')).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Category rules…' })).toHaveAttribute(
+      'href',
+      '/rules',
+    );
   });
 
   it('hides the statement actions until there is data', async () => {

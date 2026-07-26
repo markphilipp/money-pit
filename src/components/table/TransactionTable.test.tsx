@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@/store/useAppStore';
 import { resetStore, seedStore } from '@/test/fixtures';
+import { routerMock } from '@/test/router';
 import { TransactionTable } from './TransactionTable';
 
 const bodyRows = () => within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row');
@@ -11,7 +12,7 @@ const openMenu = (user: ReturnType<typeof userEvent.setup>, column: string) =>
   user.click(screen.getByRole('button', { name: `${column} column menu` }));
 
 beforeEach(async () => {
-  resetStore();
+  await resetStore();
   await seedStore();
 });
 
@@ -183,17 +184,18 @@ describe('TransactionTable', () => {
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });
 
-  it('opens the rule editor on just the row from the row context menu', async () => {
+  it('routes to the rule editor with just the row from the row context menu', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
     await user.pointer({ keys: '[MouseRight]', target: bodyRows()[0] });
     await user.click(screen.getByRole('menuitem', { name: 'Create rule from transaction' }));
 
-    expect(useAppStore.getState().ruleEditor?.sourceIds).toHaveLength(1);
+    expect(useAppStore.getState().ruleSources).toHaveLength(1);
+    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
   });
 
-  it('opens the rule editor on the whole selection from the bulk bar', async () => {
+  it('routes to the rule editor with the whole selection from the bulk bar', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
@@ -201,9 +203,10 @@ describe('TransactionTable', () => {
     await user.click(within(bodyRows()[1]).getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Create rule' }));
 
-    const { ruleEditor, selectedIds } = useAppStore.getState();
-    expect(ruleEditor?.sourceIds).toEqual([...selectedIds]);
-    expect(ruleEditor?.sourceIds).toHaveLength(2);
+    const { ruleSources, selectedIds } = useAppStore.getState();
+    expect(ruleSources).toEqual([...selectedIds]);
+    expect(ruleSources).toHaveLength(2);
+    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
   });
 
   it('selects a row from its context menu', async () => {

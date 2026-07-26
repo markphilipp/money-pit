@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { Transaction } from '@/lib/types';
 import { fmtMoney, personShort } from '@/lib/format';
@@ -33,7 +34,8 @@ export function TransactionTable() {
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
   const clearSelection = useAppStore((s) => s.clearSelection);
-  const openRuleEditor = useAppStore((s) => s.openRuleEditor);
+  const setRuleSources = useAppStore((s) => s.setRuleSources);
+  const router = useRouter();
   const [picker, setPicker] = useState<PickerState | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const headRef = useHeightVar('--table-head-h');
@@ -78,6 +80,11 @@ export function TransactionTable() {
   /** Acting inside a selection applies to the whole selection, otherwise to that row alone. */
   const targetsFor = (id: string) => (state.selectedIds.has(id) ? [...state.selectedIds] : [id]);
 
+  const startRuleFrom = (ids: string[]) => {
+    setRuleSources(ids);
+    router.push('/rules/new');
+  };
+
   return (
     <div className={`card ${styles.tableCard}`}>
       <div ref={headRef} className={styles.head}>
@@ -112,7 +119,7 @@ export function TransactionTable() {
               bulk: true,
             })
           }
-          onCreateRule={() => openRuleEditor([...state.selectedIds])}
+          onCreateRule={() => startRuleFrom([...state.selectedIds])}
         />
       </div>
 
@@ -182,7 +189,7 @@ export function TransactionTable() {
               <RowContextMenu
                 key={row.id}
                 selected={state.selectedIds.has(row.original.id)}
-                onCreateRule={() => openRuleEditor(targetsFor(row.original.id))}
+                onCreateRule={() => startRuleFrom(targetsFor(row.original.id))}
                 onToggleSelect={() => toggleSelected(row.original.id)}
                 onChangeCategory={({ x, y }) => {
                   const targetIds = targetsFor(row.original.id);

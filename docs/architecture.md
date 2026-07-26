@@ -37,8 +37,9 @@ Actions worth knowing before you add one:
   bottom. First matching rule wins, so a new rule placed after `other` could never match.
 - `deleteRule` — also strips the deleted id out of the active category checklist filter, otherwise
   the table would filter on a category that no longer exists.
-- `openRuleEditor(ids)` / `closeRuleEditor()` — the app has one route, so the rule editor screen is
-  store state that `page.tsx` renders instead of the dashboard (see [ui.md](ui.md)).
+- `setRuleSources(ids)` — seeds `/rules/new` with the transactions to induce a rule from. The
+  _route_ decides which screen shows; this only carries its subject. It is inside `partialize`, so
+  reloading `/rules/new` keeps working instead of landing on a screen with no subject.
 - `clearOverrides(ids)` — hands rows back to the rules. Used when saving a rule that would otherwise
   be shadowed by manual categories on the very rows it was induced from.
 - `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
@@ -48,10 +49,12 @@ Actions worth knowing before you add one:
 
 ### Hydration
 
-Static export prerenders with empty state, so `persist` runs with `skipHydration: true` and
-`useHydrated()` rehydrates after mount via `useSyncExternalStore`. `src/app/page.tsx` renders an
-`aria-busy` placeholder until then. Reading store state before hydration gives you the initial
-state, not the session's — anything that must see persisted data belongs below that gate.
+The server renders with empty state — `sessionStorage` only exists in the browser — so `persist`
+runs with `skipHydration: true` and `useHydrated()` rehydrates after mount via
+`useSyncExternalStore`. Every screen renders an `aria-busy` placeholder until then. Reading store
+state before hydration gives you the initial state, not the session's — anything that must see
+persisted data belongs below that gate. This is why `/rules/[id]` resolves its rule _after_
+hydration rather than on the server: which rule an id refers to is not knowable there.
 
 ## Selectors — `src/store/selectors.ts`
 

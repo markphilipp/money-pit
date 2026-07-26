@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { QueryBuilder, type Field, type RuleGroupType } from 'react-querybuilder';
 import { personShort } from '@/lib/format';
 import { usePersons } from '@/store/hooks';
-import styles from './RuleBuilder.module.css';
+import styles from './RuleConditions.module.css';
 
 const TEXT_OPERATORS = [
   { name: 'contains', label: 'contains' },

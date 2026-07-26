@@ -14,8 +14,8 @@ import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV, seedStore } from '@/test/f
 
 const state = () => useAppStore.getState();
 
-beforeEach(() => {
-  resetStore();
+beforeEach(async () => {
+  await resetStore();
   sessionStorage.clear();
 });
 
@@ -242,16 +242,16 @@ describe('selection and sorting', () => {
     expect(state().selectedIds.size).toBe(0);
   });
 
-  it('opens and closes the rule editor without persisting it', () => {
+  it('persists the rule editor sources so /rules/new survives a reload', () => {
     const ids = selectFiltered(state())
       .slice(0, 2)
       .map((t) => t.id);
-    state().openRuleEditor(ids);
-    expect(state().ruleEditor).toEqual({ sourceIds: ids });
-    expect(sessionStorage.getItem('money-pit')).not.toContain('ruleEditor');
+    state().setRuleSources(ids);
+    expect(state().ruleSources).toEqual(ids);
+    expect(sessionStorage.getItem('money-pit')).toContain(ids[0]);
 
-    state().closeRuleEditor();
-    expect(state().ruleEditor).toBeNull();
+    state().setRuleSources([]);
+    expect(state().ruleSources).toEqual([]);
   });
 
   it('flips direction when the same column is clicked twice', () => {

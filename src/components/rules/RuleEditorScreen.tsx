@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { RuleGroupType } from 'react-querybuilder';
 import type { CategoryRule, Transaction } from '@/lib/types';
 import { matchCategory } from '@/lib/categorize';
@@ -11,9 +12,11 @@ import { fmtMoney, personShort } from '@/lib/format';
 import { nextPaletteColor } from '@/lib/palette';
 import { ColorPickerPopover } from '@/components/common/ColorPickerPopover';
 import { useAppState, useTransactions } from '@/store/hooks';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, useHydrated } from '@/store/useAppStore';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
+import { RuleForm } from './RuleForm';
 import { fromRqb, toRqb } from './rqbMap';
+import screen from './RuleScreen.module.css';
 import styles from './RuleEditorScreen.module.css';
 
 /** Stands in for the rule being drafted so the preview can honour first-match-wins ordering. */
@@ -29,15 +32,29 @@ interface PreviewRow {
   overridden: boolean;
 }
 
+/**
+ * The route decides that this screen is showing; the store only carries which transactions the
+ * rule is being induced from. Remounting on a change of sources keeps the drafted name, colour
+ * and conditions from leaking between two runs of the flow.
+ */
 export function RuleEditorScreen() {
+  const hydrated = useHydrated();
+  const sourceIds = useAppStore((s) => s.ruleSources);
+
+  if (!hydrated) return <main className="wrap" aria-busy="true" />;
+  // Reached straight from the rules screen, with nothing selected to induce a rule from.
+  if (sourceIds.length === 0) return <RuleForm />;
+  return <RuleEditorForm key={sourceIds.join()} sourceIds={sourceIds} />;
+}
+
+function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
+  const router = useRouter();
   const state = useAppState();
   const all = useTransactions();
   const addRule = useAppStore((s) => s.addRule);
   const clearOverrides = useAppStore((s) => s.clearOverrides);
-  const closeRuleEditor = useAppStore((s) => s.closeRuleEditor);
+  const setRuleSources = useAppStore((s) => s.setRuleSources);
   const clearSelection = useAppStore((s) => s.clearSelection);
-
-  const sourceIds = useMemo(() => state.ruleEditor?.sourceIds ?? [], [state.ruleEditor]);
 
   const sources = useMemo(() => {
     const byId = new Map(all.map((t) => [t.id, t]));
@@ -103,6 +120,11 @@ export function RuleEditorScreen() {
     if (!nameTouched) setName(suggestions[index].name);
   }
 
+  function leave() {
+    setRuleSources([]);
+    router.push('/');
+  }
+
   function save() {
     const trimmed = name.trim();
     if (!canSave) return;
@@ -117,22 +139,22 @@ export function RuleEditorScreen() {
     });
     if (alsoClearOverrides && overriddenCount) clearOverrides(sourceIds);
     clearSelection();
-    closeRuleEditor();
+    leave();
   }
 
   return (
-    <main className={`wrap ${styles.screen}`}>
-      <div className={styles.topBar}>
-        <button type="button" className="btn-clear" onClick={closeRuleEditor}>
+    <main className={`wrap ${screen.screen}`}>
+      <div className={screen.topBar}>
+        <button type="button" className={screen.back} onClick={leave}>
           ← Back
         </button>
-        <h1 className={styles.title}>
+        <h1 className={screen.title}>
           New rule from {sources.length} transaction{sources.length === 1 ? '' : 's'}
         </h1>
       </div>
 
       {suggestions.length > 0 && (
-        <section className={`card ${styles.section}`}>
+        <section className={`card ${screen.section}`}>
           <h2>Suggested rules</h2>
           <p className="sub">Pick a starting point, then refine it below.</p>
           <ul className={styles.cards}>
@@ -159,9 +181,9 @@ export function RuleEditorScreen() {
         </section>
       )}
 
-      <section className={`card ${styles.section}`}>
+      <section className={`card ${screen.section}`}>
         <h2>Rule</h2>
-        <div className={styles.identity}>
+        <div className={screen.identity}>
           <ColorPickerPopover value={color} onChange={setColor} ariaLabel="Rule color" />
           <div className="field">
             <label htmlFor="rule-editor-name">Category name</label>
@@ -180,10 +202,10 @@ export function RuleEditorScreen() {
         <RuleConditionsEditor query={query} onQueryChange={setQuery} />
       </section>
 
-      <section className={`card ${styles.section}`}>
+      <section className={`card ${screen.section}`}>
         <h2>Matches</h2>
         {!hasConditions ? (
-          <p className={styles.empty}>Add a condition to preview what this rule will match.</p>
+          <p className={screen.empty}>Add a condition to preview what this rule will match.</p>
         ) : (
           <>
             {excluded > 0 && (
@@ -208,7 +230,7 @@ export function RuleEditorScreen() {
         )}
       </section>
 
-      <div className={styles.actions}>
+      <div className={screen.actions}>
         {overriddenCount > 0 && (
           <label className="toggle">
             <input
@@ -220,11 +242,11 @@ export function RuleEditorScreen() {
             applies
           </label>
         )}
-        <span className={styles.spacer} />
-        <button type="button" className="btn-clear" onClick={closeRuleEditor}>
+        <span className={screen.spacer} />
+        <button type="button" className="btn-clear" onClick={leave}>
           Cancel
         </button>
-        <button type="button" className={styles.save} onClick={save} disabled={!canSave}>
+        <button type="button" className={screen.save} onClick={save} disabled={!canSave}>
           Save rule
         </button>
       </div>
@@ -233,7 +255,7 @@ export function RuleEditorScreen() {
 }
 
 function PreviewTable({ rows, muted }: { rows: PreviewRow[]; muted?: boolean }) {
-  if (!rows.length) return <p className={styles.empty}>Nothing here.</p>;
+  if (!rows.length) return <p className={screen.empty}>Nothing here.</p>;
   return (
     <div className={styles.tableWrap}>
       <table className={`${styles.table} ${muted ? styles.mutedTable : ''}`}>

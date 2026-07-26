@@ -30,17 +30,27 @@ jsdom is missing two things the app uses; both are shimmed there:
 - `Blob.prototype.text` — used by `uploadFiles`.
 - `ResizeObserver` — a no-op class is enough, `useHeightVar` only needs it to exist.
 
-`afterEach` runs `cleanup()` and clears `sessionStorage`, so tests don't leak persisted state into
-each other. Environment is jsdom with globals on; `@/` resolves to `src/`.
+`afterEach` runs `cleanup()`, resets the router spies and clears `sessionStorage`, so tests don't
+leak state into each other. Environment is jsdom with globals on; `@/` resolves to `src/`.
+
+`next/navigation` and `next/link` are stubbed globally in `vitest.setup.ts` — the App Router hooks
+need a router context that only exists inside a running Next app. Assert navigation against
+`routerMock.push` from `src/test/router.ts`; real navigation is Playwright's job.
+
+`resetStore()` awaits `persist.rehydrate()`, so components render past the `useHydrated()` gate as
+they would on the app's second paint. `beforeEach` must await it.
 
 ## Playwright — `playwright.config.ts`
 
-Chromium only. Specs run against the static export served from `out/` on port 3210, so
-**`bun run build` must run first**. Existing specs cover the empty state, multi-file upload with
-overlap dedupe, inline per-file errors, column-menu filtering + reload persistence, recategorizing
-from a pill, creating a rule from a row, inducing a merchant rule from several selected rows
-(`merchants.csv` — three stores of one synthetic merchant), managing rules from the account menu,
-and bulk selection.
+Chromium only. Specs run against `next start` on port 3210, so **`bun run build` must run first**.
+Existing specs cover the empty state, multi-file upload with overlap dedupe, inline per-file errors,
+column-menu filtering + reload persistence, recategorizing from a pill, creating a rule from a row,
+inducing a merchant rule from several selected rows (`merchants.csv` — three stores of one synthetic
+merchant), managing rules on `/rules`, editing a rule on its own URL and returning through browser
+history, the 404 status for an unknown URL, and bulk selection.
+
+Routing assertions belong here, not in the unit tests: this is the only layer running a real
+router.
 
 `testDir: './e2e'` is the only scoping. Do not add a `testIgnore` for `**/.worktrees/**` —
 Playwright matches those against absolute paths, so a checkout that itself sits under `.worktrees/`
