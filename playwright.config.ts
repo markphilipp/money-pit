@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
+  // testDir alone scopes discovery; don't add a '**/.worktrees/**' testIgnore —
+  // Playwright matches it against absolute paths, so a checkout that itself sits
+  // under .worktrees/ would silently find zero tests.
   testDir: './e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
