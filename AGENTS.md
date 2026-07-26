@@ -10,7 +10,7 @@ changing shape, so don't mine it for detail or expand it without being asked.
 
 ## Stack
 
-Next.js 16 App Router with `output: 'export'` (static bundle on Netlify), React 19, Zustand,
+Next.js 16 App Router with `output: 'export'` (static bundle on Vercel), React 19, Zustand,
 CSS Modules over tokens in `src/app/globals.css`. Chart.js 4 via react-chartjs-2, TanStack Table v8,
 react-querybuilder, Radix UI. Vitest + React Testing Library, Playwright for e2e. **bun** is the
 package manager.

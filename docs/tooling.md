@@ -2,7 +2,7 @@
 
 ## Package manager
 
-**bun**, pinned to 1.3.9 in CI and Netlify. `bun.lock` is the only lockfile — `package-lock.json`,
+**bun**, pinned to 1.3.9 in CI; Vercel picks it up from `bun.lock`. `bun.lock` is the only lockfile — `package-lock.json`,
 `yarn.lock` and `pnpm-lock.yaml` are gitignored so a stray `npm install` can't be committed. Scripts
 that shell out use `bunx` (`start`, the Playwright web server). `trustedDependencies` in
 `package.json` allows `unrs-resolver`'s postinstall.
@@ -33,11 +33,20 @@ Runs on every PR and on push to `main`:
 - **e2e** — downloads that artifact, caches browsers keyed on `bun.lock`, installs chromium via
   `bunx playwright install --with-deps`, runs `bun run e2e`; uploads the report on failure.
 
-## Deploy — `netlify.toml`
+## Deploy — Vercel
 
-Netlify builds `bun run build` and publishes `out/`. No environment variables. `main` auto-deploys
-and every PR gets a preview. The static export ships its own `404.html`, and a single-route app
-needs no redirect rules.
+Git-connected, no config file. Vercel's Next.js preset auto-detects the framework, installs with
+bun (it sees `bun.lock`), runs `bun run build` and publishes the static export from `out/` — so
+there is no `vercel.json` and no build overrides to keep in sync. No environment variables. `main`
+auto-deploys to production; every PR gets a preview URL commented on GitHub. The static export
+ships its own `404.html`, and a single-route app needs no redirect rules.
+
+CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
+and deploys.
+
+If server code ever arrives — route handlers, server actions, middleware — drop `output: 'export'`
+and `images: { unoptimized: true }` from `next.config.ts`; the same Vercel project then builds a
+serverful deployment with no other changes.
 
 ## Config notes
 

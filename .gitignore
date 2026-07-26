@@ -17,7 +17,7 @@ prototype/data.js
 *.pem
 *-debug.log*
 .env*
-.vercel
+.vercel/
 *.tsbuildinfo
 next-env.d.ts
 
