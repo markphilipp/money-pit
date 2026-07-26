@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { ChartOptions } from 'chart.js';
+import { UserMenu } from '@/components/layout/UserMenu';
 import { keywordsToGroup } from '@/lib/rules/engine';
 import { useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV } from '@/test/fixtures';
@@ -24,6 +25,17 @@ const clickCategorySlice = (index: number) => {
 
 const tableRows = () => within(screen.getAllByRole('rowgroup')[1]).getAllByRole('row');
 
+// Mirrors the real layout: the account menu sits outside the page, alongside it.
+const renderApp = () =>
+  render(
+    <>
+      <Home />
+      <UserMenu />
+    </>,
+  );
+
+const dropZone = () => screen.getByLabelText(/Drop statement CSVs here/);
+
 beforeEach(() => {
   chartClicks.length = 0;
   resetStore();
@@ -33,21 +45,21 @@ beforeEach(() => {
 describe('page', () => {
   it('shows the empty state, then the dashboard after an upload', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
+    renderApp();
 
     expect(await screen.findByText(/Drop statement CSVs here/)).toBeInTheDocument();
 
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
 
     expect(await screen.findByRole('heading', { name: /Transactions/ })).toBeInTheDocument();
     expect(screen.getAllByText('$251.47')).toHaveLength(2); // net spend tile + table totals row
     expect(screen.getByText('(6)')).toBeInTheDocument();
   });
 
-  it('dedupes a second overlapping statement added from the header', async () => {
+  it('dedupes a second overlapping statement added from the account menu', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV, 'jun.csv'));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV, 'jun.csv'));
 
     await screen.findByRole('heading', { name: /Transactions/ });
     await user.upload(
@@ -60,8 +72,8 @@ describe('page', () => {
 
   it('filters the table when a category slice is clicked', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
     clickCategorySlice(0); // Groceries — the largest slice
@@ -72,8 +84,8 @@ describe('page', () => {
 
   it('searches, then resets every filter', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
     await user.type(screen.getByLabelText('Search description'), 'lowes');
@@ -86,8 +98,8 @@ describe('page', () => {
 
   it('re-categorizes the table when a rule changes', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
     // Home Improvement sits above Groceries, so claiming the merchant there re-categorizes the row
@@ -103,8 +115,8 @@ describe('page', () => {
 
   it('has no in-page rules panel or filter bar left', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
     expect(screen.queryByRole('button', { name: /Category rules/ })).not.toBeInTheDocument();
@@ -114,12 +126,13 @@ describe('page', () => {
 
   it('returns to the empty state after starting over', async () => {
     const user = userEvent.setup();
-    const { container } = render(<Home />);
-    await user.upload(container.querySelector('input[type=file]')!, csvFile(SAMPLE_CSV));
+    renderApp();
+    await user.upload(dropZone(), csvFile(SAMPLE_CSV));
     await screen.findByRole('heading', { name: /Transactions/ });
 
-    await user.click(screen.getByRole('button', { name: 'Start over' }));
-    await user.click(screen.getByRole('button', { name: 'Confirm reset' }));
+    await user.click(screen.getByLabelText('Account menu'));
+    await user.click(screen.getByRole('menuitem', { name: 'Start over' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Confirm reset' }));
 
     expect(await screen.findByText(/Drop statement CSVs here/)).toBeInTheDocument();
     expect(useAppStore.getState().rawRows).toHaveLength(0);

@@ -63,6 +63,51 @@
   cursor: not-allowed;
 }
 
+.danger {
+  color: var(--accent);
+}
+
+.input {
+  display: none;
+}
+
+.errors {
+  position: fixed;
+  top: 64px;
+  right: calc(20px + var(--removed-body-scroll-bar-size, 0px));
+  z-index: 30;
+  max-width: min(340px, calc(100vw - 40px));
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.errors ul {
+  list-style: none;
+}
+
+.errors strong {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
+
+.dismiss {
+  margin-top: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .soon {
   font-family: var(--font-mono), monospace;
   font-size: 10px;
