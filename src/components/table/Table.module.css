@@ -22,6 +22,7 @@
 .search {
   flex: 1;
   min-width: 160px;
+  max-width: 340px;
   font-size: 14px;
   padding: 7px 10px;
   border: 1px solid var(--line);
@@ -65,7 +66,8 @@
   vertical-align: top;
 }
 
-.table tbody tr:hover {
+.table tbody tr:hover,
+.table tbody tr[data-state='open'] {
   background: var(--accent-soft);
 }
 

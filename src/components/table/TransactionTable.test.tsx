@@ -229,12 +229,8 @@ describe('TransactionTable', () => {
     expect(useAppStore.getState().selectedIds.size).toBe(0);
   });
 
-  it('shows payments once the credits toggle is on', async () => {
-    const user = userEvent.setup();
+  it('always hides payments', () => {
     render(<TransactionTable />);
     expect(screen.queryByText(/ONLINE PAYMENT/)).not.toBeInTheDocument();
-
-    await user.click(screen.getByLabelText('Show payments & credits'));
-    expect(await screen.findByText(/ONLINE PAYMENT/)).toBeInTheDocument();
   });
 });

@@ -79,9 +79,6 @@ describe('page', () => {
     await user.type(screen.getByLabelText('Search description'), 'lowes');
     expect(tableRows()).toHaveLength(1);
 
-    await user.click(screen.getByLabelText('Show payments & credits'));
-    expect(screen.getByLabelText('Show payments & credits')).toBeChecked();
-
     await user.click(screen.getByRole('button', { name: 'Reset' }));
     expect(tableRows()).toHaveLength(6);
     expect(screen.getByLabelText('Search description')).toHaveValue('');

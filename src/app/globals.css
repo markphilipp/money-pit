@@ -32,7 +32,6 @@ body {
     linear-gradient(90deg, var(--grid) 1px, transparent 1px);
   background-size: 28px 28px;
   min-height: 100vh;
-  padding: 28px 20px 80px;
 }
 
 button,
@@ -47,9 +46,12 @@ select {
   outline-offset: 1px;
 }
 
+/* Page padding lives here, not on body: Radix's scroll lock rewrites body
+   padding while a menu is open, which made the whole page jump. */
 .wrap {
-  max-width: 1180px;
+  max-width: 1220px;
   margin: 0 auto;
+  padding: 28px 20px 80px;
 }
 
 .card {

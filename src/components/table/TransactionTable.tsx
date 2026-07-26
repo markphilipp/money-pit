@@ -101,14 +101,6 @@ export function TransactionTable() {
           value={state.filters.search}
           onChange={(e) => setFilter({ search: e.target.value })}
         />
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={state.filters.showCredits}
-            onChange={(e) => setFilter({ showCredits: e.target.checked })}
-          />
-          Show payments &amp; credits
-        </label>
         <button
           className="btn-clear"
           onClick={() => {
