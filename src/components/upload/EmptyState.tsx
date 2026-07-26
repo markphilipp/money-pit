@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { EXPECTED_HEADER } from '@/lib/csv';
 import { UploadZone } from './UploadZone';
 import styles from './EmptyState.module.css';
@@ -8,9 +9,15 @@ export function EmptyState() {
   return (
     <div className={styles.shell}>
       <div className={styles.card}>
-        <div className={styles.eyebrow}>Money Pit</div>
-        <h1 className={styles.title}>
-          Spending <span className={styles.thin}>Breakdown</span>
+        <h1 className={styles.brand}>
+          <Image
+            className={styles.logo}
+            src="/money-pit-logo.png"
+            alt="The Money Pit"
+            width={640}
+            height={576}
+            priority
+          />
         </h1>
         <div className={styles.rule} />
         <p className={styles.pitch}>

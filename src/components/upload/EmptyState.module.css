@@ -11,46 +11,34 @@
   background: var(--card);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 34px 30px;
+  padding: 30px 30px 34px;
 }
 
-.eyebrow {
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 600;
-  margin-bottom: 6px;
+.brand {
+  display: flex;
+  justify-content: center;
 }
 
-.title {
-  font-family: var(--font-condensed), sans-serif;
-  font-weight: 700;
-  font-size: clamp(34px, 5vw, 52px);
-  line-height: 1;
-  letter-spacing: 0.01em;
-  text-transform: uppercase;
-}
-
-.title .thin {
-  color: var(--ink-soft);
-  font-weight: 500;
+.logo {
+  width: clamp(200px, 44%, 268px);
+  height: auto;
 }
 
 .rule {
   height: 3px;
   background: var(--accent);
-  width: 72px;
-  margin: 12px 0 16px;
+  width: 76px;
+  margin: 22px auto 18px;
   border-radius: 2px;
 }
 
 .pitch {
   font-size: 14px;
   color: var(--ink-soft);
-  line-height: 1.5;
-  margin-bottom: 18px;
+  line-height: 1.55;
+  margin-bottom: 22px;
+  text-align: center;
+  text-wrap: balance;
 }
 
 .format {
