@@ -60,7 +60,31 @@ The status action is the **first** step in the job, not the last. Its `main` ent
 commit status pending and its `post` hook reports the job's real conclusion; run it late and there
 is a window where Vercel sees no pending check and can promote early. It reads the target commit
 from `client_payload.git.sha` and lists the run's jobs to derive its conclusion, so the workflow
-needs `statuses: write` **and** `actions: read`.
+needs `statuses: write` **and** `actions: read`. If `git.sha` is ever absent it logs a warning and
+skips the status update silently — a green run that reported nothing looks the same as no run.
+
+The dispatch payload looks like this:
+
+```json
+{
+  "id": "dpl_…",
+  "url": "https://money-2eqqlt1e0-markphilipp.vercel.app",
+  "alias": ["money-pit.vercel.app", "money-pit-git-main-markphilipp.vercel.app"],
+  "environment": "production",
+  "target": "production",
+  "type": "success",
+  "git": { "ref": "main", "sha": "…", "shortSha": "…" },
+  "project": { "id": "prj_…", "name": "money-pit" }
+}
+```
+
+The gate tests `url`, not `alias`. The alias still resolves to the _previous_ build until promotion,
+so testing it would pass on the old code every time.
+
+`ssoProtection` is `all_except_custom_domains`, so that deployment URL 302s to Vercel SSO. The gate
+gets in with an automation bypass secret, stored as the `VERCEL_AUTOMATION_BYPASS_SECRET` repo
+secret and sent by `playwright.config.ts` as an `x-vercel-protection-bypass` header. Rotate it with
+`vercel project protection enable money-pit --protection-bypass`, then update the GitHub secret.
 
 This gate deliberately runs e2e only — `lint`, `typecheck` and `test` already have to pass before a
 commit can reach `main` (see the ruleset below), so the thing worth re-checking post-build is

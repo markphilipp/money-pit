@@ -4,6 +4,11 @@ import { defineConfig, devices } from '@playwright/test';
 // instead of a locally served `out/`.
 const externalBaseURL = process.env.E2E_BASE_URL;
 
+// Per-deployment URLs sit behind Vercel SSO; this header is the automation
+// bypass. The alias is exempt, but it still points at the previous build until
+// promotion, so the gate has to hit the deployment URL itself.
+const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+
 export default defineConfig({
   // testDir alone scopes discovery; don't add a '**/.worktrees/**' testIgnore —
   // Playwright matches it against absolute paths, so a checkout that itself sits
@@ -16,6 +21,9 @@ export default defineConfig({
   use: {
     baseURL: externalBaseURL ?? 'http://127.0.0.1:3210',
     trace: 'on-first-retry',
+    ...(bypassSecret && {
+      extraHTTPHeaders: { 'x-vercel-protection-bypass': bypassSecret },
+    }),
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: externalBaseURL
