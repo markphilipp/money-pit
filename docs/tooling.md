@@ -96,7 +96,8 @@ reports but doesn't block anything. Requiring a check that never reports would s
 promotion indefinitely, so add it only after a green run.
 
 `main` is protected by a repository ruleset requiring `lint`, `typecheck`, `test`, `build` and
-`e2e`, and blocking force-push and deletion. There are no bypass actors.
+`e2e`, and blocking force-push and deletion. Repository admins are bypass actors in `always` mode,
+so an emergency fix can go straight to `main` — the normal path is still a PR.
 
 If server code ever arrives — route handlers, server actions, middleware — drop `output: 'export'`
 and `images: { unoptimized: true }` from `next.config.ts`; the same Vercel project then builds a
