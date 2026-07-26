@@ -27,12 +27,7 @@ jobs:
         with:
           name: 'Vercel - money-pit: e2e'
 
-      # Only `url` is documented; dumping the rest makes the payload shape
-      # visible the first time the gate runs.
-      - name: Dump dispatch payload
-        run: echo '${{ toJSON(github.event.client_payload) }}'
-
-      # Vercel sends a bare hostname in some contexts and a full URL in others.
+      # Observed payloads carry a full URL, but the docs don't commit to that.
       - name: Resolve deployment URL
         id: target
         run: |
@@ -56,6 +51,7 @@ jobs:
       - run: bun run e2e
         env:
           E2E_BASE_URL: ${{ steps.target.outputs.url }}
+          VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
 
       - uses: actions/upload-artifact@v4
         if: failure()
