@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "npx serve out",
+    "start": "bunx serve out",
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -15,6 +15,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
+  "trustedDependencies": [
+    "unrs-resolver"
+  ],
   "dependencies": {
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.23",

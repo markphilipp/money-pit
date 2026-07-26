@@ -1,6 +1,8 @@
 .DS_Store
 node_modules/
 package-lock.json
+yarn.lock
+pnpm-lock.yaml
 statements/
 *.csv
 !e2e/fixtures/*.csv
@@ -11,7 +13,7 @@ prototype/data.js
 /out/
 /build
 *.pem
-npm-debug.log*
+*-debug.log*
 .env*
 .vercel
 *.tsbuildinfo
