@@ -9,6 +9,7 @@ import { Header } from '@/components/layout/Header';
 import { StatsStrip } from '@/components/layout/StatsStrip';
 import { TransactionTable } from '@/components/table/TransactionTable';
 import { EmptyState } from '@/components/upload/EmptyState';
+import { useHeightVar } from '@/hooks/useHeightVar';
 import { useHydrated } from '@/store/useAppStore';
 import { useAppState, useFiltered } from '@/store/hooks';
 import { selectStats } from '@/store/selectors';
@@ -19,6 +20,7 @@ export default function Home() {
   const state = useAppState();
   const filtered = useFiltered();
   const stats = useMemo(() => selectStats(filtered, state.rules), [filtered, state.rules]);
+  const chartsRef = useHeightVar('--charts-h');
 
   if (!hydrated) return <main className={`wrap ${styles.loading}`} aria-busy="true" />;
   if (state.rawRows.length === 0)
@@ -33,9 +35,11 @@ export default function Home() {
       <Header />
       <StatsStrip stats={stats} />
 
-      <div className={chartStyles.charts}>
-        <CategoryChart />
-        <PersonChart />
+      <div ref={chartsRef} className={styles.stickyCharts}>
+        <div className={chartStyles.charts}>
+          <CategoryChart />
+          <PersonChart />
+        </div>
       </div>
 
       <TransactionTable />
