@@ -1,0 +1,77 @@
+.header {
+  position: relative;
+  margin-bottom: 26px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  justify-content: center;
+}
+
+.header::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  width: 76px;
+  height: 3px;
+  margin-left: -38px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.mark {
+  flex: none;
+  width: auto;
+  height: clamp(58px, 7.5vw, 78px);
+}
+
+.lockup {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-weight: inherit;
+}
+
+.script {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--brand-brown);
+}
+
+.script::before,
+.script::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.4;
+}
+
+.wordmark {
+  font-family: var(--font-condensed), sans-serif;
+  font-weight: 700;
+  font-size: clamp(32px, 4.4vw, 46px);
+  line-height: 0.92;
+  letter-spacing: 0.005em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.money {
+  color: var(--brand-green);
+}
+
+.pit {
+  color: var(--brand-brown);
+}

@@ -1,0 +1,10 @@
+.next
+out
+coverage
+node_modules
+.worktrees
+worktrees
+prototype
+playwright-report
+test-results
+bun.lock

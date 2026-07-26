@@ -1,0 +1,68 @@
+.zone {
+  display: block;
+  width: 100%;
+  border: 2px dashed var(--line);
+  border-radius: var(--radius);
+  background: #fff;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  color: var(--ink-soft);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.zone:hover,
+.zone.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.title {
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ink);
+}
+
+.hint {
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.errors {
+  margin-top: 12px;
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.errors li {
+  list-style: none;
+}
+
+.errors li + li {
+  margin-top: 6px;
+}
+
+.errors strong {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
