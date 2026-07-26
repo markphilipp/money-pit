@@ -37,7 +37,7 @@ const clickSlice = (index: number) => {
 
 beforeEach(async () => {
   captured.length = 0;
-  resetStore();
+  await resetStore();
   await seedStore();
 });
 

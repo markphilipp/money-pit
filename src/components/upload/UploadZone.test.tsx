@@ -5,7 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SAMPLE_CSV } from '@/test/fixtures';
 import { EmptyState } from './EmptyState';
 
-beforeEach(() => resetStore());
+beforeEach(resetStore);
 
 describe('EmptyState + UploadZone', () => {
   it('explains the expected CSV format', () => {

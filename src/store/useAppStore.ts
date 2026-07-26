@@ -34,6 +34,8 @@ export interface AppState {
   chartMode: ChartMode;
   sort: SortState;
   selectedIds: Set<string>;
+  /** Seeds `/rules/new`; persisted so the route survives a reload rather than losing its subject. */
+  ruleSources: string[];
 
   uploadFiles: (files: File[]) => Promise<UploadResult>;
   addRule: (rule: CategoryRule) => void;
@@ -41,6 +43,8 @@ export interface AppState {
   deleteRule: (id: string) => void;
   reorderRules: (id: string, direction: -1 | 1) => void;
   setOverride: (ids: string[], categoryId: string) => void;
+  clearOverrides: (ids: string[]) => void;
+  setRuleSources: (ids: string[]) => void;
   setFilter: (patch: Partial<FilterState>) => void;
   setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
@@ -61,11 +65,12 @@ const initialState = {
   chartMode: 'donut' as ChartMode,
   sort: { key: 'date', dir: -1 } as SortState,
   selectedIds: new Set<string>(),
+  ruleSources: [] as string[],
 };
 
 type PersistedState = Pick<
   AppState,
-  'rawRows' | 'rules' | 'overrides' | 'filters' | 'chartMode' | 'sort'
+  'rawRows' | 'rules' | 'overrides' | 'filters' | 'chartMode' | 'sort' | 'ruleSources'
 >;
 
 const noopStorage = {
@@ -161,6 +166,15 @@ export const useAppStore = create<AppState>()(
           return { overrides };
         }),
 
+      clearOverrides: (ids) =>
+        set((s) => {
+          const overrides = { ...s.overrides };
+          for (const id of ids) delete overrides[id];
+          return { overrides };
+        }),
+
+      setRuleSources: (ids) => set({ ruleSources: ids }),
+
       setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
 
       setColumnFilter: (column, filter) =>
@@ -226,7 +240,7 @@ export const useAppStore = create<AppState>()(
 
       clearSelection: () => set({ selectedIds: new Set<string>() }),
 
-      resetAll: () => set({ ...initialState, selectedIds: new Set<string>() }),
+      resetAll: () => set({ ...initialState, selectedIds: new Set<string>(), ruleSources: [] }),
     }),
     {
       name: 'money-pit',
@@ -238,6 +252,7 @@ export const useAppStore = create<AppState>()(
         filters: s.filters,
         chartMode: s.chartMode,
         sort: s.sort,
+        ruleSources: s.ruleSources,
       }),
       merge: (persisted, current) => {
         const raw = persisted as Partial<PersistedState> | undefined;
@@ -248,13 +263,14 @@ export const useAppStore = create<AppState>()(
           filters: { ...emptyFilters, ...raw.filters },
         };
       },
-      // static export prerenders with empty state; rehydrate after mount instead (see useHydrated)
+      // the server renders with empty state — sessionStorage only exists on the client, so
+      // rehydrate after mount instead (see useHydrated)
       skipHydration: true,
     },
   ),
 );
 
-/** Gates render until sessionStorage has been read, avoiding an SSG hydration mismatch. */
+/** Gates render until sessionStorage has been read, avoiding a hydration mismatch. */
 export function useHydrated(): boolean {
   const hydrated = useSyncExternalStore(
     (onChange) => useAppStore.persist.onFinishHydration(onChange),

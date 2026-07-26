@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 // Set by the Vercel deployment gate to point the suite at a live deployment
-// instead of a locally served `out/`.
+// instead of a locally run `next start`.
 const externalBaseURL = process.env.E2E_BASE_URL;
 
 // Per-deployment URLs sit behind Vercel SSO; this header is the automation
@@ -29,7 +29,8 @@ export default defineConfig({
   webServer: externalBaseURL
     ? undefined
     : {
-        command: 'bunx serve out -l 3210',
+        // the real production server, not a static file host — routes are rendered, not pre-written
+        command: 'bunx next start -p 3210',
         url: 'http://127.0.0.1:3210',
         reuseExistingServer: !process.env.CI,
         timeout: 60_000,

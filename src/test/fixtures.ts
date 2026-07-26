@@ -27,6 +27,11 @@ export async function seedStore(text = SAMPLE_CSV) {
   await useAppStore.getState().uploadFiles([csvFile(text)]);
 }
 
-export function resetStore() {
+/**
+ * Screens gate on `useHydrated()`, so tests render as the real app does on its second paint:
+ * after sessionStorage has been read.
+ */
+export async function resetStore() {
   useAppStore.getState().resetAll();
+  if (!useAppStore.persist.hasHydrated()) await useAppStore.persist.rehydrate();
 }

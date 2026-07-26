@@ -1,8 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { RulesManagerModal } from '@/components/rules/RulesManagerModal';
 import { useAppStore } from '@/store/useAppStore';
 import styles from './UserMenu.module.css';
 
@@ -11,7 +11,6 @@ export function UserMenu() {
   const resetAll = useAppStore((s) => s.resetAll);
   const hasData = useAppStore((s) => s.rawRows.length > 0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [rulesOpen, setRulesOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [errors, setErrors] = useState<{ file: string; message: string }[]>([]);
 
@@ -64,8 +63,8 @@ export function UserMenu() {
                 <DropdownMenu.Separator className={styles.separator} />
               </>
             )}
-            <DropdownMenu.Item className={styles.item} onSelect={() => setRulesOpen(true)}>
-              Category rules…
+            <DropdownMenu.Item className={styles.item} asChild>
+              <Link href="/rules">Category rules…</Link>
             </DropdownMenu.Item>
             <DropdownMenu.Separator className={styles.separator} />
             <DropdownMenu.Item className={styles.item} disabled>
@@ -105,8 +104,6 @@ export function UserMenu() {
           </button>
         </div>
       )}
-
-      <RulesManagerModal open={rulesOpen} onClose={() => setRulesOpen(false)} />
     </>
   );
 }

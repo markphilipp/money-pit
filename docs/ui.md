@@ -4,16 +4,19 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area     | Files                                                                                      | Notes                                                                           |
-| -------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- |
-| `layout` | `Header`, `UserMenu`, `StatsStrip`                                                         | `Header` is the brand lockup only; all actions live in `UserMenu`.              |
-| `charts` | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `page.tsx`.     |
-| `table`  | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store. |
-| `rules`  | `RulesManagerModal`, `RuleBuilderModal`, `rqbMap`                                          | `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.           |
-| `upload` | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target.                                                     |
-| `common` | `ColorPickerPopover`                                                                       | Shared palette popover.                                                         |
+| Area        | Files                                                                                      | Notes                                                                                       |
+| ----------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
+| `layout`    | `Header`, `UserMenu`, `StatsStrip`                                                         | `Header` is the brand lockup only; all actions live in `UserMenu`.                          |
+| `dashboard` | `Dashboard`                                                                                | The `/` screen. `page.tsx` is a server component that renders it.                           |
+| `charts`    | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                |
+| `table`     | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store.             |
+| `rules`     | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `rqbMap`            | One screen per route; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. |
+| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target.                                                                 |
+| `common`    | `ColorPickerPopover`                                                                       | Shared palette popover.                                                                     |
 
-Every component with state or event handlers needs `'use client'` — the app is a static export.
+Every component with state or event handlers needs `'use client'`. The route files under
+`src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
+that way, so each route's shell and `<title>` are rendered on the server.
 
 ## Sticky charts and table header
 
@@ -54,11 +57,60 @@ payments/credits toggle live in the bar above.
 
 Row actions follow one rule — **acting inside a selection applies to the whole selection, otherwise
 to that row alone** (`targetsFor` in `TransactionTable.tsx`). This covers the category pill, the
-right-click menu and "create rule from rows", which seeds a `RuleBuilderModal` draft from the
-selected descriptions.
+right-click menu and "create rule from rows", which stores the ids and routes to `/rules/new`.
 
 Payments rows are excluded unless "show payments & credits" is on; the footer total reflects only
 what's visible.
+
+## Routes
+
+| Route         | Screen             | Notes                                                                                          |
+| ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| `/`           | `Dashboard`        | Charts + table. Prerendered shell, hydrated from `sessionStorage`.                             |
+| `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
+| `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
+| `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
+
+`new` is a reserved rule id (`src/lib/rules/naming.ts`) because the static segment shadows the
+dynamic one. `not-found.tsx` and `error.tsx` cover unknown URLs and render errors; an id that
+matches no rule is _not_ a 404 — rules are session-scoped, so the screen explains that instead.
+
+Screens share their chrome through `RuleScreen.module.css` (frame, heading, action row); each keeps
+only what is genuinely its own.
+
+## Rule editor screen — `RuleEditorScreen`
+
+"Create rule" from the table calls `setRuleSources(ids)` and routes to `/rules/new`. The route
+decides that the screen is showing; the store only carries which transactions the rule is being
+induced from. `ruleSources` _is_ persisted, so reloading `/rules/new` resumes rather than stranding
+the screen with no subject.
+
+Three stacked sections:
+
+1. **Suggested rules** — cards from `suggestRuleGroups` (see
+   [data-model.md](data-model.md#rule-suggestions--srclibrulessuggestts)), each showing its
+   condition and `matches all N selected + M others`. Clicking one loads it into the builder and
+   pre-fills the category name, unless the user has already typed one. The active card is marked
+   `aria-pressed` and tagged **edited** once the builder diverges from it.
+2. **Rule** — color, name, and `RuleConditionsEditor` (the react-querybuilder setup shared with
+   `RuleForm`).
+3. **Matches** — recomputed on every builder change.
+
+The match preview is the guardrail, and it is deliberately honest about three things:
+
+- The **originally selected transactions stay listed** whatever the rule now says. Ones the rule no
+  longer matches are struck through, tagged _will not match_, and counted in a `role="alert"` banner
+  above. Editing a suggestion into something too narrow is visible immediately.
+- Rules are **first-match-wins**, so `matchesGroup` alone overstates the reach. The preview inserts
+  the draft at the position `addRule` would give it (after the user rules, before the builtins) and
+  runs `matchCategory`; a row an earlier rule already owns is tagged _stays in ‹rule›_.
+- **Manual overrides beat every rule.** A selected row with an override is tagged
+  _manual category wins_, and saving offers to clear those overrides — otherwise "applies to
+  everything it matches" would silently skip exactly the rows the user hand-corrected.
+
+An emptied builder means "no rule yet", not "a rule that excludes everything" — `fromRqb` drops
+half-finished conditions, so mid-edit the group is briefly empty and flagging every row would be
+noise. Saving is retroactive for free: categorization derives from the rules on read.
 
 ## Account menu — `UserMenu`
 

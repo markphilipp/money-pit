@@ -36,9 +36,9 @@ const renderApp = () =>
 
 const dropZone = () => screen.getByLabelText(/Drop statement CSVs here/);
 
-beforeEach(() => {
+beforeEach(async () => {
   chartClicks.length = 0;
-  resetStore();
+  await resetStore();
   sessionStorage.clear();
 });
 

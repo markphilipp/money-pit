@@ -1,6 +1,21 @@
 import '@testing-library/jest-dom/vitest';
-import { afterEach } from 'vitest';
+import { createElement } from 'react';
+import { afterEach, vi } from 'vitest';
 import { cleanup } from '@testing-library/react';
+import { navigationState, resetRouter, routerMock } from '@/test/router';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => routerMock,
+  usePathname: () => navigationState.pathname,
+  useParams: () => navigationState.params,
+  useSearchParams: () => new URLSearchParams(),
+}));
+
+// next/link reaches for the app router context, which no unit test mounts.
+vi.mock('next/link', () => ({
+  default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) =>
+    createElement('a', { href, ...rest }, children),
+}));
 
 // jsdom ships Blob without the modern text()/arrayBuffer() readers.
 if (typeof Blob.prototype.text !== 'function') {
@@ -25,5 +40,6 @@ if (typeof globalThis.ResizeObserver === 'undefined') {
 
 afterEach(() => {
   cleanup();
+  resetRouter();
   sessionStorage.clear();
 });

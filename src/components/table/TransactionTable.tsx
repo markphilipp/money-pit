@@ -1,14 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { Transaction } from '@/lib/types';
-import type { RuleGroup } from '@/lib/rules/types';
-import { transactionsToDraftGroup } from '@/lib/rules/engine';
 import { fmtMoney, personShort } from '@/lib/format';
 import { useHeightVar } from '@/hooks/useHeightVar';
-import { RuleBuilderModal } from '@/components/rules/RuleBuilderModal';
-import { useAppState, usePersons, useSortedFiltered, useTransactions } from '@/store/hooks';
+import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
 import { emptyFilters, useAppStore } from '@/store/useAppStore';
 import { BulkBar } from './BulkBar';
@@ -28,7 +26,6 @@ interface PickerState {
 export function TransactionTable() {
   const state = useAppState();
   const rows = useSortedFiltered();
-  const allTransactions = useTransactions();
   const persons = usePersons();
   const setFilter = useAppStore((s) => s.setFilter);
   const setColumnFilter = useAppStore((s) => s.setColumnFilter);
@@ -37,8 +34,9 @@ export function TransactionTable() {
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
   const clearSelection = useAppStore((s) => s.clearSelection);
+  const setRuleSources = useAppStore((s) => s.setRuleSources);
+  const router = useRouter();
   const [picker, setPicker] = useState<PickerState | null>(null);
-  const [draft, setDraft] = useState<RuleGroup | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const headRef = useHeightVar('--table-head-h');
 
@@ -82,11 +80,9 @@ export function TransactionTable() {
   /** Acting inside a selection applies to the whole selection, otherwise to that row alone. */
   const targetsFor = (id: string) => (state.selectedIds.has(id) ? [...state.selectedIds] : [id]);
 
-  const draftFrom = (ids: string[]) => {
-    const byId = new Map(allTransactions.map((t) => [t.id, t]));
-    setDraft(
-      transactionsToDraftGroup(ids.map((id) => byId.get(id)).filter(Boolean) as Transaction[]),
-    );
+  const startRuleFrom = (ids: string[]) => {
+    setRuleSources(ids);
+    router.push('/rules/new');
   };
 
   return (
@@ -123,7 +119,7 @@ export function TransactionTable() {
               bulk: true,
             })
           }
-          onCreateRule={() => draftFrom([...state.selectedIds])}
+          onCreateRule={() => startRuleFrom([...state.selectedIds])}
         />
       </div>
 
@@ -193,7 +189,7 @@ export function TransactionTable() {
               <RowContextMenu
                 key={row.id}
                 selected={state.selectedIds.has(row.original.id)}
-                onCreateRule={() => draftFrom(targetsFor(row.original.id))}
+                onCreateRule={() => startRuleFrom(targetsFor(row.original.id))}
                 onToggleSelect={() => toggleSelected(row.original.id)}
                 onChangeCategory={({ x, y }) => {
                   const targetIds = targetsFor(row.original.id);
@@ -254,12 +250,6 @@ export function TransactionTable() {
           }}
         />
       )}
-
-      <RuleBuilderModal
-        open={draft !== null}
-        draft={draft ? { conditions: draft } : undefined}
-        onClose={() => setDraft(null)}
-      />
     </div>
   );
 }

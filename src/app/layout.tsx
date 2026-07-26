@@ -20,7 +20,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'The Money Pit',
+  title: { default: 'The Money Pit', template: '%s · The Money Pit' },
   description:
     'Upload a credit-card statement CSV and see where the money went. Runs entirely in your browser.',
 };

@@ -21,7 +21,8 @@ prevent** — a stale persisted category would survive a rule edit and silently 
 charts.
 
 `selectedIds` is deliberately _not_ persisted: a `Set` doesn't survive JSON, and a selection
-outliving a reload is not useful.
+outliving a reload is not useful. `ruleEditor` isn't either — a reload should land on the dashboard,
+not resume a half-written rule.
 
 ## The store — `src/store/useAppStore.ts`
 
@@ -36,6 +37,11 @@ Actions worth knowing before you add one:
   bottom. First matching rule wins, so a new rule placed after `other` could never match.
 - `deleteRule` — also strips the deleted id out of the active category checklist filter, otherwise
   the table would filter on a category that no longer exists.
+- `setRuleSources(ids)` — seeds `/rules/new` with the transactions to induce a rule from. The
+  _route_ decides which screen shows; this only carries its subject. It is inside `partialize`, so
+  reloading `/rules/new` keeps working instead of landing on a screen with no subject.
+- `clearOverrides(ids)` — hands rows back to the rules. Used when saving a rule that would otherwise
+  be shadowed by manual categories on the very rows it was induced from.
 - `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
   `filters.columnFilters` entirely when they go empty, so `columnFilters` only ever holds live
   filters. Use `checklistValues()` from `src/lib/rules/engine.ts` to read them back; the map is
@@ -43,10 +49,12 @@ Actions worth knowing before you add one:
 
 ### Hydration
 
-Static export prerenders with empty state, so `persist` runs with `skipHydration: true` and
-`useHydrated()` rehydrates after mount via `useSyncExternalStore`. `src/app/page.tsx` renders an
-`aria-busy` placeholder until then. Reading store state before hydration gives you the initial
-state, not the session's — anything that must see persisted data belongs below that gate.
+The server renders with empty state — `sessionStorage` only exists in the browser — so `persist`
+runs with `skipHydration: true` and `useHydrated()` rehydrates after mount via
+`useSyncExternalStore`. Every screen renders an `aria-busy` placeholder until then. Reading store
+state before hydration gives you the initial state, not the session's — anything that must see
+persisted data belongs below that gate. This is why `/rules/[id]` resolves its rule _after_
+hydration rather than on the server: which rule an id refers to is not knowable there.
 
 ## Selectors — `src/store/selectors.ts`
 

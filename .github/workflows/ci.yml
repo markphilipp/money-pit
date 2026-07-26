@@ -32,8 +32,14 @@ jobs:
       - run: bun run build
       - uses: actions/upload-artifact@v4
         with:
-          name: static-export
-          path: out
+          name: next-build
+          path: |
+            .next
+            !.next/cache
+          # `.next` is a dot-directory and the action skips hidden files by default,
+          # which uploads an empty artifact and only warns — hence the hard error too.
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 1
 
   e2e:
@@ -47,8 +53,8 @@ jobs:
       - run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          name: static-export
-          path: out
+          name: next-build
+          path: .next
       - name: Cache Playwright browsers
         uses: actions/cache@v4
         with:
