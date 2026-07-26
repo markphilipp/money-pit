@@ -6,6 +6,7 @@ import type { Transaction } from '@/lib/types';
 import type { RuleGroup } from '@/lib/rules/types';
 import { transactionsToDraftGroup } from '@/lib/rules/engine';
 import { fmtMoney, personShort } from '@/lib/format';
+import { useHeightVar } from '@/hooks/useHeightVar';
 import { RuleBuilderModal } from '@/components/rules/RuleBuilderModal';
 import { useAppState, usePersons, useSortedFiltered, useTransactions } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
@@ -39,6 +40,7 @@ export function TransactionTable() {
   const [picker, setPicker] = useState<PickerState | null>(null);
   const [draft, setDraft] = useState<RuleGroup | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const headRef = useHeightVar('--table-head-h');
 
   const rulesById = useMemo(() => new Map(state.rules.map((r) => [r.id, r])), [state.rules]);
 
@@ -89,7 +91,7 @@ export function TransactionTable() {
 
   return (
     <div className={`card ${styles.tableCard}`}>
-      <div className={styles.head}>
+      <div ref={headRef} className={styles.head}>
         <h2>
           Transactions <span className={styles.count}>({rows.length})</span>
         </h2>
