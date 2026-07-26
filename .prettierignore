@@ -1,0 +1,8 @@
+.next
+out
+coverage
+node_modules
+prototype
+playwright-report
+test-results
+package-lock.json

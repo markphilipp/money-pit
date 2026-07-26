@@ -1,0 +1,91 @@
+.header {
+  margin-bottom: 26px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.eyebrow {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-family: var(--font-condensed), sans-serif;
+  font-weight: 700;
+  font-size: clamp(34px, 5vw, 52px);
+  line-height: 1;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+}
+
+.thin {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+
+.rule {
+  height: 3px;
+  background: var(--accent);
+  width: 72px;
+  margin-top: 12px;
+  border-radius: 2px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.add {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.add:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.danger {
+  border-style: solid;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.input {
+  display: none;
+}
+
+.errors {
+  flex-basis: 100%;
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 13px;
+  list-style: none;
+}
+
+.errors strong {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}

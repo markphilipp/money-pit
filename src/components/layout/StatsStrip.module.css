@@ -1,0 +1,36 @@
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin: 22px 0;
+}
+
+.stat {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.value {
+  font-family: var(--font-mono), monospace;
+  font-size: 22px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.small {
+  font-size: 16px;
+}
+
+.neg {
+  color: var(--green);
+}

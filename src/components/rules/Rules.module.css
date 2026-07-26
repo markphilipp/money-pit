@@ -1,0 +1,137 @@
+.panel {
+  margin-bottom: 22px;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  background: none;
+  border: 1px dashed var(--ink-soft);
+  color: var(--ink-soft);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.trigger:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.body {
+  margin-top: 12px;
+}
+
+.intro {
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-bottom: 12px;
+}
+
+.rule {
+  display: grid;
+  grid-template-columns: 34px minmax(120px, 1fr) minmax(180px, 2fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--grid);
+}
+
+@media (max-width: 720px) {
+  .rule {
+    grid-template-columns: 34px 1fr;
+  }
+}
+
+.rule input[type='text'] {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  width: 100%;
+}
+
+.keywords {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px !important;
+}
+
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: none;
+  cursor: pointer;
+}
+
+.actions {
+  display: flex;
+  gap: 4px;
+}
+
+.iconBtn {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.iconBtn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.iconBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.builtin {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  align-self: center;
+}
+
+.addRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.addBtn {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.addBtn:hover {
+  background: var(--accent);
+  border-color: var(--accent);
+}

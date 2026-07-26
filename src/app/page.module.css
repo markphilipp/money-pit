@@ -1,0 +1,23 @@
+.topBar {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-end;
+  margin-bottom: 22px;
+}
+
+.search input {
+  min-width: 220px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.loading {
+  min-height: 60vh;
+}
