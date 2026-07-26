@@ -183,17 +183,17 @@ describe('TransactionTable', () => {
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });
 
-  it('drafts a rule from the row context menu', async () => {
+  it('opens the rule editor on just the row from the row context menu', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
     await user.pointer({ keys: '[MouseRight]', target: bodyRows()[0] });
     await user.click(screen.getByRole('menuitem', { name: 'Create rule from transaction' }));
 
-    expect(screen.getByDisplayValue('APPLE.COM/BILL CUPERTINO CA')).toBeInTheDocument();
+    expect(useAppStore.getState().ruleEditor?.sourceIds).toHaveLength(1);
   });
 
-  it('drafts one condition per selected row from the bulk bar', async () => {
+  it('opens the rule editor on the whole selection from the bulk bar', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
@@ -201,8 +201,9 @@ describe('TransactionTable', () => {
     await user.click(within(bodyRows()[1]).getByRole('checkbox'));
     await user.click(screen.getByRole('button', { name: 'Create rule' }));
 
-    expect(screen.getByDisplayValue('APPLE.COM/BILL CUPERTINO CA')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('AMAZON MKTPL*DEMO1234 SEATTLE WA')).toBeInTheDocument();
+    const { ruleEditor, selectedIds } = useAppStore.getState();
+    expect(ruleEditor?.sourceIds).toEqual([...selectedIds]);
+    expect(ruleEditor?.sourceIds).toHaveLength(2);
   });
 
   it('selects a row from its context menu', async () => {

@@ -26,6 +26,11 @@ export const emptyFilters: FilterState = {
   columnFilters: {},
 };
 
+/** The transactions a new rule is being induced from; `null` while the dashboard is showing. */
+export interface RuleEditorState {
+  sourceIds: string[];
+}
+
 export interface AppState {
   rawRows: RawStatementRow[];
   rules: CategoryRule[];
@@ -34,6 +39,7 @@ export interface AppState {
   chartMode: ChartMode;
   sort: SortState;
   selectedIds: Set<string>;
+  ruleEditor: RuleEditorState | null;
 
   uploadFiles: (files: File[]) => Promise<UploadResult>;
   addRule: (rule: CategoryRule) => void;
@@ -41,6 +47,9 @@ export interface AppState {
   deleteRule: (id: string) => void;
   reorderRules: (id: string, direction: -1 | 1) => void;
   setOverride: (ids: string[], categoryId: string) => void;
+  clearOverrides: (ids: string[]) => void;
+  openRuleEditor: (sourceIds: string[]) => void;
+  closeRuleEditor: () => void;
   setFilter: (patch: Partial<FilterState>) => void;
   setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
@@ -61,6 +70,7 @@ const initialState = {
   chartMode: 'donut' as ChartMode,
   sort: { key: 'date', dir: -1 } as SortState,
   selectedIds: new Set<string>(),
+  ruleEditor: null as RuleEditorState | null,
 };
 
 type PersistedState = Pick<
@@ -161,6 +171,17 @@ export const useAppStore = create<AppState>()(
           return { overrides };
         }),
 
+      clearOverrides: (ids) =>
+        set((s) => {
+          const overrides = { ...s.overrides };
+          for (const id of ids) delete overrides[id];
+          return { overrides };
+        }),
+
+      openRuleEditor: (sourceIds) => set({ ruleEditor: { sourceIds } }),
+
+      closeRuleEditor: () => set({ ruleEditor: null }),
+
       setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
 
       setColumnFilter: (column, filter) =>
@@ -226,7 +247,7 @@ export const useAppStore = create<AppState>()(
 
       clearSelection: () => set({ selectedIds: new Set<string>() }),
 
-      resetAll: () => set({ ...initialState, selectedIds: new Set<string>() }),
+      resetAll: () => set({ ...initialState, selectedIds: new Set<string>(), ruleEditor: null }),
     }),
     {
       name: 'money-pit',

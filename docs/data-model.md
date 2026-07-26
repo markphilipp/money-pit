@@ -74,8 +74,46 @@ Condition fields and operators (`types.ts`):
 - `matchesColumnFilter` reuses the same operator implementations for table column filters, which is
   why filter and rule semantics can't diverge.
 - `describeGroup` renders the one-line human summary shown in the rules manager (truncated at 80
-  chars). `keywordsToGroup` / `transactionsToDraftGroup` build the OR-of-contains group used by the
-  defaults and by "create rule from selected rows".
+  chars). `keywordsToGroup` builds the OR-of-contains group used by the defaults;
+  `transactionsToDraftGroup` builds the literal one-condition-per-description fallback.
+
+## Rule suggestions — `src/lib/rules/suggest.ts`
+
+`suggestRuleGroups(selected, all)` induces 1–3 ranked description rules from the transactions the
+user selected, always followed by the `exact-or` fallback so "just use the literal descriptions"
+stays one click away. Every candidate must match **all** of the selected rows; `othersMatched`
+reports how much else in the corpus it would claim. Pure, synchronous and cheap enough to re-run on
+every keystroke at this app's scale (hundreds to low-thousands of rows).
+
+Descriptors are tokenized on separators (`* # - _ , ; : | / \ ( ) [ ]`) **keeping raw offsets**,
+because the engine does no normalization beyond upper-casing — an induced value has to be a literal
+substring of every raw description. Tokens are then classified and the noise dropped:
+
+| Kind      | Rule                                                                         |
+| --------- | ---------------------------------------------------------------------------- |
+| `marker`  | wallet/processor/POS word (`SQ`, `TST*`, `PAYPAL`, …) in the first 2 slots   |
+| `numeric` | all digits/dots — store numbers, phone fragments                             |
+| `alnumId` | ≥5 chars mixing letters and digits — order ids like `MKTPL*DEMO1234`         |
+| `state`   | 2-letter US state in the last two slots                                      |
+| `noise`   | `US`, `COM`, `INC`, … plus the word before a trailing state (the city guess) |
+| `word`    | everything else — the content the suggestions are built from                 |
+
+Candidates are the longest contiguous token run every example shares, taken twice: over content
+tokens only (`token-core`, ranked first) and over the whole token list (`common-substring`). When
+the examples share no run at all, they are clustered by Jaccard overlap of their content tokens
+(single-linkage, threshold 0.5, ≤4 clusters) and each cluster contributes one condition to a flat OR
+(`or-of-clusters`) — that is how `AMAZON MKTPL*…` and `AMZN Mktp US*…` end up in one rule.
+
+Rejections that keep the output honest:
+
+- A run flanked by another content word is a phrase cut in half — `ONLINE PAYMENT, THANK` out of
+  `ONLINE PAYMENT, THANK YOU`. Runs must stop at dropped noise or at the ends of the descriptor.
+- A run with no `word` token in it (`CHARLOTTE NC`) is a place, not a merchant.
+- Under 4 chars, majority non-letters, or ending in a digit.
+- Reproducing a whole descriptor verbatim generalizes nothing, so it falls through to `exact-or`.
+
+Groups are emitted **flat** (a single-level OR) even though the engine supports nesting — nested
+groups are hard to read back in the builder, and nothing here needs them.
 
 ## Default rules — `src/lib/defaultRules.ts`
 
