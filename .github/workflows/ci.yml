@@ -36,6 +36,10 @@ jobs:
           path: |
             .next
             !.next/cache
+          # `.next` is a dot-directory and the action skips hidden files by default,
+          # which uploads an empty artifact and only warns — hence the hard error too.
+          include-hidden-files: true
+          if-no-files-found: error
           retention-days: 1
 
   e2e:

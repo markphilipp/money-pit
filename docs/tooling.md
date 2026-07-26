@@ -30,6 +30,9 @@ Runs on every PR and on push to `main`:
 
 - **quality** — matrix of `lint`, `typecheck`, `test` (`fail-fast: false`, so all three report).
 - **build** — `bun run build`, uploads `.next` (minus `.next/cache`) as the `next-build` artifact.
+  It needs `include-hidden-files: true`: `.next` is a dot-directory and `upload-artifact` skips
+  hidden files by default, which uploads nothing and merely _warns_ — a green build job with no
+  artifact, failing only in `e2e`. `if-no-files-found: error` makes that fail where it happens.
 - **e2e** — downloads that artifact, caches browsers keyed on `bun.lock`, installs chromium via
   `bunx playwright install --with-deps`, runs `bun run e2e` (which boots `next start`); uploads the
   report on failure.
