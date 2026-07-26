@@ -29,10 +29,10 @@ rundown.
 
 ## Commands
 
-- `npm run dev` / `npm run build` / `npm start`
-- `npm run lint`, `npm run typecheck`, `npm test`, `npm run test:coverage`
-- `npm run e2e` — requires `npm run build` first (serves from `out/`)
-- `npm run format`
+- `bun run dev` / `bun run build` / `bun run start`
+- `bun run lint`, `bun run typecheck`, `bun run test`, `bun run test:coverage`
+- `bun run e2e` — requires `bun run build` first (serves from `out/`)
+- `bun run format`
 
 ## Conventions
 

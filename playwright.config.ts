@@ -9,7 +9,7 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:3210', trace: 'on-first-retry' },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
   webServer: {
-    command: 'npx serve out -l 3210',
+    command: 'bunx serve out -l 3210',
     url: 'http://127.0.0.1:3210',
     reuseExistingServer: !process.env.CI,
     timeout: 60_000,

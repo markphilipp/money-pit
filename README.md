@@ -10,8 +10,8 @@ tab and forgotten when you close it (session-only state in `sessionStorage`).
 ## Quick start
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
+bun install
+bun run dev        # http://localhost:3000
 ```
 
 Drop one or more statement CSVs onto the landing page. The dashboard replaces it; use **＋ Add
@@ -51,15 +51,15 @@ Status,Date,Description,Debit,Credit,Member Name
 
 | Command                 | What it does                                                                       |
 | ----------------------- | ---------------------------------------------------------------------------------- |
-| `npm run dev`           | Next.js dev server                                                                 |
-| `npm run build`         | Static export to `out/`                                                            |
-| `npm start`             | Serve the built `out/` locally                                                     |
-| `npm run lint`          | ESLint                                                                             |
-| `npm run typecheck`     | `tsc --noEmit`                                                                     |
-| `npm test`              | Vitest unit + RTL integration tests                                                |
-| `npm run test:coverage` | Same, with coverage for `lib/` and `store/`                                        |
-| `npm run e2e`           | Playwright (chromium); builds are served from `out/`, so run `npm run build` first |
-| `npm run format`        | Prettier                                                                           |
+| `bun run dev`           | Next.js dev server                                                                 |
+| `bun run build`         | Static export to `out/`                                                            |
+| `bun run start`         | Serve the built `out/` locally                                                     |
+| `bun run lint`          | ESLint                                                                             |
+| `bun run typecheck`     | `tsc --noEmit`                                                                     |
+| `bun run test`          | Vitest unit + RTL integration tests                                                |
+| `bun run test:coverage` | Same, with coverage for `lib/` and `store/`                                        |
+| `bun run e2e`           | Playwright (chromium); builds are served from `out/`, so run `bun run build` first |
+| `bun run format`        | Prettier                                                                           |
 
 ## Architecture
 
@@ -79,7 +79,7 @@ tests wired to the real store, and a handful of Playwright specs for what only a
 
 ## Deploy
 
-Netlify builds `npm run build` and publishes `out/` (see `netlify.toml`). To connect the repo, in the
+Netlify builds `bun run build` and publishes `out/` (see `netlify.toml`). To connect the repo, in the
 Netlify UI: **Add new site → Import an existing project → pick this GitHub repo**. Build command and
 publish directory are read from `netlify.toml`; no environment variables are needed. After that,
 `main` auto-deploys and every PR gets a deploy preview.
