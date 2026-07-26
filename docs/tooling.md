@@ -56,6 +56,12 @@ until a named check reports green. The wiring:
    `Vercel - money-pit: e2e`.
 4. Vercel promotes to `money-pit.vercel.app` only if that check passed.
 
+The status action is the **first** step in the job, not the last. Its `main` entry point marks the
+commit status pending and its `post` hook reports the job's real conclusion; run it late and there
+is a window where Vercel sees no pending check and can promote early. It reads the target commit
+from `client_payload.git.sha` and lists the run's jobs to derive its conclusion, so the workflow
+needs `statuses: write` **and** `actions: read`.
+
 This gate deliberately runs e2e only — `lint`, `typecheck` and `test` already have to pass before a
 commit can reach `main` (see the ruleset below), so the thing worth re-checking post-build is
 whether the deployed artifact actually works.

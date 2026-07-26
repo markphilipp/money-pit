@@ -10,12 +10,23 @@ on:
 permissions:
   contents: read
   statuses: write
+  # The status action lists the run's jobs to derive its own conclusion.
+  actions: read
 
 jobs:
   e2e:
     name: e2e against deployment
     runs-on: ubuntu-latest
     steps:
+      # First step on purpose: this action's `main` marks the commit status
+      # pending and its `post` hook reports the job's real conclusion. Placed
+      # any later, Vercel would see no pending check while the suite runs and
+      # could promote the deployment out from under it.
+      - name: Report status to Vercel
+        uses: 'vercel/repository-dispatch/actions/status@v1'
+        with:
+          name: 'Vercel - money-pit: e2e'
+
       # Only `url` is documented; dumping the rest makes the payload shape
       # visible the first time the gate runs.
       - name: Dump dispatch payload
@@ -52,9 +63,3 @@ jobs:
           name: playwright-report-deployment
           path: playwright-report
           retention-days: 7
-
-      - name: Report status to Vercel
-        if: always()
-        uses: 'vercel/repository-dispatch/actions/status@v1'
-        with:
-          name: 'Vercel - money-pit: e2e'
