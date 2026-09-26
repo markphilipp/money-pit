@@ -48,6 +48,8 @@
   font-size: 13px;
   padding: 8px 10px;
   border-radius: 6px;
+  color: inherit;
+  text-decoration: none;
   cursor: pointer;
   outline: none;
 }
@@ -106,13 +108,6 @@
   color: var(--accent);
   cursor: pointer;
   text-decoration: underline;
-}
-
-.soon {
-  font-family: var(--font-mono), monospace;
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .separator {

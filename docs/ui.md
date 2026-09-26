@@ -6,12 +6,13 @@ Components, layout mechanics and styling conventions.
 
 | Area        | Files                                                                                      | Notes                                                                                       |
 | ----------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `layout`    | `Header`, `UserMenu`, `StatsStrip`                                                         | `Header` is the brand lockup only; all actions live in `UserMenu`.                          |
+| `layout`    | `Header`, `UserMenu`, `StatsStrip`, `AccountSync`                                          | `Header` is the brand lockup only; all actions live in `UserMenu`.                          |
 | `dashboard` | `Dashboard`                                                                                | The `/` screen. `page.tsx` is a server component that renders it.                           |
 | `charts`    | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                |
 | `table`     | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store.             |
 | `rules`     | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `rqbMap`            | One screen per route; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. |
-| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target.                                                                 |
+| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.  |
+| `auth`      | `SignInScreen`                                                                             | Provider buttons for `/sign-in`, and what signing in stores.                                |
 | `common`    | `ColorPickerPopover`                                                                       | Shared palette popover.                                                                     |
 
 Every component with state or event handlers needs `'use client'`. The route files under
@@ -70,6 +71,7 @@ what's visible.
 | `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
 | `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
+| `/sign-in`    | `SignInScreen`     | Google / GitHub via `authClient.signIn.social`. Redirects to `/` when already signed in.       |
 
 `new` is a reserved rule id (`src/lib/rules/naming.ts`) because the static segment shadows the
 dynamic one. `not-found.tsx` and `error.tsx` cover unknown URLs and render errors; an id that
@@ -115,8 +117,12 @@ noise. Saving is retroactive for free: categorization derives from the rules on 
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (two-step confirm, in-menu), **Category rules…**, and a disabled
-"Sign in — coming soon". Add statement and Start over only appear once there's data.
+**Add statement**, **Start over** (two-step confirm, in-menu), **Category rules…**, and **Sign in…**
+(a link to `/sign-in`). Add statement and Start over only appear once there's data. Signed in, Start
+over is labelled **Delete account data**, because it deletes the account's rows and rules, and Sign
+in becomes **Sign out**. Sign out clears the tab's persisted state and does a full reload to `/`, so
+no account data survives in the in-memory store. The avatar stays a generic SVG: provider names and
+pictures are never stored, and not loading provider images keeps `img-src` at `'self'`.
 
 Two Radix gotchas encoded there, don't undo them:
 

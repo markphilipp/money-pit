@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useAppStore } from '@/store/useAppStore';
+import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SECOND_CSV, seedStore } from '@/test/fixtures';
 import { UserMenu } from './UserMenu';
 
@@ -15,7 +15,7 @@ describe('UserMenu', () => {
     render(<UserMenu />);
 
     await user.click(screen.getByLabelText('Account menu'));
-    expect(screen.getByRole('menuitem', { name: /Sign in/ })).toHaveAttribute('data-disabled', '');
+    expect(screen.getByRole('menuitem', { name: 'Sign in…' })).toHaveAttribute('href', '/sign-in');
 
     expect(screen.getByRole('menuitem', { name: 'Category rules…' })).toHaveAttribute(
       'href',
@@ -88,5 +88,23 @@ describe('UserMenu', () => {
 
     await user.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('offers sign-out and names the account deletion when signed in', async () => {
+    await seedStore();
+    const user = userEvent.setup();
+    render(
+      <SignedInContext value={true}>
+        <UserMenu />
+      </SignedInContext>,
+    );
+
+    await user.click(screen.getByLabelText('Account menu'));
+    expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /Sign in/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('menuitem', { name: 'Delete account data' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Confirm: delete everything' }));
+    expect(useAppStore.getState().rawRows).toHaveLength(0);
   });
 });

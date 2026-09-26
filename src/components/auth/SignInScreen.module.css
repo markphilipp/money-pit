@@ -1,0 +1,75 @@
+.shell {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.card {
+  max-width: 440px;
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 30px 30px 26px;
+}
+
+.title {
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.lede {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+  margin-bottom: 22px;
+}
+
+.providers {
+  display: grid;
+  gap: 10px;
+}
+
+.provider {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.provider:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.provider:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.error {
+  margin-top: 14px;
+  font-size: 13px;
+  color: var(--accent);
+}
+
+.alt {
+  margin-top: 22px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+
+.alt a {
+  color: var(--accent);
+}

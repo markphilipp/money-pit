@@ -1,12 +1,21 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useContext, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { useAppStore } from '@/store/useAppStore';
+import { authClient } from '@/auth/client';
+import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import styles from './UserMenu.module.css';
 
+// A full reload rebuilds the store from scratch, so no account data outlives the session in memory.
+async function signOut() {
+  await authClient.signOut();
+  useAppStore.persist.clearStorage();
+  window.location.assign('/');
+}
+
 export function UserMenu() {
+  const signedIn = useContext(SignedInContext);
   const uploadFiles = useAppStore((s) => s.uploadFiles);
   const resetAll = useAppStore((s) => s.resetAll);
   const hasData = useAppStore((s) => s.rawRows.length > 0);
@@ -45,7 +54,7 @@ export function UserMenu() {
                       className={`${styles.item} ${styles.danger}`}
                       onSelect={() => resetAll()}
                     >
-                      Confirm reset
+                      {signedIn ? 'Confirm: delete everything' : 'Confirm reset'}
                     </DropdownMenu.Item>
                     <DropdownMenu.Item className={styles.item}>Cancel</DropdownMenu.Item>
                   </>
@@ -57,7 +66,7 @@ export function UserMenu() {
                       setConfirming(true);
                     }}
                   >
-                    Start over
+                    {signedIn ? 'Delete account data' : 'Start over'}
                   </DropdownMenu.Item>
                 )}
                 <DropdownMenu.Separator className={styles.separator} />
@@ -67,9 +76,15 @@ export function UserMenu() {
               <Link href="/rules">Category rules…</Link>
             </DropdownMenu.Item>
             <DropdownMenu.Separator className={styles.separator} />
-            <DropdownMenu.Item className={styles.item} disabled>
-              Sign in <span className={styles.soon}>coming soon</span>
-            </DropdownMenu.Item>
+            {signedIn ? (
+              <DropdownMenu.Item className={styles.item} onSelect={() => void signOut()}>
+                Sign out
+              </DropdownMenu.Item>
+            ) : (
+              <DropdownMenu.Item className={styles.item} asChild>
+                <Link href="/sign-in">Sign in…</Link>
+              </DropdownMenu.Item>
+            )}
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>

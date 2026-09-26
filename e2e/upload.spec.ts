@@ -29,7 +29,11 @@ test('offers the account menu on the empty state', async ({ page }) => {
 
   await page.getByLabel('Account menu').click();
   await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: /Sign in/ })).toBeDisabled();
+  await page.getByRole('menuitem', { name: 'Sign in…' }).click();
+
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByText(/You don’t need an account/)).toBeVisible();
 });
 
 test('reports a bad file inline and still loads a good one', async ({ page }) => {

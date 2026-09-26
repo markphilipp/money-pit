@@ -16,7 +16,7 @@ changing shape, so don't mine it for detail or expand it without being asked.
 Next.js 16 App Router, server-rendered on Vercel, React 19, Zustand, Drizzle over Neon Postgres,
 Better Auth,
 CSS Modules over tokens in `src/app/globals.css`. Routes are real routes — `/`, `/rules`,
-`/rules/new`, `/rules/[id]` — not screens swapped by store state. Chart.js 4 via react-chartjs-2, TanStack Table v8,
+`/rules/new`, `/rules/[id]`, `/sign-in` — not screens swapped by store state. Chart.js 4 via react-chartjs-2, TanStack Table v8,
 react-querybuilder, Radix UI. Vitest + React Testing Library, Playwright for e2e. **bun** is the
 package manager.
 
@@ -59,7 +59,7 @@ src/db/           Drizzle client (lazy getDb()), schema/ and queries/; SQL migra
 src/auth/         Better Auth server instance (lazy getAuth()), session lookup, browser client
 src/components/   by feature area: charts, table, rules, upload, layout, common
 src/hooks/        shared React hooks (sticky-offset measurement)
-src/app/          App Router routes (/, /rules, /rules/new, /rules/[id]), actions/, global tokens
+src/app/          App Router routes (/, /rules, /rules/new, /rules/[id], /sign-in), actions/, global tokens
 e2e/              Playwright specs + synthetic CSV fixtures
 prototype/        original single-file dashboard, kept for visual reference only
 docs/             the sub-documents below
