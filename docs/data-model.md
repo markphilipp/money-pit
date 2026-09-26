@@ -139,6 +139,16 @@ ordinal, so a stored copy would orphan every override the day the hash changed. 
 missing rule id as Other. Dedupe stays `mergeRows` run before the write, never `ON CONFLICT DO
 NOTHING`, which would sum across files instead of taking the per-file maximum.
 
+## Claiming a session — `src/lib/claim.ts`
+
+`claimInto(account, local)` folds a signed-out session into an account. Rows go through
+`mergeRows`, so overlap is deduped like a second upload. Overrides are keyed by `txnId`, which
+survives the merge, and the session's win. An account still on the seeded defaults takes the
+session's rules wholesale. Otherwise only rules whose id the account lacks are added, ahead of the
+builtins: ids are name slugs, so a shared id is the same rule and the account's version stays.
+Rules read back from `jsonb` lose their key order, so "still on the defaults" is a structural
+comparison. Claiming the same session twice changes nothing.
+
 ## Formatting & color
 
 - `format.ts` — `fmtMoney` (US, minus sign is U+2212), `personShort` (first name, title-cased).

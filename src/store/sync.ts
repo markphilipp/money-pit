@@ -4,8 +4,17 @@ import { initialState, useAppStore, type AppState } from './useAppStore';
 
 export type AccountApi = Pick<
   typeof AccountActions,
-  'appendRows' | 'setOverrides' | 'replaceRules' | 'setPreference' | 'resetAccount' | 'loadSnapshot'
+  | 'appendRows'
+  | 'setOverrides'
+  | 'replaceRules'
+  | 'setPreference'
+  | 'resetAccount'
+  | 'loadSnapshot'
+  | 'claimLocal'
 >;
+
+/** Asked when a sign-in lands on a tab holding signed-out statements; resolves true to keep them. */
+export type ConfirmClaim = () => Promise<boolean>;
 
 // Server actions cap request bodies at 1 MB; a stored row serializes to roughly 200 bytes.
 const APPEND_CHUNK = 2000;
@@ -30,7 +39,11 @@ async function applySnapshot(api: AccountApi) {
  * one at a time in order. A failed write drops whatever was queued behind it and reloads the
  * snapshot, so the store falls back to what the server actually holds.
  */
-export function startAccountSync(api: AccountApi, onError: (message: string) => void) {
+export function startAccountSync(
+  api: AccountApi,
+  onError: (message: string) => void,
+  confirmClaim: ConfirmClaim,
+) {
   let stopped = false;
   let applying = false;
   let generation = 0;
@@ -87,8 +100,24 @@ export function startAccountSync(api: AccountApi, onError: (message: string) => 
   };
 
   let unsubscribe = () => {};
+  // Loading the snapshot switches persistence to account mode, which drops the session's statements
+  // from sessionStorage, so any claim has to finish first. A failed claim stops here and leaves
+  // them in place for a reload to offer again.
+  const claim = async () => {
+    const { rawRows, overrides, rules } = useAppStore.getState();
+    if (!rawRows.length || !(await confirmClaim()) || stopped) return true;
+    try {
+      await api.claimLocal(toStoredRows(rawRows, overrides), rules);
+      return true;
+    } catch {
+      onError('Couldn’t save this session’s statements to your account. Reload to try again.');
+      return false;
+    }
+  };
+
   const ready = (async () => {
     if (!useAppStore.persist.hasHydrated()) await useAppStore.persist.rehydrate();
+    if (!(await claim())) return;
     await load();
     if (!stopped) unsubscribe = useAppStore.subscribe(mirror);
   })().catch(() => onError('Couldn’t load your account.'));

@@ -17,6 +17,7 @@ function fakeApi(snapshot?: Partial<Awaited<ReturnType<AccountApi['loadSnapshot'
     replaceRules: vi.fn(async () => {}),
     setPreference: vi.fn(async () => {}),
     resetAccount: vi.fn(async () => {}),
+    claimLocal: vi.fn(async () => {}),
     loadSnapshot: vi.fn(async () => ({
       rows: [],
       rules: defaultRules,
@@ -28,9 +29,10 @@ function fakeApi(snapshot?: Partial<Awaited<ReturnType<AccountApi['loadSnapshot'
 
 let sync: ReturnType<typeof startAccountSync> | undefined;
 const onError = vi.fn();
+const confirmClaim = vi.fn(async () => false);
 
 async function start(api: AccountApi) {
-  sync = startAccountSync(api, onError);
+  sync = startAccountSync(api, onError, confirmClaim);
   await sync.ready;
   return sync;
 }
@@ -39,6 +41,7 @@ beforeEach(async () => {
   await resetStore();
   sessionStorage.clear();
   onError.mockClear();
+  confirmClaim.mockClear();
 });
 
 afterEach(() => sync?.stop());
@@ -154,5 +157,56 @@ describe('leaving mid-write', () => {
     finish();
     await sync!.settled();
     expect(leave()).toBe(true);
+  });
+});
+
+describe('claiming a signed-out session', () => {
+  it('asks only when the tab holds statements', async () => {
+    await start(fakeApi());
+    expect(confirmClaim).not.toHaveBeenCalled();
+  });
+
+  it('drops the session when declined', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV)]);
+    const api = fakeApi();
+    await start(api);
+
+    expect(confirmClaim).toHaveBeenCalledTimes(1);
+    expect(api.claimLocal).not.toHaveBeenCalled();
+    expect(state().rawRows).toEqual([]);
+  });
+
+  it('saves rows, overrides and rules to the account before loading it', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV)]);
+    const [txn] = selectTransactions(state());
+    state().setOverride([txn.id], 'pets');
+    state().setRule('home', { name: 'Renovations' });
+    confirmClaim.mockResolvedValueOnce(true);
+    const api = fakeApi();
+    api.loadSnapshot.mockImplementation(async () => {
+      expect(api.claimLocal).toHaveBeenCalled();
+      return { rows: [], rules: defaultRules, preference: null };
+    });
+    await start(api);
+
+    const [rows, rules] = api.claimLocal.mock.calls[0] as unknown as Parameters<
+      AccountApi['claimLocal']
+    >;
+    expect(rows).toHaveLength(7);
+    expect(rows.find((r) => r.description === txn.description)?.categoryOverride).toBe('pets');
+    expect(rules.find((r) => r.id === 'home')?.name).toBe('Renovations');
+  });
+
+  it('keeps the session in sessionStorage when the claim fails', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV)]);
+    confirmClaim.mockResolvedValueOnce(true);
+    const api = fakeApi();
+    api.claimLocal.mockRejectedValueOnce(new Error('offline'));
+    await start(api);
+
+    expect(onError).toHaveBeenCalledWith(expect.stringMatching(/Reload to try again/));
+    expect(api.loadSnapshot).not.toHaveBeenCalled();
+    expect(state().mode).toBe('local');
+    expect(JSON.parse(sessionStorage.getItem('money-pit')!).state.rawRows).toHaveLength(7);
   });
 });

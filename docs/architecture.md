@@ -83,6 +83,14 @@ order. If one fails, the queue behind it is dropped, the snapshot is reloaded ov
 and an alert says so. There is no per-action rollback. While a write is pending, a `beforeunload`
 guard asks before the page is left, because a server action can't outlive the page.
 
+**Claiming a signed-out session.** Loading the snapshot switches persistence to account mode,
+which drops the tab's statements from `sessionStorage`. So before the first load, if the rehydrated
+tab still holds signed-out rows (the case right after a sign-in), `AccountSync` asks whether to save
+them. Save calls `claimLocal`, which runs `claimInto()` from `src/lib/claim.ts` against the account
+in one transaction; Discard just loads the account. A failed claim stops before the load, so the
+rows stay in the tab and a reload asks again. The prompt can't be dismissed without choosing, and
+focus starts on Save so Enter never discards.
+
 The layout's session check reads the cookie first and builds the auth instance only if one is
 present, so signed-out rendering never needs a database. Reading request headers makes every route
 dynamic.

@@ -6,7 +6,8 @@ import { readRules, replaceRules as writeRules } from '@/db/queries/rules';
 import { deleteRows, insertRows, readRows, updateOverrides } from '@/db/queries/rows';
 import { requireUserId } from '@/auth/session';
 import { defaultRules } from '@/lib/defaultRules';
-import type { StoredRow } from '@/lib/sync';
+import { claimInto } from '@/lib/claim';
+import { fromStoredRows, overrideChanges, toStoredRows, type StoredRow } from '@/lib/sync';
 import type { CategoryRule } from '@/lib/types';
 import type { Preference } from '@/db/queries/preference';
 import { preferenceInput, rowsInput, rulesInput } from './input';
@@ -57,5 +58,29 @@ export async function loadSnapshot() {
       rules: rules.length ? rules : defaultRules,
       preference: await readPreference(tx, userId),
     };
+  });
+}
+
+/** Saves a signed-out session's rows, overrides and rules into the account; safe to retry. */
+export async function claimLocal(rows: StoredRow[], rules: CategoryRule[]) {
+  const userId = await requireUserId();
+  const local = { ...fromStoredRows(rowsInput.parse(rows)), rules: rulesInput.parse(rules) };
+  await getDb().transaction(async (tx) => {
+    const account = {
+      ...fromStoredRows(await readRows(tx, userId)),
+      rules: await readRules(tx, userId),
+    };
+    const merged = claimInto(account, local);
+    await insertRows(
+      tx,
+      userId,
+      toStoredRows(merged.rawRows, merged.overrides).slice(account.rawRows.length),
+    );
+    await updateOverrides(
+      tx,
+      userId,
+      overrideChanges(account.rawRows, account.overrides, merged.overrides),
+    );
+    await writeRules(tx, userId, merged.rules);
   });
 }
