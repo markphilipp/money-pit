@@ -119,6 +119,24 @@ groups are hard to read back in the builder, and nothing here needs them.
 
 Seed categories built from keyword lists. `payments` and `other` are `builtin: true`: renameable and
 recolorable, but not deletable, and always pinned last so user rules get first look at every row.
+Every new account gets all of them, builtins included, from Better Auth's `user.create.after` hook.
+
+## Account schema — `src/db/schema/app.ts`
+
+Signed-in state lives in Postgres, keyed by `user_id` with `ON DELETE CASCADE`. Only raw inputs are
+stored, never anything derived.
+
+| Table           | Holds                                                                                                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `statement_row` | One `RawStatementRow` plus its per-key `ordinal` and `category_override`. Unique on the row key + ordinal. `ORDER BY id` is `rawRows` order.                                 |
+| `category_rule` | The rule list. `position` is the array index; `src/db/queries/rules.ts` rewrites the whole list (delete + insert) in one transaction, so reorders never collide on position. |
+| `preference`    | `chart_mode`, `sort_key`, `sort_dir`.                                                                                                                                        |
+
+There is no `txnId` column and no override table. `txnId` is re-derived from the row and its
+ordinal, so a stored copy would orphan every override the day the hash changed. An override is the
+`category_override` column on its row, with no FK to rules, because categorization already treats a
+missing rule id as Other. Dedupe stays `mergeRows` run before the write, never `ON CONFLICT DO
+NOTHING`, which would sum across files instead of taking the per-file maximum.
 
 ## Formatting & color
 

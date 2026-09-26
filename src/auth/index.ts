@@ -1,7 +1,9 @@
 import { betterAuth, type BetterAuthOptions } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { getDb } from '@/db';
+import { replaceRules } from '@/db/queries/rules';
 import * as schema from '@/db/schema';
+import { defaultRules } from '@/lib/defaultRules';
 
 // No PII beyond the account email: providers' names and avatars are never stored.
 const dropProfile = () => ({ name: '', image: '' });
@@ -38,6 +40,11 @@ export function authOptions() {
       github: socialProvider('GITHUB'),
     },
     databaseHooks: {
+      user: {
+        create: {
+          after: (user) => getDb().transaction((tx) => replaceRules(tx, user.id, defaultRules)),
+        },
+      },
       account: { create: { before: dropTokens }, update: { before: dropTokens } },
     },
     telemetry: { enabled: false },

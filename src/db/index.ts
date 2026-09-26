@@ -19,7 +19,10 @@ function connect() {
   return drizzle({ client: new Pool({ connectionString: pooledConnectionString() }) });
 }
 
-let db: ReturnType<typeof connect> | undefined;
+type Db = ReturnType<typeof connect>;
+export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+
+let db: Db | undefined;
 
 // Lazy so importing this module never reads env: `next build` evaluates route modules with no DATABASE_URL.
 export function getDb() {

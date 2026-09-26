@@ -46,7 +46,9 @@ they would on the app's second paint. `beforeEach` must await it.
 builds a test-only instance with Better Auth's `testUtils` plugin (kept out of `src/auth`, so the
 privileged helpers never ship), saves a throwaway user, signs a session cookie, and asserts the real
 `getAuth().api.getSession` reads that user back and returns `null` for a forged signature or an
-unknown token. The user is deleted in `finally`. It lives outside `bun run test` because CI has no
+unknown token. `saveUser` goes through the same `databaseHooks` as an OAuth sign-up, so the script
+also asserts the user was seeded with `defaultRules` in order. The user is deleted in `finally`,
+and the script checks the delete cascaded to its rules. It lives outside `bun run test` because CI has no
 database and unit runs must stay hermetic.
 
 ## Playwright — `playwright.config.ts`
