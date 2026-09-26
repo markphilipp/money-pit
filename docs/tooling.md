@@ -49,10 +49,15 @@ is server-rendered on demand, and `not-found.tsx` returns a real 404 status. The
 markup only — it is handed no statement data and has nothing to store.
 
 The Vercel Neon integration injects `DATABASE_URL` (pooled, `-pooler` host) for the app and
-`DATABASE_URL_UNPOOLED` (direct) for `drizzle-kit`. Locally, `bunx vercel env pull .env.local`.
+`DATABASE_URL_UNPOOLED` (direct) for `drizzle-kit`. Preview and Production use the Neon `main`
+branch. Development's two URLs are set by hand to the Neon `dev` branch, and the integration's other
+`PG*`/`POSTGRES_*` vars have no Development target, so a local shell can't reach production. Locally,
+`bunx vercel env pull .env.local` (pull into a fresh file: `pull` keeps keys it no longer serves).
 `src/db` reads the env on first query, not at import, so `bun run build` needs no database.
-`engines.node` is `>=22` because the Neon driver uses the runtime's global `WebSocket`, which Node 20
-lacks; there is no `ws` dependency.
+
+Node is pinned to 24 (the newest Vercel supports): `engines.node` for Vercel, `.node-version` for
+fnm locally and `actions/setup-node` in CI. The Neon driver relies on the runtime's global
+`WebSocket`; there is no `ws` dependency.
 
 CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
 and deploys.
