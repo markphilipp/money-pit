@@ -25,3 +25,6 @@ next-env.d.ts
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# verify-money-pit skill: run state and evidence
+/.verify/
