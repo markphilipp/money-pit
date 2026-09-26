@@ -40,6 +40,15 @@ need a router context that only exists inside a running Next app. Assert navigat
 `resetStore()` awaits `persist.rehydrate()`, so components render past the `useHydrated()` gate as
 they would on the app's second paint. `beforeEach` must await it.
 
+## Auth session check — `bun run auth:check`
+
+`scripts/auth-session-check.ts` runs against the Neon branch in `.env.local`, not in vitest. It
+builds a test-only instance with Better Auth's `testUtils` plugin (kept out of `src/auth`, so the
+privileged helpers never ship), saves a throwaway user, signs a session cookie, and asserts the real
+`getAuth().api.getSession` reads that user back and returns `null` for a forged signature or an
+unknown token. The user is deleted in `finally`. It lives outside `bun run test` because CI has no
+database and unit runs must stay hermetic.
+
 ## Playwright — `playwright.config.ts`
 
 Chromium only. Specs run against `next start` on port 3210, so **`bun run build` must run first**.

@@ -51,6 +51,8 @@ gitignored on purpose — `bun.lock` is the only lockfile.
 ```
 src/lib/          pure domain logic: CSV parsing, categorization, rule engine, ids, formatting
 src/store/        Zustand store, selectors, React hooks
+src/db/           Drizzle client (lazy getDb()) and schema/; generated SQL migrations live in drizzle/
+src/auth/         Better Auth server instance (lazy getAuth()) and browser client
 src/components/   by feature area: charts, table, rules, upload, layout, common
 src/hooks/        shared React hooks (sticky-offset measurement)
 src/app/          App Router routes (/, /rules, /rules/new, /rules/[id]), global tokens

@@ -40,9 +40,9 @@ Runs on every PR and on push to `main`:
 ## Deploy — Vercel
 
 Git-connected, no config file. Vercel's Next.js preset auto-detects the framework, installs with
-bun (it sees `bun.lock`) and runs `bun run build` — so there is no `vercel.json` and no build
-overrides to keep in sync. `main` auto-deploys to production; every PR
-gets a preview URL commented on GitHub.
+bun (it sees `bun.lock`) and runs the `vercel-build` script, which `@vercel/next` prefers over
+`build` — so there is no `vercel.json` and no build overrides to keep in sync. `main` auto-deploys
+to production; every PR gets a preview URL commented on GitHub.
 
 This is a **serverful** deployment: `/` , `/rules` and `/rules/new` are prerendered, `/rules/[id]`
 is server-rendered on demand, and `not-found.tsx` returns a real 404 status. The server renders
@@ -54,6 +54,35 @@ branch. Development's two URLs are set by hand to the Neon `dev` branch, and the
 `PG*`/`POSTGRES_*` vars have no Development target, so a local shell can't reach production. Locally,
 `bunx vercel env pull .env.local` (pull into a fresh file: `pull` keeps keys it no longer serves).
 `src/db` reads the env on first query, not at import, so `bun run build` needs no database.
+
+### Migrations run in the production build
+
+`vercel-build` runs `bun run db:migrate` before `next build` when `VERCEL_ENV=production`, and
+plain `next build` otherwise. A GitHub Actions job can't be ordered against Vercel's build, so this
+is the only place a migration is guaranteed to land before the code that needs it. Local and CI
+`bun run build` stay DB-free. Preview deploys share the production database and never migrate it.
+
+The old deployment keeps serving while the new build migrates, and a failed build leaves the
+migration applied. So every migration is **expand/contract**: add columns nullable or with a
+default, ship the writer, backfill, and only then tighten or drop in a later deploy. Never add a
+`NOT NULL` column without a default in the same deploy as its first writer.
+
+Schema lives in `src/db/schema/`. Better Auth owns `auth.ts`: regenerate it with
+`bun run auth:generate` (it reads `scripts/auth-cli.config.ts`, because the CLI needs an exported
+instance and the app's is lazy), then `bun run db:generate --name <change>` and commit the SQL in
+`drizzle/`.
+
+### Auth env
+
+| Var                                         | Purpose                                                              |
+| ------------------------------------------- | -------------------------------------------------------------------- |
+| `BETTER_AUTH_SECRET`                        | Signs session cookies. Per environment; never shared.                |
+| `BETTER_AUTH_URL`                           | Canonical origin for OAuth callbacks.                                |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google sign-in. A provider missing either is disabled, not an error. |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub sign-in, same rule.                                           |
+
+`src/auth` builds the Better Auth instance on first request, like `getDb()`, so `next build` needs
+none of these. OAuth callbacks work on production and localhost only, not rotating preview URLs.
 
 Node is pinned to 24 (the newest Vercel supports): `engines.node` for Vercel, `.node-version` for
 fnm locally and `actions/setup-node` in CI. The Neon driver relies on the runtime's global

@@ -20,7 +20,10 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
-    "db:ping": "bun scripts/db-ping.ts"
+    "db:ping": "bun scripts/db-ping.ts",
+    "auth:generate": "auth generate --config scripts/auth-cli.config.ts --output src/db/schema/auth.ts -y && prettier --write src/db/schema/auth.ts",
+    "auth:check": "bun scripts/auth-session-check.ts",
+    "vercel-build": "if [ \"$VERCEL_ENV\" = production ]; then bun run db:migrate; fi && next build"
   },
   "trustedDependencies": [
     "unrs-resolver"
@@ -33,6 +36,7 @@
     "@radix-ui/react-popover": "^1.1.23",
     "@radix-ui/react-tabs": "^1.1.21",
     "@tanstack/react-table": "^8.21.3",
+    "better-auth": "^1.7.6",
     "chart.js": "^4.5.1",
     "drizzle-orm": "^0.45.3",
     "next": "16.2.12",
@@ -55,6 +59,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "auth": "1.7.6",
     "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
