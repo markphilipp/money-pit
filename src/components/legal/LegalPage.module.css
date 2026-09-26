@@ -1,0 +1,38 @@
+.page {
+  max-width: 680px;
+  margin: 40px auto 60px;
+  padding: 30px 30px 26px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.page h1 {
+  font-family: var(--font-condensed), sans-serif;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.page h2 {
+  font-size: 16px;
+  margin: 26px 0 6px;
+}
+
+.page p,
+.page ul {
+  margin-bottom: 10px;
+}
+
+.page ul {
+  padding-left: 20px;
+}
+
+.page a {
+  color: var(--accent);
+}
+
+.updated {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+}

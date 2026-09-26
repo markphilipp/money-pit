@@ -52,6 +52,10 @@ export function SignInScreen() {
             </button>
           ))}
         </div>
+        <p className={styles.legal}>
+          By signing in you agree to the <Link href="/terms">terms</Link> and{' '}
+          <Link href="/privacy">privacy policy</Link>.
+        </p>
         {error && (
           <p className={styles.error} role="alert">
             {error}

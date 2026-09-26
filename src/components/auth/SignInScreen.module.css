@@ -63,13 +63,20 @@
   color: var(--accent);
 }
 
+.legal {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.legal a,
+.alt a {
+  color: var(--accent);
+}
+
 .alt {
   margin-top: 22px;
   font-size: 12px;
   line-height: 1.55;
   color: var(--ink-soft);
-}
-
-.alt a {
-  color: var(--accent);
 }

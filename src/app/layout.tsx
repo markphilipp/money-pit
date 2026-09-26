@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Barlow_Condensed, IBM_Plex_Mono, Inter } from 'next/font/google';
 import { currentUserId } from '@/auth/session';
 import { AccountSync } from '@/components/layout/AccountSync';
+import { Footer } from '@/components/layout/Footer';
 import { UserMenu } from '@/components/layout/UserMenu';
 import './globals.css';
 
@@ -36,6 +37,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <UserMenu />
           {children}
         </AccountSync>
+        <Footer />
       </body>
     </html>
   );

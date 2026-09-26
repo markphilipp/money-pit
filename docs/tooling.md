@@ -89,6 +89,11 @@ instance and the app's is lazy), then `bun run db:generate --name <change>` and 
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google sign-in. A provider missing either is disabled, not an error. |
 | `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub sign-in, same rule.                                           |
 
+The `/privacy` page makes promises this config keeps. Better Auth `databaseHooks` drop provider
+names, avatars and tokens, and the IP address and user agent Better Auth records on each session by
+default (`bun run auth:check` asserts both). The page also quotes Neon's 6-hour history retention.
+Change any of these and the page changes with them.
+
 `src/auth` builds the Better Auth instance on first request, like `getDb()`, so `next build` needs
 none of these. OAuth callbacks work on production and localhost only, not rotating preview URLs.
 

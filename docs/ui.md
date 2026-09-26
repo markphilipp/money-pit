@@ -72,6 +72,8 @@ what's visible.
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
 | `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
 | `/sign-in`    | `SignInScreen`     | Google / GitHub via `authClient.signIn.social`. Redirects to `/` when already signed in.       |
+| `/privacy`    | `LegalPage`        | Privacy policy. Google's OAuth consent screen links to it, so keep it true to what's stored.   |
+| `/terms`      | `LegalPage`        | Terms of service, also linked from the consent screen. Both are linked from `Footer`.          |
 
 `new` is a reserved rule id (`src/lib/rules/naming.ts`) because the static segment shadows the
 dynamic one. `not-found.tsx` and `error.tsx` cover unknown URLs and render errors; an id that

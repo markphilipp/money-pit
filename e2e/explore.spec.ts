@@ -149,3 +149,11 @@ test('bulk-selects rows and rewrites their category', async ({ page }) => {
     page.getByRole('row', { name: /LOWES/ }).getByTitle('Change category'),
   ).toContainText('Pets');
 });
+
+test('links the privacy policy and terms from every page', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Privacy' }).click();
+  await expect(page.getByRole('heading', { name: 'Privacy policy' })).toBeVisible();
+  await page.getByRole('contentinfo').getByRole('link', { name: 'Terms' }).click();
+  await expect(page.getByRole('heading', { name: 'Terms of service' })).toBeVisible();
+});
