@@ -1,9 +1,12 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SECOND_CSV, seedStore } from '@/test/fixtures';
+import { authClient } from '@/auth/client';
 import { UserMenu } from './UserMenu';
+
+vi.mock('@/auth/client', () => ({ authClient: { signOut: vi.fn() } }));
 
 beforeEach(async () => {
   await resetStore();
@@ -106,5 +109,23 @@ describe('UserMenu', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Delete account data' }));
     await user.click(screen.getByRole('menuitem', { name: 'Confirm: delete everything' }));
     expect(useAppStore.getState().rawRows).toHaveLength(0);
+  });
+
+  it('says so when signing out fails', async () => {
+    vi.mocked(authClient.signOut).mockResolvedValueOnce({
+      data: null,
+      error: { status: 403 },
+    } as never);
+    const user = userEvent.setup();
+    render(
+      <SignedInContext value={true}>
+        <UserMenu />
+      </SignedInContext>,
+    );
+
+    await user.click(screen.getByLabelText('Account menu'));
+    await user.click(screen.getByRole('menuitem', { name: 'Sign out' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('still signed in');
   });
 });

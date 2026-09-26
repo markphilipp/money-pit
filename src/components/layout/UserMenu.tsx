@@ -8,10 +8,12 @@ import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import styles from './UserMenu.module.css';
 
 // A full reload rebuilds the store from scratch, so no account data outlives the session in memory.
-async function signOut() {
-  await authClient.signOut();
+async function signOut(): Promise<boolean> {
+  const { error } = await authClient.signOut();
+  if (error) return false;
   useAppStore.persist.clearStorage();
   window.location.assign('/');
+  return true;
 }
 
 export function UserMenu() {
@@ -22,6 +24,7 @@ export function UserMenu() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [errors, setErrors] = useState<{ file: string; message: string }[]>([]);
+  const [signOutFailed, setSignOutFailed] = useState(false);
 
   return (
     <>
@@ -77,7 +80,10 @@ export function UserMenu() {
             </DropdownMenu.Item>
             <DropdownMenu.Separator className={styles.separator} />
             {signedIn ? (
-              <DropdownMenu.Item className={styles.item} onSelect={() => void signOut()}>
+              <DropdownMenu.Item
+                className={styles.item}
+                onSelect={async () => setSignOutFailed(!(await signOut()))}
+              >
                 Sign out
               </DropdownMenu.Item>
             ) : (
@@ -115,6 +121,15 @@ export function UserMenu() {
             ))}
           </ul>
           <button className={styles.dismiss} onClick={() => setErrors([])}>
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {signOutFailed && (
+        <div className={styles.errors} role="alert">
+          <p>Couldn’t sign out, so you’re still signed in. Try again.</p>
+          <button className={styles.dismiss} onClick={() => setSignOutFailed(false)}>
             Dismiss
           </button>
         </div>

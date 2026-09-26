@@ -25,7 +25,12 @@ export default defineConfig({
       extraHTTPHeaders: { 'x-vercel-protection-bypass': bypassSecret },
     }),
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // Signed-in specs mint throwaway users straight into the database, so they need DATABASE_URL and
+  // the server's BETTER_AUTH_SECRET. Locally that's .env.local (Neon dev); CI uses a per-run branch.
+  projects: [
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] }, grepInvert: /@signed-in/ },
+    { name: 'signed-in', use: { ...devices['Desktop Chrome'] }, grep: /@signed-in/ },
+  ],
   webServer: externalBaseURL
     ? undefined
     : {
@@ -33,6 +38,8 @@ export default defineConfig({
         command: 'bunx next start -p 3210',
         url: 'http://127.0.0.1:3210',
         reuseExistingServer: !process.env.CI,
+        // Better Auth rejects sign-out from any origin but its own; .env.local points at dev's port.
+        env: { BETTER_AUTH_URL: 'http://127.0.0.1:3210' },
         timeout: 60_000,
       },
 });
