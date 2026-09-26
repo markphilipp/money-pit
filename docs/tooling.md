@@ -36,6 +36,13 @@ Runs on every PR and on push to `main`:
 - **e2e** — downloads that artifact, caches browsers keyed on `bun.lock`, installs chromium via
   `bunx playwright install --with-deps`, runs `bun run e2e` (which boots `next start`); uploads the
   report on failure.
+- **e2e-signed-in** — same setup, then creates a Neon branch `ci-<run id>-<attempt>` off `dev` with
+  `neondatabase/create-branch-action`, runs `db:migrate` against it, generates a masked
+  `BETTER_AUTH_SECRET`, and runs `bun run e2e:signed-in` on the pooled URL.
+  `neondatabase/delete-branch-action` removes the branch under `if: always()`, and the branch's
+  `expires_at` (two hours out) is the backstop if that step never runs. It branches off `dev`, not
+  `main`, so production data never reaches CI. It needs the `NEON_API_KEY` repo secret and the
+  `NEON_PROJECT_ID` repo variable, and is skipped while the variable is unset.
 
 ## Deploy — Vercel
 

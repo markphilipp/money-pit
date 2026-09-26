@@ -68,3 +68,26 @@ router.
 `testDir: './e2e'` is the only scoping. Do not add a `testIgnore` for `**/.worktrees/**` —
 Playwright matches those against absolute paths, so a checkout that itself sits under `.worktrees/`
 would silently discover zero tests.
+
+### Signed-in specs — `bun run e2e:signed-in`
+
+Specs tagged `@signed-in` (`e2e/signed-in.spec.ts`) run in their own `signed-in` project, and
+`bun run e2e` (the `chromium` project) leaves them out, so the default suite needs no database. The
+signed-in project covers sync into a fresh browser context, saving a signed-out session on sign-in,
+and deleting account data then signing out.
+
+The `account` fixture in `e2e/account.ts` builds a Better Auth instance with the `testUtils` plugin,
+mints a throwaway user per test, and deletes it afterwards. `account.signIn(context?)` adds that
+user's session cookies. The fixture and the server must share `DATABASE_URL` and
+`BETTER_AUTH_SECRET`. Locally both come from `.env.local` (the Neon `dev` branch), so after
+`bun run build`, `bun run e2e:signed-in` just works. In CI they come from a per-run branch (see
+[tooling.md](tooling.md#ci--githubworkflowsciyml)). The web server overrides `BETTER_AUTH_URL` to
+`http://127.0.0.1:3210`, because Better Auth rejects sign-out from any other origin.
+
+Writes to the account happen in the background, and the page has no "saved" signal. Don't wait for
+a write with `waitForLoadState('networkidle')`: it resolves at once on a page that was already idle,
+and a reload then aborts the write still in flight. Poll the server with `account.rowCount()`, or
+retry a fresh page load with `expect(...).toPass()`.
+
+Wait for the signed-in empty state ("saved to your account") before uploading. Otherwise the
+account snapshot arrives after the upload and overwrites it.
