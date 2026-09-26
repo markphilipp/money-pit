@@ -66,7 +66,7 @@ what's visible.
 
 | Route         | Screen             | Notes                                                                                          |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `/`           | `Dashboard`        | Charts + table. Prerendered shell, hydrated from `sessionStorage`.                             |
+| `/`           | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
 | `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
 | `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |

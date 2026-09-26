@@ -2,16 +2,19 @@
 
 ## What this is
 
-money-pit ("The Money Pit"): a client-only spending dashboard. Upload credit-card statement CSVs,
-auto-categorize them with rules, chart by category/cardholder, correct rows by hand. Next renders
-and routes; every byte of statement data stays in the browser, in `sessionStorage`, and the server
-never sees any of it. This file and `docs/` are
+money-pit ("The Money Pit"): a spending dashboard. Upload credit-card statement CSVs,
+auto-categorize them with rules, chart by category/cardholder, correct rows by hand. It has two
+modes. **Signed out** (the default), every byte of statement data stays in the browser, in
+`sessionStorage`, and the server never sees any of it. **Signed in** (optional, Google or GitHub via
+Better Auth), statements, rules, overrides and preferences are saved to the user's account in Neon
+Postgres; the only other thing stored about the user is the account email. This file and `docs/` are
 the source of truth — `README.md` is an intentionally bare placeholder while the app is still
 changing shape, so don't mine it for detail or expand it without being asked.
 
 ## Stack
 
-Next.js 16 App Router, server-rendered on Vercel, React 19, Zustand,
+Next.js 16 App Router, server-rendered on Vercel, React 19, Zustand, Drizzle over Neon Postgres,
+Better Auth,
 CSS Modules over tokens in `src/app/globals.css`. Routes are real routes — `/`, `/rules`,
 `/rules/new`, `/rules/[id]` — not screens swapped by store state. Chart.js 4 via react-chartjs-2, TanStack Table v8,
 react-querybuilder, Radix UI. Vitest + React Testing Library, Playwright for e2e. **bun** is the
@@ -35,10 +38,11 @@ gitignored on purpose — `bun.lock` is the only lockfile.
 
 ## Hard rules
 
-- **No network calls, no analytics, no telemetry.** Privacy is a constraint of this app, not a
-  feature. A change that sends statement data anywhere is wrong by definition. The server renders
-  markup and nothing else — no statement data reaches it, there is no database, and the production
-  CSP in `next.config.ts` pins `connect-src` to `'self'` so the browser enforces this too.
+- **No third-party calls, no analytics, no telemetry.** Privacy is a constraint of this app, not a
+  feature. Statement data goes only to this app's server, and only when the user is signed in. A
+  change that sends it anywhere else, or sends it while signed out, is wrong by definition. The
+  production CSP in `next.config.ts` pins `connect-src` to `'self'` so the browser enforces this
+  too.
 - **Never commit real financial data.** `statements/`, `*.csv` (except `e2e/fixtures/*.csv`) and
   `prototype/data.js` are gitignored. Every committed fixture uses synthetic "Alex/Jamie Sample"
   data.
@@ -50,12 +54,12 @@ gitignored on purpose — `bun.lock` is the only lockfile.
 
 ```
 src/lib/          pure domain logic: CSV parsing, categorization, rule engine, ids, formatting
-src/store/        Zustand store, selectors, React hooks
-src/db/           Drizzle client (lazy getDb()) and schema/; generated SQL migrations live in drizzle/
-src/auth/         Better Auth server instance (lazy getAuth()) and browser client
+src/store/        Zustand store, selectors, React hooks, signed-in sync subscriber
+src/db/           Drizzle client (lazy getDb()), schema/ and queries/; SQL migrations live in drizzle/
+src/auth/         Better Auth server instance (lazy getAuth()), session lookup, browser client
 src/components/   by feature area: charts, table, rules, upload, layout, common
 src/hooks/        shared React hooks (sticky-offset measurement)
-src/app/          App Router routes (/, /rules, /rules/new, /rules/[id]), global tokens
+src/app/          App Router routes (/, /rules, /rules/new, /rules/[id]), actions/, global tokens
 e2e/              Playwright specs + synthetic CSV fixtures
 prototype/        original single-file dashboard, kept for visual reference only
 docs/             the sub-documents below

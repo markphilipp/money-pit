@@ -5,7 +5,7 @@ export default function Error({ error, reset }: { error: Error; reset: () => voi
     <main className="wrap">
       <section className="card">
         <h2>Something went wrong</h2>
-        {/* Statements never leave the browser, so there is nowhere to report this to. */}
+        {/* No error-reporting service by design: the app makes no third-party calls. */}
         <p className="sub">{error.message}</p>
         <button type="button" className="btn-clear" onClick={reset}>
           Try again

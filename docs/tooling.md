@@ -44,9 +44,10 @@ bun (it sees `bun.lock`) and runs the `vercel-build` script, which `@vercel/next
 `build` — so there is no `vercel.json` and no build overrides to keep in sync. `main` auto-deploys
 to production; every PR gets a preview URL commented on GitHub.
 
-This is a **serverful** deployment: `/` , `/rules` and `/rules/new` are prerendered, `/rules/[id]`
-is server-rendered on demand, and `not-found.tsx` returns a real 404 status. The server renders
-markup only — it is handed no statement data and has nothing to store.
+This is a **serverful** deployment. Every route is server-rendered on demand, because the root
+layout reads the session cookie, and `not-found.tsx` returns a real 404 status. Signed out, the
+server renders markup only and is handed no statement data. Signed in, server actions in
+`src/app/actions/` store the user's statements, rules, overrides and preferences in Neon.
 
 The Vercel Neon integration injects `DATABASE_URL` (pooled, `-pooler` host) for the app and
 `DATABASE_URL_UNPOOLED` (direct) for `drizzle-kit`. Preview and Production use the Neon `main`
@@ -149,7 +150,7 @@ so an emergency fix can go straight to `main` — the normal path is still a PR.
 ## Config notes
 
 - `next.config.ts` — no `output` setting (a serverful build) plus the production security headers.
-  The CSP's `connect-src 'self'` is what makes "no network calls" enforced rather than merely
+  The CSP's `connect-src 'self'` is what makes "no third-party calls" enforced rather than merely
   intended; it cannot be `'none'` because client-side navigation fetches RSC payloads. Headers are
   skipped outside production so dev keeps its HMR websocket.
 - Next infers the workspace root as the parent repo, because `node_modules` lives there and

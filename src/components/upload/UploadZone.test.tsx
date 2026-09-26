@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { useAppStore } from '@/store/useAppStore';
+import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SAMPLE_CSV } from '@/test/fixtures';
 import { EmptyState } from './EmptyState';
 
@@ -13,6 +13,21 @@ describe('EmptyState + UploadZone', () => {
     expect(
       screen.getByText('Status,Date,Description,Debit,Credit,Member Name'),
     ).toBeInTheDocument();
+  });
+
+  it('scopes the privacy promise to signed-out use', () => {
+    render(<EmptyState />);
+    expect(screen.getByText(/Without an account, nothing is uploaded/)).toBeInTheDocument();
+  });
+
+  it('says where statements go when signed in', () => {
+    render(
+      <SignedInContext value={true}>
+        <EmptyState />
+      </SignedInContext>,
+    );
+    expect(screen.getByText(/saved to your account/)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing is uploaded/)).not.toBeInTheDocument();
   });
 
   it('loads a browsed file into the store', async () => {

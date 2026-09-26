@@ -6,6 +6,7 @@ most of the unit-test weight.
 ## Types — `src/lib/types.ts`
 
 `RawStatementRow` is the persisted shape: six raw strings, straight off the CSV, nothing coerced.
+It goes to `sessionStorage` when signed out and to the `statement_row` table when signed in.
 `Transaction` is the derived shape (parsed `Date`, signed `amount`, `isCredit`, `categoryId`).
 Two ids are reserved as constants: `PAYMENTS_ID = 'payments'` and `OTHER_ID = 'other'`.
 

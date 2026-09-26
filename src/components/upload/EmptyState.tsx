@@ -1,11 +1,14 @@
 'use client';
 
+import { useContext } from 'react';
 import Image from 'next/image';
 import { EXPECTED_HEADER } from '@/lib/csv';
+import { SignedInContext } from '@/store/useAppStore';
 import { UploadZone } from './UploadZone';
 import styles from './EmptyState.module.css';
 
 export function EmptyState() {
+  const signedIn = useContext(SignedInContext);
   return (
     <div className={styles.shell}>
       <div className={styles.card}>
@@ -34,8 +37,9 @@ export function EmptyState() {
         <UploadZone />
 
         <p className={styles.privacy}>
-          Nothing is uploaded anywhere. Files are parsed in this browser tab and forgotten when you
-          close it.
+          {signedIn
+            ? 'Statements you add are saved to your account, so they’re here next time you sign in.'
+            : 'Without an account, nothing is uploaded. Files are parsed in this browser tab and forgotten when you close it.'}
         </p>
       </div>
     </div>

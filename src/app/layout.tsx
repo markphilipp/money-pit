@@ -24,7 +24,7 @@ const mono = IBM_Plex_Mono({
 export const metadata: Metadata = {
   title: { default: 'The Money Pit', template: '%s · The Money Pit' },
   description:
-    'Upload a credit-card statement CSV and see where the money went. Runs entirely in your browser.',
+    'Upload a credit-card statement CSV and see where the money went. Without an account, it never leaves your browser.',
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
