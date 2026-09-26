@@ -2,6 +2,9 @@
   "name": "money-pit",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -13,12 +16,17 @@
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
+    "db:ping": "bun scripts/db-ping.ts"
   },
   "trustedDependencies": [
     "unrs-resolver"
   ],
   "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
@@ -26,6 +34,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "@tanstack/react-table": "^8.21.3",
     "chart.js": "^4.5.1",
+    "drizzle-orm": "^0.45.3",
     "next": "16.2.12",
     "papaparse": "^5.5.3",
     "react": "19.2.4",
@@ -46,6 +55,7 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.1.0",
     "@vitest/coverage-v8": "^3.2.4",
+    "drizzle-kit": "^0.31.11",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "eslint-config-prettier": "^10.1.8",

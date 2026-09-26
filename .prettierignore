@@ -8,3 +8,4 @@ prototype
 playwright-report
 test-results
 bun.lock
+drizzle

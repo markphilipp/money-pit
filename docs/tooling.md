@@ -41,12 +41,18 @@ Runs on every PR and on push to `main`:
 
 Git-connected, no config file. Vercel's Next.js preset auto-detects the framework, installs with
 bun (it sees `bun.lock`) and runs `bun run build` — so there is no `vercel.json` and no build
-overrides to keep in sync. No environment variables. `main` auto-deploys to production; every PR
+overrides to keep in sync. `main` auto-deploys to production; every PR
 gets a preview URL commented on GitHub.
 
 This is a **serverful** deployment: `/` , `/rules` and `/rules/new` are prerendered, `/rules/[id]`
 is server-rendered on demand, and `not-found.tsx` returns a real 404 status. The server renders
 markup only — it is handed no statement data and has nothing to store.
+
+The Vercel Neon integration injects `DATABASE_URL` (pooled, `-pooler` host) for the app and
+`DATABASE_URL_UNPOOLED` (direct) for `drizzle-kit`. Locally, `bunx vercel env pull .env.local`.
+`src/db` reads the env on first query, not at import, so `bun run build` needs no database.
+`engines.node` is `>=22` because the Neon driver uses the runtime's global `WebSocket`, which Node 20
+lacks; there is no `ws` dependency.
 
 CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
 and deploys.
