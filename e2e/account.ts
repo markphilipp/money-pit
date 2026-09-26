@@ -6,7 +6,7 @@ import type { TestHelpers } from 'better-auth/plugins';
 import { eq } from 'drizzle-orm';
 import { authOptions } from '@/auth';
 import { getDb } from '@/db';
-import { statementRow } from '@/db/schema';
+import { statementRow, user as userTable } from '@/db/schema';
 
 // The server under test reads .env.local itself; minting sessions here needs the same database and
 // BETTER_AUTH_SECRET. loadEnvFile never overrides what CI already exported.
@@ -16,6 +16,7 @@ interface Account {
   signIn: (context?: BrowserContext) => Promise<void>;
   /** What the server holds, for waiting on a write the page has no visible signal for. */
   rowCount: () => Promise<number>;
+  exists: () => Promise<boolean>;
 }
 
 /** Each test gets its own throwaway user, so signed-in specs stay parallel-safe; it's deleted after. */
@@ -39,6 +40,7 @@ export const test = base.extend<{ account: Account }, { helpers: TestHelpers }>(
     await provide({
       signIn: (target = context) => target.addCookies(cookies),
       rowCount: () => getDb().$count(statementRow, eq(statementRow.userId, user.id)),
+      exists: async () => (await getDb().$count(userTable, eq(userTable.id, user.id))) > 0,
     });
     await helpers.deleteUser(user.id);
   },

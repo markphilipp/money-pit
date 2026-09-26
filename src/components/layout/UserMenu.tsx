@@ -3,17 +3,34 @@
 import { useContext, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { deleteAccount } from '@/app/actions/account';
 import { authClient } from '@/auth/client';
 import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import styles from './UserMenu.module.css';
 
 // A full reload rebuilds the store from scratch, so no account data outlives the session in memory.
-async function signOut(): Promise<boolean> {
-  const { error } = await authClient.signOut();
-  if (error) return false;
+function leave() {
   useAppStore.persist.clearStorage();
   window.location.assign('/');
-  return true;
+}
+
+async function signOut(): Promise<string | null> {
+  const { error } = await authClient.signOut();
+  if (error) return 'Couldn’t sign out, so you’re still signed in. Try again.';
+  leave();
+  return null;
+}
+
+async function deleteAndLeave(): Promise<string | null> {
+  try {
+    await deleteAccount();
+  } catch {
+    return 'Couldn’t delete your account. Try again.';
+  }
+  // The session died with the account; this only clears its cookie.
+  await authClient.signOut();
+  leave();
+  return null;
 }
 
 export function UserMenu() {
@@ -22,13 +39,13 @@ export function UserMenu() {
   const resetAll = useAppStore((s) => s.resetAll);
   const hasData = useAppStore((s) => s.rawRows.length > 0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [confirming, setConfirming] = useState(false);
+  const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null);
   const [errors, setErrors] = useState<{ file: string; message: string }[]>([]);
-  const [signOutFailed, setSignOutFailed] = useState(false);
+  const [accountError, setAccountError] = useState<string | null>(null);
 
   return (
     <>
-      <DropdownMenu.Root onOpenChange={(open) => !open && setConfirming(false)}>
+      <DropdownMenu.Root onOpenChange={(open) => !open && setConfirming(null)}>
         <DropdownMenu.Trigger asChild>
           <button className={styles.avatar} aria-label="Account menu">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -51,13 +68,13 @@ export function UserMenu() {
                 >
                   Add statement
                 </DropdownMenu.Item>
-                {confirming ? (
+                {confirming === 'reset' ? (
                   <>
                     <DropdownMenu.Item
                       className={`${styles.item} ${styles.danger}`}
                       onSelect={() => resetAll()}
                     >
-                      {signedIn ? 'Confirm: delete everything' : 'Confirm reset'}
+                      Confirm reset
                     </DropdownMenu.Item>
                     <DropdownMenu.Item className={styles.item}>Cancel</DropdownMenu.Item>
                   </>
@@ -66,10 +83,10 @@ export function UserMenu() {
                     className={styles.item}
                     onSelect={(e) => {
                       e.preventDefault();
-                      setConfirming(true);
+                      setConfirming('reset');
                     }}
                   >
-                    {signedIn ? 'Delete account data' : 'Start over'}
+                    Start over
                   </DropdownMenu.Item>
                 )}
                 <DropdownMenu.Separator className={styles.separator} />
@@ -80,12 +97,35 @@ export function UserMenu() {
             </DropdownMenu.Item>
             <DropdownMenu.Separator className={styles.separator} />
             {signedIn ? (
-              <DropdownMenu.Item
-                className={styles.item}
-                onSelect={async () => setSignOutFailed(!(await signOut()))}
-              >
-                Sign out
-              </DropdownMenu.Item>
+              <>
+                <DropdownMenu.Item
+                  className={styles.item}
+                  onSelect={async () => setAccountError(await signOut())}
+                >
+                  Sign out
+                </DropdownMenu.Item>
+                {confirming === 'delete' ? (
+                  <>
+                    <DropdownMenu.Item
+                      className={`${styles.item} ${styles.danger}`}
+                      onSelect={async () => setAccountError(await deleteAndLeave())}
+                    >
+                      Confirm: delete my account
+                    </DropdownMenu.Item>
+                    <DropdownMenu.Item className={styles.item}>Cancel</DropdownMenu.Item>
+                  </>
+                ) : (
+                  <DropdownMenu.Item
+                    className={styles.item}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setConfirming('delete');
+                    }}
+                  >
+                    Delete account…
+                  </DropdownMenu.Item>
+                )}
+              </>
             ) : (
               <DropdownMenu.Item className={styles.item} asChild>
                 <Link href="/sign-in">Sign in…</Link>
@@ -126,10 +166,10 @@ export function UserMenu() {
         </div>
       )}
 
-      {signOutFailed && (
+      {accountError && (
         <div className={styles.errors} role="alert">
-          <p>Couldn’t sign out, so you’re still signed in. Try again.</p>
-          <button className={styles.dismiss} onClick={() => setSignOutFailed(false)}>
+          <p>{accountError}</p>
+          <button className={styles.dismiss} onClick={() => setAccountError(null)}>
             Dismiss
           </button>
         </div>

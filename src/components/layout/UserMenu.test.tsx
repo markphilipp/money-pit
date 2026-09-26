@@ -3,10 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import { csvFile, resetStore, SECOND_CSV, seedStore } from '@/test/fixtures';
+import { deleteAccount } from '@/app/actions/account';
 import { authClient } from '@/auth/client';
 import { UserMenu } from './UserMenu';
 
 vi.mock('@/auth/client', () => ({ authClient: { signOut: vi.fn() } }));
+vi.mock('@/app/actions/account', () => ({ deleteAccount: vi.fn() }));
 
 beforeEach(async () => {
   await resetStore();
@@ -93,7 +95,7 @@ describe('UserMenu', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
-  it('offers sign-out and names the account deletion when signed in', async () => {
+  it('offers sign-out and account deletion when signed in', async () => {
     await seedStore();
     const user = userEvent.setup();
     render(
@@ -106,9 +108,27 @@ describe('UserMenu', () => {
     expect(screen.getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
     expect(screen.queryByRole('menuitem', { name: /Sign in/ })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('menuitem', { name: 'Delete account data' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Confirm: delete everything' }));
-    expect(useAppStore.getState().rawRows).toHaveLength(0);
+    await user.click(screen.getByRole('menuitem', { name: 'Delete account…' }));
+    expect(
+      screen.getByRole('menuitem', { name: 'Confirm: delete my account' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the account and says so when deleting it fails', async () => {
+    vi.mocked(deleteAccount).mockRejectedValueOnce(new Error('offline'));
+    const user = userEvent.setup();
+    render(
+      <SignedInContext value={true}>
+        <UserMenu />
+      </SignedInContext>,
+    );
+
+    await user.click(screen.getByLabelText('Account menu'));
+    await user.click(screen.getByRole('menuitem', { name: 'Delete account…' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Confirm: delete my account' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete your account');
+    expect(authClient.signOut).not.toHaveBeenCalled();
   });
 
   it('says so when signing out fails', async () => {

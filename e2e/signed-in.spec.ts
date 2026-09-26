@@ -78,7 +78,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(prompt).toHaveCount(0);
   });
 
-  test('deletes account data from the menu, then signs out', async ({ page, account }) => {
+  test('starts over, keeping the account, then deletes it', async ({ page, account }) => {
     await account.signIn();
     await page.goto('/');
     await expect(page.getByText(/saved to your account/)).toBeVisible();
@@ -87,15 +87,17 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect.poll(account.rowCount).toBe(8);
 
     await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Delete account data' }).click();
-    await page.getByRole('menuitem', { name: 'Confirm: delete everything' }).click();
+    await page.getByRole('menuitem', { name: 'Start over' }).click();
+    await page.getByRole('menuitem', { name: 'Confirm reset' }).click();
     // Reloading mid-write would abort the reset, and networkidle resolves at once on an idle page.
     await expect.poll(account.rowCount).toBe(0);
     await page.reload();
-    await expect(page.getByText('Drop statement CSVs here')).toBeVisible();
+    await expect(page.getByText(/saved to your account/)).toBeVisible();
 
     await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Sign out' }).click();
+    await page.getByRole('menuitem', { name: 'Delete account…' }).click();
+    await page.getByRole('menuitem', { name: 'Confirm: delete my account' }).click();
     await expect(page.getByText(/Without an account, nothing is uploaded/)).toBeVisible();
+    expect(await account.exists()).toBe(false);
   });
 });

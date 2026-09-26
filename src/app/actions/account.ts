@@ -1,6 +1,8 @@
 'use server';
 
+import { eq } from 'drizzle-orm';
 import { getDb } from '@/db';
+import { user } from '@/db/schema';
 import { deletePreference, readPreference, upsertPreference } from '@/db/queries/preference';
 import { readRules, replaceRules as writeRules } from '@/db/queries/rules';
 import { deleteRows, insertRows, readRows, updateOverrides } from '@/db/queries/rows';
@@ -46,6 +48,12 @@ export async function resetAccount() {
     await deletePreference(tx, userId);
     await writeRules(tx, userId, defaultRules);
   });
+}
+
+/** Every other table cascades from `user`, sessions included, so this also signs the user out. */
+export async function deleteAccount() {
+  const userId = await requireUserId();
+  await getDb().delete(user).where(eq(user.id, userId));
 }
 
 export async function loadSnapshot() {
