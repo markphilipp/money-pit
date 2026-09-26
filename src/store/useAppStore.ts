@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type {
@@ -26,7 +26,11 @@ export const emptyFilters: FilterState = {
   columnFilters: {},
 };
 
+/** `account` once a signed-in snapshot has replaced local state; the server then owns the data. */
+export type StoreMode = 'local' | 'account';
+
 export interface AppState {
+  mode: StoreMode;
   rawRows: RawStatementRow[];
   rules: CategoryRule[];
   overrides: Record<string, string>;
@@ -57,7 +61,8 @@ export interface AppState {
   resetAll: () => void;
 }
 
-const initialState = {
+export const initialState = {
+  mode: 'local' as StoreMode,
   rawRows: [] as RawStatementRow[],
   rules: defaultRules,
   overrides: {} as Record<string, string>,
@@ -79,7 +84,7 @@ const noopStorage = {
   removeItem: () => undefined,
 };
 
-const storage = createJSONStorage<PersistedState>(() =>
+const storage = createJSONStorage<Partial<PersistedState>>(() =>
   typeof window === 'undefined' ? noopStorage : window.sessionStorage,
 );
 
@@ -240,20 +245,30 @@ export const useAppStore = create<AppState>()(
 
       clearSelection: () => set({ selectedIds: new Set<string>() }),
 
-      resetAll: () => set({ ...initialState, selectedIds: new Set<string>(), ruleSources: [] }),
+      resetAll: () =>
+        set((s) => ({
+          ...initialState,
+          mode: s.mode,
+          selectedIds: new Set<string>(),
+          ruleSources: [],
+        })),
     }),
     {
       name: 'money-pit',
       storage,
-      partialize: (s) => ({
-        rawRows: s.rawRows,
-        rules: s.rules,
-        overrides: s.overrides,
-        filters: s.filters,
-        chartMode: s.chartMode,
-        sort: s.sort,
-        ruleSources: s.ruleSources,
-      }),
+      // Signed in, statement data lives in the account; only view state stays in the tab.
+      partialize: (s): Partial<PersistedState> =>
+        s.mode === 'account'
+          ? { filters: s.filters, ruleSources: s.ruleSources }
+          : {
+              rawRows: s.rawRows,
+              rules: s.rules,
+              overrides: s.overrides,
+              filters: s.filters,
+              chartMode: s.chartMode,
+              sort: s.sort,
+              ruleSources: s.ruleSources,
+            },
       merge: (persisted, current) => {
         const raw = persisted as Partial<PersistedState> | undefined;
         if (!raw) return current;
@@ -270,17 +285,25 @@ export const useAppStore = create<AppState>()(
   ),
 );
 
-/** Gates render until sessionStorage has been read, avoiding a hydration mismatch. */
+/** Set from the server-rendered session, so the very first client render already knows to wait. */
+export const SignedInContext = createContext(false);
+
+/**
+ * Gates render until sessionStorage has been read, avoiding a hydration mismatch, and, when signed
+ * in, until the account snapshot has replaced local state.
+ */
 export function useHydrated(): boolean {
+  const signedIn = useContext(SignedInContext);
   const hydrated = useSyncExternalStore(
     (onChange) => useAppStore.persist.onFinishHydration(onChange),
     () => useAppStore.persist.hasHydrated(),
     () => false,
   );
+  const synced = useAppStore((s) => s.mode === 'account');
   useEffect(() => {
     if (!useAppStore.persist.hasHydrated()) void useAppStore.persist.rehydrate();
   }, []);
-  return hydrated;
+  return hydrated && (!signedIn || synced);
 }
 
 export const OTHER_CATEGORY_ID = OTHER_ID;

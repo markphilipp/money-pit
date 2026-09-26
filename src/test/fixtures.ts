@@ -32,6 +32,7 @@ export async function seedStore(text = SAMPLE_CSV) {
  * after sessionStorage has been read.
  */
 export async function resetStore() {
+  useAppStore.setState({ mode: 'local' });
   useAppStore.getState().resetAll();
   if (!useAppStore.persist.hasHydrated()) await useAppStore.persist.rehydrate();
 }

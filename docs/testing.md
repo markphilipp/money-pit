@@ -6,6 +6,8 @@ Testing trophy, weighted like this:
 
 1. **Unit (`src/lib/*.test.ts`)** — parsing, dedupe, hashing, categorization, the rule engine,
    formatting. Cheap and exhaustive; any new business rule gets its cases here.
+   `src/store/sync.test.ts` drives the signed-in subscriber against the real store with a fake
+   `AccountApi`, so sync behavior is tested without a server or a database.
 2. **Integration (RTL, `*.test.tsx`)** — the bulk of the confidence. Render the real component
    against the **real store**; don't mock the store or the selectors. If a test needs a mocked
    store to pass, the component is probably reaching for state it shouldn't.

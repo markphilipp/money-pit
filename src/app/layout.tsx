@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Barlow_Condensed, IBM_Plex_Mono, Inter } from 'next/font/google';
+import { currentUserId } from '@/auth/session';
+import { AccountSync } from '@/components/layout/AccountSync';
 import { UserMenu } from '@/components/layout/UserMenu';
 import './globals.css';
 
@@ -25,12 +27,15 @@ export const metadata: Metadata = {
     'Upload a credit-card statement CSV and see where the money went. Runs entirely in your browser.',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const signedIn = (await currentUserId()) !== null;
   return (
     <html lang="en" className={`${inter.variable} ${condensed.variable} ${mono.variable}`}>
       <body>
-        <UserMenu />
-        {children}
+        <AccountSync signedIn={signedIn}>
+          <UserMenu />
+          {children}
+        </AccountSync>
       </body>
     </html>
   );

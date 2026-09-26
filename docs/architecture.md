@@ -14,8 +14,10 @@ CSV files → rawRows (persisted)
                    charts · stats strip · table
 ```
 
-Only `rawRows`, `rules`, `overrides`, `filters`, `chartMode` and `sort` are persisted
-(`partialize` in `src/store/useAppStore.ts`). Everything a component renders below that line is
+Only `rawRows`, `rules`, `overrides`, `filters`, `chartMode`, `sort` and `ruleSources` are
+persisted (`partialize` in `src/store/useAppStore.ts`). Signed out, all of them go to
+`sessionStorage`. Signed in, only `filters` and `ruleSources` do, and the account holds the rest
+(see [Signed-in sync](#signed-in-sync--srcstoresyncts)). Everything a component renders below that line is
 recomputed. **Adding a derived field to persisted state is the mistake this design exists to
 prevent** — a stale persisted category would survive a rule edit and silently disagree with the
 charts.
@@ -55,6 +57,35 @@ runs with `skipHydration: true` and `useHydrated()` rehydrates after mount via
 state before hydration gives you the initial state, not the session's — anything that must see
 persisted data belongs below that gate. This is why `/rules/[id]` resolves its rule _after_
 hydration rather than on the server: which rule an id refers to is not knowable there.
+
+Signed in, the gate also waits for the account snapshot (`mode === 'account'`). The root layout
+reads the session on the server and passes `signedIn` down through `SignedInContext`, so the very
+first client render already knows to wait instead of flashing the tab's local data.
+
+## Signed-in sync — `src/store/sync.ts`
+
+Store actions don't know about accounts. They stay local and synchronous, and components never
+await the network. `AccountSync` (in the root layout) calls `startAccountSync()` when the request
+had a valid session. It loads the snapshot into the store, sets `mode: 'account'`, and then
+subscribes to the store and turns each diff into a server action from `src/app/actions/account.ts`:
+
+| Slice               | Change      | Server action                                                     |
+| ------------------- | ----------- | ----------------------------------------------------------------- |
+| `rawRows`           | grew        | `appendRows` with the new tail, in chunks under the 1 MB body cap |
+| `rawRows`           | emptied     | `resetAccount` only: `resetAll` resets every other slice too      |
+| `rules`             | ref changed | `replaceRules` with the whole list                                |
+| `overrides`         | diff        | `setOverrides` with the changed rows, identified by content       |
+| `chartMode`, `sort` | changed     | `setPreference`                                                   |
+
+Every action re-derives the user from the session cookie and parses its arguments with the zod
+schemas in `src/app/actions/input.ts`. Every write is idempotent. Writes run one at a time, in
+order. If one fails, the queue behind it is dropped, the snapshot is reloaded over local state,
+and an alert says so. There is no per-action rollback. While a write is pending, a `beforeunload`
+guard asks before the page is left, because a server action can't outlive the page.
+
+The layout's session check reads the cookie first and builds the auth instance only if one is
+present, so signed-out rendering never needs a database. Reading request headers makes every route
+dynamic.
 
 ## Selectors — `src/store/selectors.ts`
 

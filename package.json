@@ -45,6 +45,7 @@
     "react-chartjs-2": "^5.3.0",
     "react-dom": "19.2.4",
     "react-querybuilder": "^8.21.0",
+    "zod": "^4.6.5",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

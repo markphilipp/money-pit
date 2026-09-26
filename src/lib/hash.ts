@@ -1,4 +1,4 @@
-import type { RawStatementRow } from './types';
+import type { OrdinalRow, RawStatementRow } from './types';
 
 function fnv1a(input: string): string {
   let h = 0x811c9dc5;
@@ -15,4 +15,14 @@ export function rowKey(row: RawStatementRow): string {
 
 export function txnId(row: RawStatementRow, ordinal: number): string {
   return `${fnv1a(rowKey(row))}-${fnv1a(row.description)}-${ordinal}`;
+}
+
+export function withOrdinals(rows: RawStatementRow[]): OrdinalRow[] {
+  const seen = new Map<string, number>();
+  return rows.map((row) => {
+    const key = rowKey(row);
+    const ordinal = seen.get(key) ?? 0;
+    seen.set(key, ordinal + 1);
+    return { ...row, ordinal };
+  });
 }

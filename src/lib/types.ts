@@ -9,6 +9,11 @@ export interface RawStatementRow {
   person: string;
 }
 
+/** `ordinal` counts earlier identical rows, so `txnId(row, ordinal)` tells real duplicates apart. */
+export interface OrdinalRow extends RawStatementRow {
+  ordinal: number;
+}
+
 export interface Transaction {
   id: string;
   status: string;
