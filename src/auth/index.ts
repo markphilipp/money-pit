@@ -32,6 +32,9 @@ const dropTokens = () =>
     },
   });
 
+// Better Auth records these on every session by default.
+const dropClientInfo = () => Promise.resolve({ data: { ipAddress: null, userAgent: null } });
+
 export function authOptions() {
   return {
     database: drizzleAdapter(getDb(), { provider: 'pg', schema }),
@@ -46,6 +49,7 @@ export function authOptions() {
         },
       },
       account: { create: { before: dropTokens }, update: { before: dropTokens } },
+      session: { create: { before: dropClientInfo }, update: { before: dropClientInfo } },
     },
     telemetry: { enabled: false },
   } satisfies BetterAuthOptions;

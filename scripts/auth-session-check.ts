@@ -5,7 +5,7 @@ import { testUtils } from 'better-auth/plugins';
 import { authOptions, getAuth } from '@/auth';
 import { getDb } from '@/db';
 import { readRules } from '@/db/queries/rules';
-import { account, categoryRule } from '@/db/schema';
+import { account, categoryRule, session as sessionTable } from '@/db/schema';
 import { defaultRules } from '@/lib/defaultRules';
 
 const { test } = await betterAuth({ ...authOptions(), plugins: [testUtils()] }).$context;
@@ -35,6 +35,28 @@ try {
   }
   console.log('forged signature -> null, unknown token -> null');
 
+  const { internalAdapter } = await auth.$context;
+  const clientInfo = async (id: string) => {
+    const [row] = await getDb().select().from(sessionTable).where(eq(sessionTable.id, id));
+    return { ipAddress: row.ipAddress, userAgent: row.userAgent };
+  };
+  const tracked = await internalAdapter.createSession(user.id, false, {
+    ipAddress: '203.0.113.7',
+    userAgent: 'session-check',
+  });
+  assert.deepEqual(
+    await clientInfo(tracked.id),
+    { ipAddress: null, userAgent: null },
+    'session create stores no IP or user agent',
+  );
+  await internalAdapter.updateSession(tracked.token, { ipAddress: '203.0.113.7' });
+  assert.deepEqual(
+    await clientInfo(tracked.id),
+    { ipAddress: null, userAgent: null },
+    'session update stores no IP or user agent',
+  );
+  console.log('session create/update -> client info', await clientInfo(tracked.id));
+
   const tokens = {
     idToken: 'id-token',
     accessToken: 'access-token',
@@ -49,7 +71,6 @@ try {
     );
   };
   const nulls = Object.fromEntries(Object.keys(tokens).map((key) => [key, null]));
-  const { internalAdapter } = await auth.$context;
   const created = await internalAdapter.createAccount({
     userId: user.id,
     providerId: 'github',
