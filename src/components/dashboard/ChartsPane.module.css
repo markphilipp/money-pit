@@ -1,0 +1,88 @@
+/* Pins the charts once they hit the top; the table then scrolls beneath them. */
+.wrapper {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--paper);
+  padding: 12px 0 0;
+  margin-top: -12px;
+}
+
+.pane {
+  height: var(--charts-pane-h);
+  overflow: hidden;
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 22px;
+}
+
+.handle {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: row-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.handle[data-minimized='true'] {
+  cursor: default;
+  pointer-events: none;
+}
+
+.grip {
+  width: 44px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.handle:hover .grip,
+.handle:focus-visible .grip {
+  background: var(--accent);
+}
+
+.toggle {
+  position: absolute;
+  right: 0;
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 9px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.toggle:hover,
+.toggle:focus-visible {
+  color: var(--accent);
+}
+
+@media (max-width: 820px) {
+  .wrapper {
+    position: static;
+    padding: 0 0 18px;
+    margin-top: 0;
+  }
+
+  .pane {
+    height: auto;
+    overflow: visible;
+  }
+
+  .bar {
+    display: none;
+  }
+}
