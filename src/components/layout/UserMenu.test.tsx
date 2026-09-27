@@ -51,28 +51,44 @@ describe('UserMenu', () => {
     await waitFor(() => expect(useAppStore.getState().rawRows).toHaveLength(8));
   });
 
-  it('requires two clicks to start over', async () => {
+  it('asks in a modal before starting over, focusing Cancel', async () => {
     await seedStore();
     const user = userEvent.setup();
     render(<UserMenu />);
 
     await user.click(screen.getByLabelText('Account menu'));
     await user.click(screen.getByRole('menuitem', { name: 'Start over' }));
+
+    const dialog = await screen.findByRole('alertdialog', { name: 'Start over?' });
+    expect(dialog).toHaveTextContent('from this browser');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus();
     expect(useAppStore.getState().rawRows).toHaveLength(7);
 
-    await user.click(screen.getByRole('menuitem', { name: 'Confirm reset' }));
+    await user.click(screen.getByRole('button', { name: 'Start over' }));
     expect(useAppStore.getState().rawRows).toHaveLength(0);
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
-  it('can back out of starting over', async () => {
+  it.each([
+    [
+      'Cancel',
+      (user: ReturnType<typeof userEvent.setup>) =>
+        user.click(screen.getByRole('button', { name: 'Cancel' })),
+    ],
+    ['Escape', (user: ReturnType<typeof userEvent.setup>) => user.keyboard('{Escape}')],
+  ])('can back out of starting over with %s', async (_, dismiss) => {
     await seedStore();
     const user = userEvent.setup();
     render(<UserMenu />);
 
     await user.click(screen.getByLabelText('Account menu'));
     await user.click(screen.getByRole('menuitem', { name: 'Start over' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Cancel' }));
+    await screen.findByRole('alertdialog');
+    await dismiss(user);
 
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Account menu')).toHaveFocus();
     expect(useAppStore.getState().rawRows).toHaveLength(7);
 
     await user.click(screen.getByLabelText('Account menu'));
@@ -110,8 +126,9 @@ describe('UserMenu', () => {
 
     await user.click(screen.getByRole('menuitem', { name: 'Delete account…' }));
     expect(
-      screen.getByRole('menuitem', { name: 'Confirm: delete my account' }),
+      await screen.findByRole('alertdialog', { name: 'Delete your account?' }),
     ).toBeInTheDocument();
+    expect(deleteAccount).not.toHaveBeenCalled();
   });
 
   it('keeps the account and says so when deleting it fails', async () => {
@@ -125,7 +142,7 @@ describe('UserMenu', () => {
 
     await user.click(screen.getByLabelText('Account menu'));
     await user.click(screen.getByRole('menuitem', { name: 'Delete account…' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Confirm: delete my account' }));
+    await user.click(await screen.findByRole('button', { name: 'Delete my account' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Couldn’t delete your account');
     expect(authClient.signOut).not.toHaveBeenCalled();

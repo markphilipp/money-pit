@@ -98,7 +98,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
 
     await page.getByLabel('Account menu').click();
     await page.getByRole('menuitem', { name: 'Start over' }).click();
-    await page.getByRole('menuitem', { name: 'Confirm reset' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Start over' }).click();
     // Reloading mid-write would abort the reset, and networkidle resolves at once on an idle page.
     await expect.poll(account.rowCount).toBe(0);
     await page.reload();
@@ -106,7 +106,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
 
     await page.getByLabel('Account menu').click();
     await page.getByRole('menuitem', { name: 'Delete account…' }).click();
-    await page.getByRole('menuitem', { name: 'Confirm: delete my account' }).click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete my account' }).click();
     await expect(page.getByText(/Without an account, nothing is uploaded/)).toBeVisible();
     expect(await account.exists()).toBe(false);
   });

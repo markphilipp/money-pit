@@ -132,7 +132,7 @@ describe('page', () => {
 
     await user.click(screen.getByLabelText('Account menu'));
     await user.click(screen.getByRole('menuitem', { name: 'Start over' }));
-    await user.click(screen.getByRole('menuitem', { name: 'Confirm reset' }));
+    await user.click(await screen.findByRole('button', { name: 'Start over' }));
 
     expect(await screen.findByText(/Drop statement CSVs here/)).toBeInTheDocument();
     expect(useAppStore.getState().rawRows).toHaveLength(0);
