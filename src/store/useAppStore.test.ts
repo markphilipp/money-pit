@@ -387,8 +387,9 @@ describe('session persistence', () => {
     );
     await useAppStore.persist.rehydrate();
 
-    expect(state().categories.map((c) => c.id)).toEqual(['coffee', 'other']);
-    expect(state().rules.map((r) => r.id)).toEqual(['coffee']);
+    // the legacy record never had a Payments builtin; upgrading repairs that from the defaults
+    expect(state().categories.map((c) => c.id)).toEqual(['coffee', 'other', 'payments']);
+    expect(state().rules.map((r) => r.id)).toEqual(['coffee', 'payments']);
     expect(state().categories.find((c) => c.id === 'other')?.builtin).toBe(true);
   });
 });

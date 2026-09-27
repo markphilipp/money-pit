@@ -16,18 +16,32 @@ export interface LegacyRule {
  * Splits pre-category rules into the current shape. Each becomes a category and a rule under the
  * same id, so overrides and filters holding that id keep pointing at the same category. A rule with
  * no conditions matched nothing (the builtin Other among them), so only its category survives.
+ *
+ * Every account is supposed to have both builtins, but a legacy record is trusted only as far as
+ * what it actually stored — any builtin category or rule it's missing is filled in from the
+ * defaults, by id, so this never hands back a categorization the server would reject for lacking
+ * one. An id already present, builtin or not, is kept exactly as stored.
  */
 export function upgradeLegacyRules(legacy: LegacyRule[]): Categorization {
   if (!legacy.length) return defaultCategorization;
+  const categories = legacy.map(({ id, name, color, builtin }) =>
+    builtin ? { id, name, color, builtin } : { id, name, color },
+  );
+  const rules = legacy
+    .filter((r) => r.conditions.rules.length)
+    .map(({ id, conditions, builtin }) =>
+      builtin ? { id, categoryId: id, conditions, builtin } : { id, categoryId: id, conditions },
+    );
+  const ids = new Set(categories.map((c) => c.id));
   return {
-    categories: legacy.map(({ id, name, color, builtin }) =>
-      builtin ? { id, name, color, builtin } : { id, name, color },
-    ),
-    rules: legacy
-      .filter((r) => r.conditions.rules.length)
-      .map(({ id, conditions, builtin }) =>
-        builtin ? { id, categoryId: id, conditions, builtin } : { id, categoryId: id, conditions },
-      ),
+    categories: [
+      ...categories,
+      ...defaultCategorization.categories.filter((c) => c.builtin && !ids.has(c.id)),
+    ],
+    rules: [
+      ...rules,
+      ...defaultCategorization.rules.filter((r) => r.builtin && !ids.has(r.categoryId)),
+    ],
   };
 }
 

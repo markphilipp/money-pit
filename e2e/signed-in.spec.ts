@@ -186,14 +186,17 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await page.getByLabel('Account menu').click();
     await page.getByRole('menuitem', { name: 'Categories…' }).click();
     await expect(page.getByText('Coffee')).toBeVisible();
+    // the legacy record never had a Payments builtin; reading it repairs that in memory
+    await expect(page.getByLabel('Delete Payments')).toBeDisabled();
     // reading the legacy table doesn't write anything until something actually changes
     expect(await account.categoryIds()).toEqual([]);
 
     await page.getByRole('textbox', { name: 'New category' }).fill('Travel');
     await page.getByRole('button', { name: 'Add category' }).click();
 
-    await expect.poll(account.categoryIds).toEqual(['coffee', 'travel', 'other']);
-    expect(await account.ruleIds()).toEqual(['coffee']);
+    // the save also persists the repair: Payments lands in the account alongside the new category
+    await expect.poll(account.categoryIds).toEqual(['coffee', 'travel', 'other', 'payments']);
+    expect(await account.ruleIds()).toEqual(['coffee', 'payments']);
   });
 
   test('starts over, keeping the account, then deletes it', async ({ page, account }) => {

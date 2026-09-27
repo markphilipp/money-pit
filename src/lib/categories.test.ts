@@ -9,6 +9,7 @@ import {
   upgradeLegacyRules,
   type LegacyRule,
 } from './categories';
+import { defaultCategorization } from './defaultRules';
 import { keywordsToGroup } from './rules/engine';
 import type { Category, Rule, Transaction } from './types';
 
@@ -36,9 +37,12 @@ describe('upgradeLegacyRules', () => {
         conditions: keywordsToGroup(['KROGER']),
       },
     ];
-    expect(upgradeLegacyRules(legacy)).toEqual({
-      categories: [{ id: 'grocery', name: 'Groceries', color: '#2E7D5B' }],
-      rules: [{ id: 'grocery', categoryId: 'grocery', conditions: keywordsToGroup(['KROGER']) }],
+    const { categories, rules } = upgradeLegacyRules(legacy);
+    expect(categories[0]).toEqual({ id: 'grocery', name: 'Groceries', color: '#2E7D5B' });
+    expect(rules[0]).toEqual({
+      id: 'grocery',
+      categoryId: 'grocery',
+      conditions: keywordsToGroup(['KROGER']),
     });
   });
 
@@ -61,14 +65,53 @@ describe('upgradeLegacyRules', () => {
     const legacy: LegacyRule[] = [
       { id: 'other', name: 'Other', color: '#8A8F98', conditions: empty, builtin: true },
     ];
-    expect(upgradeLegacyRules(legacy)).toEqual({
-      categories: [{ id: 'other', name: 'Other', color: '#8A8F98', builtin: true }],
-      rules: [],
-    });
+    const { categories, rules } = upgradeLegacyRules(legacy);
+    expect(categories[0]).toEqual({ id: 'other', name: 'Other', color: '#8A8F98', builtin: true });
+    expect(rules.some((r) => r.categoryId === 'other')).toBe(false);
   });
 
   it('falls back to the seeded defaults when there is nothing to upgrade', () => {
     expect(upgradeLegacyRules([]).categories.length).toBeGreaterThan(0);
+  });
+
+  it('fills in a builtin category and rule the legacy record never had', () => {
+    const legacy: LegacyRule[] = [
+      {
+        id: 'coffee',
+        name: 'Coffee',
+        color: '#6b4f3a',
+        conditions: keywordsToGroup(['STARBUCKS']),
+      },
+      { id: 'other', name: 'Other', color: '#8A8F98', conditions: empty, builtin: true },
+    ];
+    const { categories, rules } = upgradeLegacyRules(legacy);
+    expect(categories.map((c) => c.id)).toEqual(['coffee', 'other', 'payments']);
+    expect(categories.find((c) => c.id === 'payments')).toEqual(
+      defaultCategorization.categories.find((c) => c.id === 'payments'),
+    );
+    expect(rules.map((r) => r.id)).toEqual(['coffee', 'payments']);
+    expect(rules.find((r) => r.id === 'payments')).toEqual(
+      defaultCategorization.rules.find((r) => r.id === 'payments'),
+    );
+  });
+
+  it('leaves a builtin the legacy record already had exactly as stored', () => {
+    const legacy: LegacyRule[] = [
+      {
+        id: 'payments',
+        name: 'Autopay',
+        color: '#000000',
+        conditions: keywordsToGroup(['AUTOPAY']),
+        builtin: true,
+      },
+    ];
+    const { categories } = upgradeLegacyRules(legacy);
+    expect(categories.find((c) => c.id === 'payments')).toEqual({
+      id: 'payments',
+      name: 'Autopay',
+      color: '#000000',
+      builtin: true,
+    });
   });
 });
 
