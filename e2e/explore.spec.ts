@@ -111,23 +111,61 @@ test('manages rules on their own route, reached from the user menu', async ({ pa
   ).toContainText('Other');
 });
 
-test('edits a rule on its own URL and comes back through history', async ({ page }) => {
+test('reassigns a rule to a different category on its own URL and comes back through history', async ({
+  page,
+}) => {
   await page.goto('/rules');
   await page.getByLabel('Edit Home Improvement').click();
 
   await expect(page).toHaveURL(/\/rules\/home$/);
-  await page.getByLabel('Category name').fill('Renovations');
+  await expect(page.getByLabel('Category')).toHaveValue('home');
+  await page.getByLabel('Category').selectOption('pets');
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page).toHaveURL(/\/rules$/);
-  await expect(page.getByText('Renovations')).toBeVisible();
+  const moved = page.locator('li', { hasText: 'description contains LOWE' });
+  await expect(moved).toContainText('Pets');
 
-  // the rule survives a full server round-trip, not just a client-side transition
+  // the reassignment survives a full server round-trip, not just a client-side transition
   await page.reload();
-  await expect(page.getByText('Renovations')).toBeVisible();
+  await expect(moved).toContainText('Pets');
 
   await page.goBack();
-  await expect(page.getByLabel('Category name')).toHaveValue('Renovations');
+  await expect(page.getByLabel('Category')).toHaveValue('pets');
+});
+
+test('renames a category from its own screen', async ({ page }) => {
+  await page.getByLabel('Account menu').click();
+  await page.getByRole('menuitem', { name: 'Categories…' }).click();
+
+  await expect(page).toHaveURL(/\/categories$/);
+  await expect(page.getByText('1 rule · 1 transaction')).toBeVisible();
+
+  await page.getByLabel('Rename Groceries').click();
+  await page.getByLabel('New name for Groceries').fill('Food');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Groceries')).toHaveCount(0);
+
+  await page.getByRole('link', { name: 'Done' }).click();
+  await expect(
+    page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
+  ).toContainText('Food');
+});
+
+test('warns before deleting a category that rules depend on', async ({ page }) => {
+  await page.getByLabel('Account menu').click();
+  await page.getByRole('menuitem', { name: 'Categories…' }).click();
+
+  await page.getByLabel('Delete Groceries').click();
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toContainText('will be deleted too');
+  await dialog.getByRole('button', { name: /Delete category and/ }).click();
+
+  await expect(page.getByText('Groceries')).toHaveCount(0);
+  await page.getByRole('link', { name: 'Done' }).click();
+  await expect(
+    page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
+  ).toContainText('Other');
 });
 
 test('serves a 404 for an unknown URL and a message for an unknown rule', async ({ page }) => {
