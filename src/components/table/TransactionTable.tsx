@@ -120,6 +120,7 @@ export function TransactionTable() {
             })
           }
           onCreateRule={() => startRuleFrom([...state.selectedIds])}
+          onClear={clearSelection}
         />
       </div>
 

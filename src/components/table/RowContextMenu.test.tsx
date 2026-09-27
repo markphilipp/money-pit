@@ -51,17 +51,19 @@ describe('RowContextMenu', () => {
 });
 
 describe('BulkBar', () => {
-  it('renders both bulk actions and no clear button', () => {
-    render(<BulkBar count={3} onChangeCategory={vi.fn()} onCreateRule={vi.fn()} />);
+  it('renders the bulk actions and a clear button', () => {
+    render(
+      <BulkBar count={3} onChangeCategory={vi.fn()} onCreateRule={vi.fn()} onClear={vi.fn()} />,
+    );
     expect(screen.getByText('3 selected')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Change category' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Create rule' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /clear/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Clear selection' })).toBeInTheDocument();
   });
 
   it('renders nothing without a selection', () => {
     const { container } = render(
-      <BulkBar count={0} onChangeCategory={vi.fn()} onCreateRule={vi.fn()} />,
+      <BulkBar count={0} onChangeCategory={vi.fn()} onCreateRule={vi.fn()} onClear={vi.fn()} />,
     );
     expect(container).toBeEmptyDOMElement();
   });

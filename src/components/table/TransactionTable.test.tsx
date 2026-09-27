@@ -168,18 +168,29 @@ describe('TransactionTable', () => {
     expect(selectAll.checked).toBe(false);
   });
 
-  it('bulk-changes the selection and offers no clear button', async () => {
+  it('bulk-changes the selection', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
 
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));
     await user.click(within(bodyRows()[1]).getByRole('checkbox'));
-    expect(screen.queryByRole('button', { name: /clear selection/i })).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Search description')).toBeVisible();
 
     await user.click(screen.getByRole('button', { name: 'Change category' }));
     await user.click(screen.getByRole('option', { name: /^Pets/ }));
 
     expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets', 'pets']);
+    expect(useAppStore.getState().selectedIds.size).toBe(0);
+    expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
+  });
+
+  it('clears the selection from the bulk bar', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+
     expect(useAppStore.getState().selectedIds.size).toBe(0);
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });

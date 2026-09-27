@@ -1,29 +1,25 @@
 .bar {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  padding: 0 18px;
-  border-bottom: 1px dashed var(--accent);
-  background: var(--accent-soft);
+  gap: 8px;
+  flex: none;
   font-size: 13px;
 }
 
 .count {
   font-family: var(--font-mono), monospace;
   font-weight: 600;
+  margin-right: 4px;
+  white-space: nowrap;
 }
 
 .btn {
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 7px 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid var(--ink);
@@ -34,4 +30,13 @@
 .btn:hover {
   border-color: var(--accent);
   background: var(--accent);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.ghost:hover {
+  color: #fff;
 }
