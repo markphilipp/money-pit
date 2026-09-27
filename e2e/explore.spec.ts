@@ -22,10 +22,15 @@ test('filters through the column menus and survives a reload', async ({ page }) 
   await expect(page.getByRole('row', { name: /WALMART/ })).toBeVisible();
   await expect(page.locator('tfoot')).toContainText('$64.20');
 
-  await page.getByRole('button', { name: 'Bars' }).click();
+  await page
+    .getByRole('group', { name: 'Category chart type' })
+    .getByRole('button', { name: 'Bars' })
+    .click();
   await page.reload();
 
-  await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(
+    page.getByRole('group', { name: 'Category chart type' }).getByRole('button', { name: 'Bars' }),
+  ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: /Transactions/ })).toContainText('(1)');
 
   await page.getByRole('button', { name: 'Reset' }).click();
