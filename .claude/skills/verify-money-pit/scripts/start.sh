@@ -20,7 +20,9 @@ if [[ $BUILD == 1 ]]; then
   bun run build >"$RUN/build.log" 2>&1 || { echo "build failed, see $RUN/build.log" >&2; exit 1; }
 fi
 
-nohup bunx next start -p "$PORT" >"$RUN/server.log" 2>&1 &
+# Better Auth rejects sign-out and account POSTs from any origin but BETTER_AUTH_URL, and .env.local
+# sets it to the dev server's localhost:3000.
+BETTER_AUTH_URL="http://127.0.0.1:$PORT" nohup bunx next start -p "$PORT" >"$RUN/server.log" 2>&1 &
 echo $! >"$RUN/pid"
 
 for _ in $(seq 1 60); do
