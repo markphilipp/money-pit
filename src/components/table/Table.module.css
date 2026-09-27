@@ -2,7 +2,6 @@
   padding: 0;
 }
 
-/* Sticky (rather than `relative`) is also the hook BulkBar overlays itself onto. */
 .head {
   position: sticky;
   top: var(--charts-h, 0px);
