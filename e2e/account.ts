@@ -3,7 +3,7 @@ import { test as base, type BrowserContext } from '@playwright/test';
 import { betterAuth } from 'better-auth';
 import { testUtils } from 'better-auth/plugins';
 import type { TestHelpers } from 'better-auth/plugins';
-import { eq } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import { authOptions } from '@/auth';
 import { getDb } from '@/db';
 import { category, categoryRule, rule, statementRow, user as userTable } from '@/db/schema';
@@ -33,6 +33,8 @@ interface Account {
   seedLegacyCategoryRules: (rows: LegacyCategoryRule[]) => Promise<void>;
   categoryIds: () => Promise<string[]>;
   ruleIds: () => Promise<string[]>;
+  /** The stored override for the row whose description contains `descriptionLike`, or null. */
+  overrideFor: (descriptionLike: string) => Promise<string | null>;
 }
 
 /** Each test gets its own throwaway user, so signed-in specs stay parallel-safe; it's deleted after. */
@@ -89,6 +91,18 @@ export const test = base.extend<{ account: Account }, { helpers: TestHelpers }>(
             .where(eq(rule.userId, user.id))
             .orderBy(rule.position)
         ).map((r) => r.id),
+      overrideFor: async (descriptionLike) => {
+        const [row] = await getDb()
+          .select({ categoryOverride: statementRow.categoryOverride })
+          .from(statementRow)
+          .where(
+            and(
+              eq(statementRow.userId, user.id),
+              like(statementRow.description, `%${descriptionLike}%`),
+            ),
+          );
+        return row?.categoryOverride ?? null;
+      },
     });
     await helpers.deleteUser(user.id);
   },

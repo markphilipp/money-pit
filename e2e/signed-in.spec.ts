@@ -113,6 +113,15 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await page.getByRole('button', { name: 'Add category' }).click();
     await page.getByRole('link', { name: 'Done' }).click();
 
+    await pill(page).click();
+    await page.getByPlaceholder('Search categories…').fill('travel');
+    await page
+      .getByRole('dialog', { name: 'Choose category' })
+      .getByRole('option', { name: 'Travel' })
+      .click();
+    await expect(pill(page)).toContainText('Travel');
+    await expect.poll(() => account.overrideFor('DUKE-ENERGY')).toBe('travel');
+
     const row = page.getByRole('row', { name: /Merchant Offers/ });
     await row.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
@@ -132,11 +141,16 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
 
     await page.getByRole('link', { name: 'Done' }).click();
     await expect(merchantOffersPill(page)).toContainText('Other');
+    // its rule (util) was untouched by the delete, so the row it always matched wins it back
+    await expect(pill(page)).toContainText('Utilities & Phone');
 
     // the deletion survives a full server round-trip, not just the tab's own state
     await page.reload();
     await expect(heading(page)).toContainText('(7)');
     await expect(merchantOffersPill(page)).toContainText('Other');
+    await expect(pill(page)).toContainText('Utilities & Phone');
+    // the manual override that pointed at the deleted category was cleared server-side too
+    await expect.poll(() => account.overrideFor('DUKE-ENERGY')).toBeNull();
     await page.goto('/categories');
     await expect(page.getByText('Travel')).toHaveCount(0);
   });
