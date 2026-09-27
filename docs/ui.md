@@ -4,8 +4,8 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area         | Files                                                                                            | Notes                                                                                                                                                                 |
-| ------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Area         | Files                                                                                            | Notes                                                                                                                                                                |
+| ------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                 | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.    |
 | `dashboard`  | `Dashboard`                                                                                      | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                    |
 | `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                  | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                         |

@@ -34,8 +34,9 @@ function union<T extends { id: string; builtin?: boolean }>(account: T[], local:
  * account already holds is deduped the same way a second upload would be. Overrides are keyed by
  * `txnId`, which survives the merge, and the session's win. An account still on the seeded defaults
  * takes the session's categories and rules wholesale; otherwise only the ones the account doesn't
- * have are added, ahead of the builtins. Ids are name slugs, so a shared id is the same category
- * or rule and the account's version stays.
+ * have are added, ahead of the builtins. Category ids are name slugs, so a shared id is the same
+ * category and the account's version stays. Rule ids are random, so a shared id only happens for
+ * the fixed-id builtins; every other rule from each side is just unioned in, never merged.
  */
 export function claimInto(account: Dataset, local: Dataset): Dataset {
   const seeded =
