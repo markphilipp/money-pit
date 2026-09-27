@@ -3,8 +3,10 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as accountActions from '@/app/actions/account';
+import { idleStatus, type SaveStatus } from '@/lib/saveStatus';
 import { startAccountSync } from '@/store/sync';
 import { SignedInContext } from '@/store/useAppStore';
+import { SaveStatusToast } from './SaveStatusToast';
 import styles from './AccountSync.module.css';
 
 interface PendingClaim {
@@ -19,6 +21,7 @@ export function AccountSync({
   children: React.ReactNode;
 }) {
   const [error, setError] = useState<string | null>(null);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(idleStatus);
   const [claim, setClaim] = useState<PendingClaim | null>(null);
   const saveRef = useRef<HTMLButtonElement>(null);
 
@@ -33,7 +36,7 @@ export function AccountSync({
           },
         }),
       );
-    return startAccountSync(accountActions, setError, confirmClaim).stop;
+    return startAccountSync(accountActions, setError, confirmClaim, setSaveStatus).stop;
   }, [signedIn]);
 
   return (
@@ -71,6 +74,7 @@ export function AccountSync({
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
+      {signedIn && <SaveStatusToast status={saveStatus} />}
       {error && (
         <div className={styles.alert} role="alert">
           <p>{error}</p>
