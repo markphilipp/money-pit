@@ -37,6 +37,7 @@
     "@radix-ui/react-popover": "^1.1.23",
     "@radix-ui/react-tabs": "^1.1.21",
     "@tanstack/react-table": "^8.21.3",
+    "@vercel/functions": "^3.9.9",
     "better-auth": "^1.7.6",
     "chart.js": "^4.5.1",
     "drizzle-orm": "^0.45.3",

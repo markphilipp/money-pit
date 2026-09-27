@@ -99,7 +99,9 @@ none of these. OAuth callbacks work on production and localhost only, not rotati
 
 Node is pinned to 24 (the newest Vercel supports): `engines.node` for Vercel, `.node-version` for
 fnm locally and `actions/setup-node` in CI. The Neon driver relies on the runtime's global
-`WebSocket`; there is no `ws` dependency.
+`WebSocket`; there is no `ws` dependency. `getDb()` passes its pool to `attachDatabasePool` from
+`@vercel/functions`, so Fluid Compute closes idle connections before it suspends an instance. It's a
+no-op outside Vercel.
 
 CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
 and deploys.

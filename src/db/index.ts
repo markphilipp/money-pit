@@ -1,4 +1,5 @@
 import { Pool } from '@neondatabase/serverless';
+import { attachDatabasePool } from '@vercel/functions';
 import { drizzle } from 'drizzle-orm/neon-serverless';
 
 function pooledConnectionString(): string {
@@ -16,7 +17,10 @@ function pooledConnectionString(): string {
 }
 
 function connect() {
-  return drizzle({ client: new Pool({ connectionString: pooledConnectionString() }) });
+  const pool = new Pool({ connectionString: pooledConnectionString() });
+  // Fluid Compute can suspend an instance with idle clients open; this closes them first.
+  attachDatabasePool(pool);
+  return drizzle({ client: pool });
 }
 
 type Db = ReturnType<typeof connect>;
