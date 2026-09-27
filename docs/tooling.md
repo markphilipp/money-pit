@@ -103,12 +103,17 @@ fnm locally and `actions/setup-node` in CI. The Neon driver relies on the runtim
 `@vercel/functions`, so Fluid Compute closes idle connections before it suspends an instance. It's a
 no-op outside Vercel.
 
-CI/CD stays split: GitHub Actions is the quality gate (lint/typecheck/test/e2e), Vercel only builds
-and deploys.
+CI/CD stays split: GitHub Actions is the quality gate, Vercel only builds and deploys. Vercel
+**Deployment Checks** join them. A production build is ready straight away, but Vercel only points
+`money-pit.vercel.app` at it once `lint`, `typecheck`, `test`, `build`, `e2e` and `e2e-signed-in`
+have passed on its commit. A push that fails CI never goes live, and the previous deployment keeps
+serving. Configure the checks under Project → Settings → Build and Deployment → Deployment Checks;
+`vercel project checks` lists them. A newly added CI job has to report once before it can be picked
+there.
 
 `main` is protected by a repository ruleset requiring `lint`, `typecheck`, `test`, `build` and
 `e2e`, and blocking force-push and deletion. Repository admins are bypass actors in `always` mode,
-so an emergency fix can go straight to `main` — the normal path is still a PR.
+so direct pushes to `main` skip the ruleset; the Deployment Checks still hold production.
 
 ## Config notes
 
