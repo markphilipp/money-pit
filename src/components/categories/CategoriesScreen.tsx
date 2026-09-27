@@ -60,7 +60,9 @@ function CategoryList() {
   const categories = useAppStore((s) => s.categories);
   const rules = useAppStore((s) => s.rules);
   const transactions = useTransactions();
-  const [deleting, setDeleting] = useState<Category | null>(null);
+  const [deleting, setDeleting] = useState<{ category: Category; trigger: HTMLButtonElement } | null>(
+    null,
+  );
 
   const usage = useMemo(
     () => categoryUsage({ categories, rules }, transactions),
@@ -80,13 +82,19 @@ function CategoryList() {
               key={category.id}
               category={category}
               usage={usage.get(category.id)!}
-              onDelete={() => setDeleting(category)}
+              onDelete={(trigger) => setDeleting({ category, trigger })}
             />
           ))}
         </ul>
         <AddCategory />
       </section>
-      {deleting && <DeleteCategoryDialog category={deleting} onClose={() => setDeleting(null)} />}
+      {deleting && (
+        <DeleteCategoryDialog
+          category={deleting.category}
+          returnFocusTo={{ current: deleting.trigger }}
+          onClose={() => setDeleting(null)}
+        />
+      )}
     </>
   );
 }
@@ -98,7 +106,7 @@ function CategoryRow({
 }: {
   category: Category;
   usage: CategoryUsage;
-  onDelete: () => void;
+  onDelete: (trigger: HTMLButtonElement) => void;
 }) {
   const categories = useAppStore((s) => s.categories);
   const setCategory = useAppStore((s) => s.setCategory);
@@ -171,7 +179,7 @@ function CategoryRow({
               disabled={category.builtin}
               aria-label={`Delete ${category.name}`}
               title={category.builtin ? 'Built-in categories cannot be deleted' : undefined}
-              onClick={onDelete}
+              onClick={(e) => onDelete(e.currentTarget)}
             >
               Delete
             </button>
