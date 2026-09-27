@@ -6,6 +6,7 @@ import type {
   RuleGroup,
   TextOperator,
 } from '@/lib/rules/types';
+import { OTHER_ID, PAYMENTS_ID } from '@/lib/types';
 import type { ChartMode, SortKey } from '@/lib/types';
 
 // A Record forces every member of the union to be listed, so a new operator can't be silently
@@ -61,16 +62,20 @@ const ruleGroup: z.ZodType<RuleGroup> = z.lazy(() =>
   }),
 );
 
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i, 'Color must be a 6-digit hex value.');
+
 export const categorizationInput = z
   .object({
-    categories: z.array(
-      z.object({
-        id: z.string().min(1),
-        name: z.string(),
-        color: z.string(),
-        builtin: z.boolean().optional(),
-      }),
-    ),
+    categories: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          name: z.string(),
+          color: hexColor,
+          builtin: z.boolean().optional(),
+        }),
+      )
+      .min(1, 'At least one category is required.'),
     rules: z.array(
       z.object({
         id: z.string().min(1),
@@ -80,6 +85,16 @@ export const categorizationInput = z
       }),
     ),
   })
+  .refine(
+    ({ categories }) => new Set(categories.map((c) => c.id)).size === categories.length,
+    'Category ids must be unique.',
+  )
+  .refine(
+    ({ categories }) =>
+      categories.some((c) => c.id === PAYMENTS_ID && c.builtin) &&
+      categories.some((c) => c.id === OTHER_ID && c.builtin),
+    'The builtin Payments and Other categories are required.',
+  )
   .refine(({ categories, rules }) => {
     const ids = new Set(categories.map((c) => c.id));
     return rules.every((r) => ids.has(r.categoryId));
