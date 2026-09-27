@@ -315,6 +315,7 @@ describe('session persistence', () => {
     const txn = selectTransactions(state())[0];
     state().setOverride([txn.id], 'pets');
     state().setChartMode('bar');
+    state().setPersonChartMode('bar');
     state().toggleCategoryFilter('amazon');
 
     const stored = sessionStorage.getItem('money-pit');
@@ -324,11 +325,18 @@ describe('session persistence', () => {
       values: ['amazon'],
     });
 
-    useAppStore.setState({ rawRows: [], overrides: {}, chartMode: 'donut', filters: emptyFilters });
+    useAppStore.setState({
+      rawRows: [],
+      overrides: {},
+      chartMode: 'donut',
+      personChartMode: 'donut',
+      filters: emptyFilters,
+    });
     sessionStorage.setItem('money-pit', stored!); // the setState above re-persisted the blank state
     await useAppStore.persist.rehydrate();
 
     expect(state().chartMode).toBe('bar');
+    expect(state().personChartMode).toBe('bar');
     expect(state().filters.columnFilters.category).toEqual({
       column: 'category',
       values: ['amazon'],

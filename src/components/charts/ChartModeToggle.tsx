@@ -1,7 +1,6 @@
 'use client';
 
 import type { ChartMode } from '@/lib/types';
-import { useAppStore } from '@/store/useAppStore';
 import styles from './Chart.module.css';
 
 const MODES: { id: ChartMode; label: string }[] = [
@@ -9,18 +8,21 @@ const MODES: { id: ChartMode; label: string }[] = [
   { id: 'bar', label: 'Bars' },
 ];
 
-export function ChartModeToggle() {
-  const chartMode = useAppStore((s) => s.chartMode);
-  const setChartMode = useAppStore((s) => s.setChartMode);
+interface Props {
+  mode: ChartMode;
+  onChange: (mode: ChartMode) => void;
+  label: string;
+}
 
+export function ChartModeToggle({ mode, onChange, label }: Props) {
   return (
-    <div className={styles.seg} role="group" aria-label="Chart type">
+    <div className={`${styles.seg} ${styles.corner}`} role="group" aria-label={label}>
       {MODES.map((m) => (
         <button
           key={m.id}
-          className={`${styles.segBtn} ${chartMode === m.id ? styles.active : ''}`}
-          aria-pressed={chartMode === m.id}
-          onClick={() => setChartMode(m.id)}
+          className={`${styles.segBtn} ${mode === m.id ? styles.active : ''}`}
+          aria-pressed={mode === m.id}
+          onClick={() => onChange(m.id)}
         >
           {m.label}
         </button>

@@ -58,7 +58,7 @@ Constraints that are easy to break by accident:
 Both charts read `useFiltered({ ignoreCategory })` / `{ ignorePerson }`, so a chart never filters
 itself away: clicking a slice toggles that value in the checklist filter, and unselected slices dim
 (`shade()` appends the `40` alpha suffix) rather than disappearing, so they stay clickable.
-`chartMode` ('donut' | 'bar') applies to the category chart and persists for the session.
+`chartMode` and `personChartMode` ('donut' | 'bar') are independent, one per chart, and persist for the session (and the account). The cards have no visible title or helper text; the Donut/Bars toggle is overlaid in the card's top-right corner and each chart is labelled through its canvas `aria-label`.
 
 ## Table
 

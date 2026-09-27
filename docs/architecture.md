@@ -14,7 +14,7 @@ CSV files → rawRows (persisted)
                    charts · stats strip · table
 ```
 
-Only `rawRows`, `rules`, `overrides`, `filters`, `chartMode`, `sort` and `ruleSources` are
+Only `rawRows`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort` and `ruleSources` are
 persisted (`partialize` in `src/store/useAppStore.ts`). Signed out, all of them go to
 `sessionStorage`. Signed in, only `filters` and `ruleSources` do, and the account holds the rest
 (see [Signed-in sync](#signed-in-sync--srcstoresyncts)). Everything a component renders below that line is
@@ -69,13 +69,13 @@ await the network. `AccountSync` (in the root layout) calls `startAccountSync()`
 had a valid session. It loads the snapshot into the store, sets `mode: 'account'`, and then
 subscribes to the store and turns each diff into a server action from `src/app/actions/account.ts`:
 
-| Slice               | Change      | Server action                                                     |
-| ------------------- | ----------- | ----------------------------------------------------------------- |
-| `rawRows`           | grew        | `appendRows` with the new tail, in chunks under the 1 MB body cap |
-| `rawRows`           | emptied     | `resetAccount` only: `resetAll` resets every other slice too      |
-| `rules`             | ref changed | `replaceRules` with the whole list                                |
-| `overrides`         | diff        | `setOverrides` with the changed rows, identified by content       |
-| `chartMode`, `sort` | changed     | `setPreference`                                                   |
+| Slice                                  | Change      | Server action                                                     |
+| -------------------------------------- | ----------- | ----------------------------------------------------------------- |
+| `rawRows`                              | grew        | `appendRows` with the new tail, in chunks under the 1 MB body cap |
+| `rawRows`                              | emptied     | `resetAccount` only: `resetAll` resets every other slice too      |
+| `rules`                                | ref changed | `replaceRules` with the whole list                                |
+| `overrides`                            | diff        | `setOverrides` with the changed rows, identified by content       |
+| `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                   |
 
 Every action re-derives the user from the session cookie and parses its arguments with the zod
 schemas in `src/app/actions/input.ts`. Every write is idempotent. Writes run one at a time, in

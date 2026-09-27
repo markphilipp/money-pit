@@ -64,7 +64,10 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await page.goto('/');
     await uploadAndEdit(page);
     await page.goto('/');
-    await page.getByRole('button', { name: 'Bars' }).click();
+    await page
+      .getByRole('group', { name: 'Category chart type' })
+      .getByRole('button', { name: 'Bars' })
+      .click();
     await account.signIn();
     await page.goto('/');
 
@@ -72,19 +75,21 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(prompt.getByRole('button', { name: 'Save to my account' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(pill(page)).toContainText('Renovations');
-    await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(
+      page
+        .getByRole('group', { name: 'Category chart type' })
+        .getByRole('button', { name: 'Bars' }),
+    ).toHaveAttribute('aria-pressed', 'true');
     expect(await storedKeys(page)).toEqual(['filters', 'ruleSources']);
 
     await page.reload();
     await expect(heading(page)).toContainText('(7)');
     await expect(pill(page)).toContainText('Renovations');
-    await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
+    await expect(
+      page
+        .getByRole('group', { name: 'Category chart type' })
+        .getByRole('button', { name: 'Bars' }),
+    ).toHaveAttribute('aria-pressed', 'true');
     await expect(prompt).toHaveCount(0);
   });
 

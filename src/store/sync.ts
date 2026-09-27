@@ -19,8 +19,13 @@ export type ConfirmClaim = () => Promise<boolean>;
 // Server actions cap request bodies at 1 MB; a stored row serializes to roughly 200 bytes.
 const APPEND_CHUNK = 2000;
 
-const toPreference = ({ chartMode, sort }: Pick<AppState, 'chartMode' | 'sort'>) => ({
+const toPreference = ({
   chartMode,
+  personChartMode,
+  sort,
+}: Pick<AppState, 'chartMode' | 'personChartMode' | 'sort'>) => ({
+  chartMode,
+  personChartMode,
   sortKey: sort.key,
   sortDir: sort.dir,
 });
@@ -34,6 +39,7 @@ async function applySnapshot(api: AccountApi) {
     overrides,
     rules,
     chartMode: preference?.chartMode ?? initialState.chartMode,
+    personChartMode: preference?.personChartMode ?? initialState.personChartMode,
     sort: preference ? { key: preference.sortKey, dir: preference.sortDir } : initialState.sort,
     selectedIds: new Set<string>(),
   } satisfies Partial<AppState>;
@@ -99,7 +105,11 @@ export function startAccountSync(
       const changes = overrideChanges(next.rawRows, prev.overrides, next.overrides);
       if (changes.length) enqueue(() => api.setOverrides(changes));
     }
-    if (next.chartMode !== prev.chartMode || next.sort !== prev.sort) {
+    if (
+      next.chartMode !== prev.chartMode ||
+      next.personChartMode !== prev.personChartMode ||
+      next.sort !== prev.sort
+    ) {
       const preference = toPreference(next);
       enqueue(() => api.setPreference(preference));
     }
@@ -116,6 +126,7 @@ export function startAccountSync(
     // Untouched defaults aren't a choice, so they never overwrite what the account has saved.
     const untouched =
       state.chartMode === initialState.chartMode &&
+      state.personChartMode === initialState.personChartMode &&
       state.sort.key === initialState.sort.key &&
       state.sort.dir === initialState.sort.dir;
     try {

@@ -19,11 +19,15 @@
   }
 }
 
-.cardTop {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
+.card {
+  position: relative;
+}
+
+.corner {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 1;
 }
 
 .box {
@@ -47,7 +51,7 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  padding: 6px 11px;
+  padding: 4px 9px;
   border: none;
   background: var(--card);
   color: var(--ink-soft);

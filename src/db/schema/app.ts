@@ -70,6 +70,7 @@ export const categoryRule = pgTable(
 export const preference = pgTable('preference', {
   userId: userId().primaryKey(),
   chartMode: text('chart_mode').$type<ChartMode>().default('donut').notNull(),
+  personChartMode: text('person_chart_mode').$type<ChartMode>().default('donut').notNull(),
   sortKey: text('sort_key').$type<SortKey>().default('date').notNull(),
   sortDir: smallint('sort_dir').$type<1 | -1>().default(-1).notNull(),
 });

@@ -36,6 +36,7 @@ export interface AppState {
   overrides: Record<string, string>;
   filters: FilterState;
   chartMode: ChartMode;
+  personChartMode: ChartMode;
   sort: SortState;
   selectedIds: Set<string>;
   /** Seeds `/rules/new`; persisted so the route survives a reload rather than losing its subject. */
@@ -54,6 +55,7 @@ export interface AppState {
   toggleCategoryFilter: (id: string) => void;
   togglePersonFilter: (person: string) => void;
   setChartMode: (mode: ChartMode) => void;
+  setPersonChartMode: (mode: ChartMode) => void;
   setSort: (key: SortKey, dir?: 1 | -1) => void;
   toggleSelected: (id: string) => void;
   selectAll: (ids: string[], selected: boolean) => void;
@@ -68,6 +70,7 @@ export const initialState = {
   overrides: {} as Record<string, string>,
   filters: emptyFilters,
   chartMode: 'donut' as ChartMode,
+  personChartMode: 'donut' as ChartMode,
   sort: { key: 'date', dir: -1 } as SortState,
   selectedIds: new Set<string>(),
   ruleSources: [] as string[],
@@ -75,7 +78,14 @@ export const initialState = {
 
 type PersistedState = Pick<
   AppState,
-  'rawRows' | 'rules' | 'overrides' | 'filters' | 'chartMode' | 'sort' | 'ruleSources'
+  | 'rawRows'
+  | 'rules'
+  | 'overrides'
+  | 'filters'
+  | 'chartMode'
+  | 'personChartMode'
+  | 'sort'
+  | 'ruleSources'
 >;
 
 const noopStorage = {
@@ -216,6 +226,8 @@ export const useAppStore = create<AppState>()(
 
       setChartMode: (chartMode) => set({ chartMode }),
 
+      setPersonChartMode: (personChartMode) => set({ personChartMode }),
+
       setSort: (key, dir) =>
         set((s) => ({
           sort: dir
@@ -266,6 +278,7 @@ export const useAppStore = create<AppState>()(
               overrides: s.overrides,
               filters: s.filters,
               chartMode: s.chartMode,
+              personChartMode: s.personChartMode,
               sort: s.sort,
               ruleSources: s.ruleSources,
             },

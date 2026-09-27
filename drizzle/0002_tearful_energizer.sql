@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "person_chart_mode" text DEFAULT 'donut' NOT NULL;
