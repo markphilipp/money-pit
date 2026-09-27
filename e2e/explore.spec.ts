@@ -139,7 +139,8 @@ test('renames a category from its own screen', async ({ page }) => {
   await page.getByRole('menuitem', { name: 'Categories…' }).click();
 
   await expect(page).toHaveURL(/\/categories$/);
-  await expect(page.getByText('1 rule · 1 transaction')).toBeVisible();
+  const groceriesRow = page.locator('li', { has: page.getByLabel('Rename Groceries') });
+  await expect(groceriesRow).toContainText('1 rule · 1 transaction');
 
   await page.getByLabel('Rename Groceries').click();
   await page.getByLabel('New name for Groceries').fill('Food');

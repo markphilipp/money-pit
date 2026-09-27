@@ -109,7 +109,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
 
     await page.getByLabel('Account menu').click();
     await page.getByRole('menuitem', { name: 'Categories…' }).click();
-    await page.getByLabel('New category').fill('Travel');
+    await page.getByRole('textbox', { name: 'New category' }).fill('Travel');
     await page.getByRole('button', { name: 'Add category' }).click();
     await page.getByRole('link', { name: 'Done' }).click();
 
@@ -117,7 +117,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await row.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
     await expect(page).toHaveURL(/\/rules\/new$/);
-    await page.getByLabel('Category').selectOption('travel');
+    await page.getByLabel('Category', { exact: true }).selectOption('travel');
     await page.getByRole('button', { name: 'Save rule' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(merchantOffersPill(page)).toContainText('Travel');
@@ -175,7 +175,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     // reading the legacy table doesn't write anything until something actually changes
     expect(await account.categoryIds()).toEqual([]);
 
-    await page.getByLabel('New category').fill('Travel');
+    await page.getByRole('textbox', { name: 'New category' }).fill('Travel');
     await page.getByRole('button', { name: 'Add category' }).click();
 
     await expect.poll(account.categoryIds).toEqual(['coffee', 'travel', 'other']);
