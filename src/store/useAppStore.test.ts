@@ -360,8 +360,19 @@ describe('session persistence', () => {
 
   it('upgrades a pre-split session stored under the legacy rules key', async () => {
     const legacy = [
-      { id: 'coffee', name: 'Coffee', color: '#6b4f3a', conditions: keywordsToGroup(['STARBUCKS']) },
-      { id: 'other', name: 'Other', color: '#8A8F98', conditions: { combinator: 'and', rules: [] }, builtin: true },
+      {
+        id: 'coffee',
+        name: 'Coffee',
+        color: '#6b4f3a',
+        conditions: keywordsToGroup(['STARBUCKS']),
+      },
+      {
+        id: 'other',
+        name: 'Other',
+        color: '#8A8F98',
+        conditions: { combinator: 'and', rules: [] },
+        builtin: true,
+      },
     ];
     sessionStorage.setItem(
       'money-pit',

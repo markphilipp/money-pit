@@ -4,16 +4,17 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area        | Files                                                                                      | Notes                                                                                                                                                             |
-| ----------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`    | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`           | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`. |
-| `dashboard` | `Dashboard`                                                                                | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                 |
-| `charts`    | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                      |
-| `table`     | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                   |
-| `rules`     | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `rqbMap`            | One screen per route; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.                                                                       |
-| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                        |
-| `auth`      | `SignInScreen`                                                                             | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                      |
-| `common`    | `ColorPickerPopover`                                                                       | Shared palette popover.                                                                                                                                           |
+| Area         | Files                                                                                            | Notes                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                 | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.    |
+| `dashboard`  | `Dashboard`                                                                                      | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                    |
+| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                  | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                         |
+| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`       | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                      |
+| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. |
+| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                       | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                      |
+| `upload`     | `EmptyState`, `UploadZone`                                                                       | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                           |
+| `auth`       | `SignInScreen`                                                                                   | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                         |
+| `common`     | `ColorPickerPopover`, `ConfirmDialog`                                                            | Shared palette popover and a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step.                         |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
@@ -78,6 +79,7 @@ what's visible.
 | Route         | Screen             | Notes                                                                                          |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
 | `/`           | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
+| `/categories` | `CategoriesScreen` | Add, rename, recolor and delete categories. Reached from the account menu.                     |
 | `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
 | `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
@@ -85,9 +87,11 @@ what's visible.
 | `/privacy`    | `LegalPage`        | Privacy policy. Google's OAuth consent screen links to it, so keep it true to what's stored.   |
 | `/terms`      | `LegalPage`        | Terms of service, also linked from the consent screen. Both are linked from `Footer`.          |
 
-`new` is a reserved rule id (`src/lib/rules/naming.ts`) because the static segment shadows the
-dynamic one. `not-found.tsx` and `error.tsx` cover unknown URLs and render errors; an id that
-matches no rule is _not_ a 404 — rules are session-scoped, so the screen explains that instead.
+`new` is a reserved category id (`src/lib/rules/naming.ts`, `uniqueId`) — a holdover from when a
+rule's own id doubled as its category id and could collide with the static `/rules/new` route. A new
+rule's own id is minted separately (`newRuleId`, random) and never reaches that check. `not-found.tsx`
+and `error.tsx` cover unknown URLs and render errors; an id that matches no rule is _not_ a 404 —
+rules are session-scoped, so the screen explains that instead.
 
 Screens share their chrome through `RuleScreen.module.css` (frame, heading, action row); each keeps
 only what is genuinely its own.
@@ -104,10 +108,10 @@ Three stacked sections:
 1. **Suggested rules** — cards from `suggestRuleGroups` (see
    [data-model.md](data-model.md#rule-suggestions--srclibrulessuggestts)), each showing its
    condition and `matches all N selected + M others`. Clicking one loads it into the builder and
-   pre-fills the category name, unless the user has already typed one. The active card is marked
-   `aria-pressed` and tagged **edited** once the builder diverges from it.
-2. **Rule** — color, name, and `RuleConditionsEditor` (the react-querybuilder setup shared with
-   `RuleForm`).
+   pre-fills the new category's name, unless the user has already typed one. The active card is
+   marked `aria-pressed` and tagged **edited** once the builder diverges from it.
+2. **Rule** — `CategoryField` (existing category, or a new one named and colored here) and
+   `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`).
 3. **Matches** — recomputed on every builder change.
 
 The match preview is the guardrail, and it is deliberately honest about three things:
@@ -117,7 +121,7 @@ The match preview is the guardrail, and it is deliberately honest about three th
   above. Editing a suggestion into something too narrow is visible immediately.
 - Rules are **first-match-wins**, so `matchesGroup` alone overstates the reach. The preview inserts
   the draft at the position `addRule` would give it (after the user rules, before the builtins) and
-  runs `matchCategory`; a row an earlier rule already owns is tagged _stays in ‹rule›_.
+  runs `matchCategory`; a row an earlier rule already owns is tagged _stays in ‹category›_.
 - **Manual overrides beat every rule.** A selected row with an override is tagged
   _manual category wins_, and saving offers to clear those overrides — otherwise "applies to
   everything it matches" would silently skip exactly the rows the user hand-corrected.
@@ -126,17 +130,33 @@ An emptied builder means "no rule yet", not "a rule that excludes everything" �
 half-finished conditions, so mid-edit the group is briefly empty and flagging every row would be
 noise. Saving is retroactive for free: categorization derives from the rules on read.
 
+## Categories screen — `CategoriesScreen`
+
+Add, rename, recolor and delete categories, one row per category with its rule and transaction
+counts (`categoryUsage`). Renaming is inline (a text input replaces the name, Enter or Save
+commits, Escape cancels); a name already in use by another category is rejected before Save
+enables, case-insensitively (`findCategoryByName`). Builtins (`payments`, `other`) can be renamed
+and recolored but their Delete button is disabled.
+
+Deleting a non-builtin category opens `DeleteCategoryDialog`, built on the shared `ConfirmDialog`
+with a rich `description` (a list of the rules that file into it, and how many rows an override
+versus a rule put there) instead of a plain string — `ConfirmDialog`'s description renders inside a
+`div`, not Radix's default `<p>`, specifically so a caller can nest block content like this list
+without producing invalid HTML. The confirm button reads "Delete category" or "Delete category and N
+rules" depending on whether any exist, and deleting removes the category, every rule filing into it,
+and every override pointing at it in one store update.
+
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (confirms in a modal), **Category rules…**, and **Sign in…**
-(a link to `/sign-in`). Add statement and Start over only appear once there's data. Signed in, Start
-over also wipes the account's rows and resets its rules, but keeps the account. Sign in becomes
-**Sign out** and **Delete account…** (same modal), which calls the `deleteAccount` server
-action. Deleting the `user` row cascades to everything, sessions included. Both sign out and delete
-clear the tab's persisted state and do a full reload to `/`, so no account data survives in the
-in-memory store. The avatar stays a generic SVG: provider names and
-pictures are never stored, and not loading provider images keeps `img-src` at `'self'`.
+**Add statement**, **Start over** (confirms in a modal), **Categories…**, **Category rules…**, and
+**Sign in…** (a link to `/sign-in`). Add statement and Start over only appear once there's data.
+Signed in, Start over also wipes the account's rows and resets its categories and rules, but keeps
+the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the
+`deleteAccount` server action. Deleting the `user` row cascades to everything, sessions included.
+Both sign out and delete clear the tab's persisted state and do a full reload to `/`, so no account
+data survives in the in-memory store. The avatar stays a generic SVG: provider names and pictures
+are never stored, and not loading provider images keeps `img-src` at `'self'`.
 
 Two Radix gotchas encoded there, don't undo them:
 

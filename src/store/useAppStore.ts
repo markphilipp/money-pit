@@ -88,11 +88,10 @@ export const initialState = {
  * Categories and rules persist under `categorization`, not `rules`: a tab saved before the split
  * holds its rules under `rules`, and code from before the split would misread the new shape there.
  */
-interface PersistedState
-  extends Pick<
-    AppState,
-    'rawRows' | 'overrides' | 'filters' | 'chartMode' | 'personChartMode' | 'sort' | 'ruleSources'
-  > {
+interface PersistedState extends Pick<
+  AppState,
+  'rawRows' | 'overrides' | 'filters' | 'chartMode' | 'personChartMode' | 'sort' | 'ruleSources'
+> {
   categorization: Categorization;
   rules?: LegacyRule[];
 }

@@ -141,6 +141,47 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(page.getByText('Travel')).toHaveCount(0);
   });
 
+  test('reads a pre-split account from category_rule and upgrades it on first save', async ({
+    page,
+    account,
+  }) => {
+    await account.seedLegacyCategoryRules([
+      {
+        id: 'coffee',
+        name: 'Coffee',
+        color: '#6b4f3a',
+        conditions: {
+          combinator: 'or',
+          rules: [{ field: 'description', operator: 'contains', value: 'STARBUCKS' }],
+        },
+      },
+      {
+        id: 'other',
+        name: 'Other',
+        color: '#8A8F98',
+        conditions: { combinator: 'and', rules: [] },
+        builtin: true,
+      },
+    ]);
+    expect(await account.categoryIds()).toEqual([]);
+
+    await account.signIn();
+    await page.goto('/');
+    await expect(page.getByText(/saved to your account/)).toBeVisible();
+
+    await page.getByLabel('Account menu').click();
+    await page.getByRole('menuitem', { name: 'Categories…' }).click();
+    await expect(page.getByText('Coffee')).toBeVisible();
+    // reading the legacy table doesn't write anything until something actually changes
+    expect(await account.categoryIds()).toEqual([]);
+
+    await page.getByLabel('New category').fill('Travel');
+    await page.getByRole('button', { name: 'Add category' }).click();
+
+    await expect.poll(account.categoryIds).toEqual(['coffee', 'travel', 'other']);
+    expect(await account.ruleIds()).toEqual(['coffee']);
+  });
+
   test('starts over, keeping the account, then deletes it', async ({ page, account }) => {
     await account.signIn();
     await page.goto('/');

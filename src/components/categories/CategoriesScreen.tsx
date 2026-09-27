@@ -60,9 +60,10 @@ function CategoryList() {
   const categories = useAppStore((s) => s.categories);
   const rules = useAppStore((s) => s.rules);
   const transactions = useTransactions();
-  const [deleting, setDeleting] = useState<{ category: Category; trigger: HTMLButtonElement } | null>(
-    null,
-  );
+  const [deleting, setDeleting] = useState<{
+    category: Category;
+    trigger: HTMLButtonElement;
+  } | null>(null);
 
   const usage = useMemo(
     () => categoryUsage({ categories, rules }, transactions),

@@ -6,7 +6,7 @@ How data moves through the app, and the rules that keep the store honest.
 
 ```
 CSV files → rawRows (persisted)
-                ├── + rules (persisted)
+                ├── + categories, rules (persisted)
                 └── + overrides (persisted)
                         ↓  toTransactions()
                    Transaction[]  ← derived, never stored
@@ -14,8 +14,10 @@ CSV files → rawRows (persisted)
                    charts · stats strip · table
 ```
 
-Only `rawRows`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort` and `ruleSources` are
-persisted (`partialize` in `src/store/useAppStore.ts`). Signed out, all of them go to
+Only `rawRows`, `categories`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort`
+and `ruleSources` are persisted (`partialize` in `src/store/useAppStore.ts`, under the key
+`categorization` for the category/rule pair — see [data-model.md](data-model.md)). Signed out, all
+of them go to
 `sessionStorage`. Signed in, only `filters` and `ruleSources` do, and the account holds the rest
 (see [Signed-in sync](#signed-in-sync--srcstoresyncts)). Everything a component renders below that line is
 recomputed. **Adding a derived field to persisted state is the mistake this design exists to
@@ -35,10 +37,16 @@ Actions worth knowing before you add one:
 - `uploadFiles(files)` — parses each file independently and returns `{ ok, errors }`. One bad file
   never blocks the others; callers render `errors` inline. Rows are merged through `mergeRows`
   (see [data-model.md](data-model.md)) and only committed if at least one file parsed.
-- `addRule` / `reorderRules` — builtin rules (`payments`, `other`) are always re-pinned to the
-  bottom. First matching rule wins, so a new rule placed after `other` could never match.
-- `deleteRule` — also strips the deleted id out of the active category checklist filter, otherwise
-  the table would filter on a category that no longer exists.
+- `addCategory` / `setCategory` — a new category is pinned ahead of the builtins, same as a rule.
+  `setCategory` patches name or color; renaming happens here even for a builtin category.
+- `deleteCategory` — routes through `removeCategory` (`src/lib/categories.ts`): drops the category,
+  every rule that files into it, and every override pointing at it, then strips the id out of the
+  active category checklist filter so the table never filters on a category that's gone. Refuses a
+  builtin. This is the operation the delete-warning dialog confirms before calling.
+- `addRule` / `reorderRules` — the builtin `payments` rule is always re-pinned to the bottom (`other`
+  has no rule to pin). First matching rule wins, so a new rule placed after `payments` could never
+  match.
+- `deleteRule` — removes one rule; its category and any other rules filing into it are untouched.
 - `setRuleSources(ids)` — seeds `/rules/new` with the transactions to induce a rule from. The
   _route_ decides which screen shows; this only carries its subject. It is inside `partialize`, so
   reloading `/rules/new` keeps working instead of landing on a screen with no subject.
@@ -73,7 +81,7 @@ subscribes to the store and turns each diff into a server action from `src/app/a
 | -------------------------------------- | ----------- | ----------------------------------------------------------------- |
 | `rawRows`                              | grew        | `appendRows` with the new tail, in chunks under the 1 MB body cap |
 | `rawRows`                              | emptied     | `resetAccount` only: `resetAll` resets every other slice too      |
-| `rules`                                | ref changed | `replaceRules` with the whole list                                |
+| `categories`, `rules`                  | ref changed | `replaceCategories` with both lists, written together             |
 | `overrides`                            | diff        | `setOverrides` with the changed rows, identified by content       |
 | `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                   |
 
@@ -106,15 +114,17 @@ dynamic.
 
 ## Selectors — `src/store/selectors.ts`
 
-Pure functions taking `AppState`. `selectTransactions` memoizes on the identity triple
-`(rawRows, rules, overrides)` in a module-level cache, because deriving transactions walks every
-row on every render. Keep store updates immutable or the cache silently goes stale.
+Pure functions taking `AppState`. `selectTransactions` memoizes on the identity quadruple
+`(rawRows, categories, rules, overrides)` in a module-level cache, because deriving transactions
+walks every row on every render. Keep store updates immutable or the cache silently goes stale.
 
 - `selectFiltered(state, opts)` — applies search, the payments exclusion and column filters.
   `opts.ignoreCategory` / `ignorePerson` let a chart exclude its _own_ dimension, which is why
   clicking a donut slice dims the others instead of collapsing the chart to one slice.
 - `selectCategoryTotals` / `selectPersonTotals` / `selectStats` — all drop `PAYMENTS_ID` rows.
-  Statement payments never count toward spend, in charts or totals.
+  Statement payments never count toward spend, in charts or totals. Category-facing selectors take
+  `categories`, not `rules` — a category's name and color, not what fills it, is what a chart or the
+  sort key needs.
 - `selectPersons` assigns colors by first-seen order across all rows (not filtered rows) so a
   cardholder keeps the same color as filters change.
 

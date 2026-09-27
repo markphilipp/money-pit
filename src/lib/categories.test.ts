@@ -29,7 +29,12 @@ const txn = (id: string, categoryId: string): Transaction => ({
 describe('upgradeLegacyRules', () => {
   it('splits each rule into a category and a rule sharing its id', () => {
     const legacy: LegacyRule[] = [
-      { id: 'grocery', name: 'Groceries', color: '#2E7D5B', conditions: keywordsToGroup(['KROGER']) },
+      {
+        id: 'grocery',
+        name: 'Groceries',
+        color: '#2E7D5B',
+        conditions: keywordsToGroup(['KROGER']),
+      },
     ];
     expect(upgradeLegacyRules(legacy)).toEqual({
       categories: [{ id: 'grocery', name: 'Groceries', color: '#2E7D5B' }],
@@ -39,7 +44,13 @@ describe('upgradeLegacyRules', () => {
 
   it('keeps a builtin flag on both halves', () => {
     const legacy: LegacyRule[] = [
-      { id: 'payments', name: 'Payments', color: '#9AA39C', conditions: keywordsToGroup(['AUTOPAY']), builtin: true },
+      {
+        id: 'payments',
+        name: 'Payments',
+        color: '#9AA39C',
+        conditions: keywordsToGroup(['AUTOPAY']),
+        builtin: true,
+      },
     ];
     const { categories, rules } = upgradeLegacyRules(legacy);
     expect(categories[0].builtin).toBe(true);
@@ -157,24 +168,37 @@ describe('resolveCategoryChoice', () => {
   });
 
   it('reuses a category whose name matches a new choice', () => {
-    const resolved = resolveCategoryChoice({ kind: 'new', name: 'groceries', color: '#000' }, categories);
+    const resolved = resolveCategoryChoice(
+      { kind: 'new', name: 'groceries', color: '#000' },
+      categories,
+    );
     expect(resolved).toEqual({ category: categories[0], isNew: false });
   });
 
   it('mints a slug id for a genuinely new name', () => {
-    const resolved = resolveCategoryChoice({ kind: 'new', name: 'Travel', color: '#123' }, categories);
-    expect(resolved).toEqual({ category: { id: 'travel', name: 'Travel', color: '#123' }, isNew: true });
+    const resolved = resolveCategoryChoice(
+      { kind: 'new', name: 'Travel', color: '#123' },
+      categories,
+    );
+    expect(resolved).toEqual({
+      category: { id: 'travel', name: 'Travel', color: '#123' },
+      isNew: true,
+    });
   });
 
   it('returns null for a new choice with no name yet', () => {
-    expect(resolveCategoryChoice({ kind: 'new', name: '  ', color: '#123' }, categories)).toBeNull();
+    expect(
+      resolveCategoryChoice({ kind: 'new', name: '  ', color: '#123' }, categories),
+    ).toBeNull();
   });
 });
 
 describe('ruleLabels', () => {
   it('names a single rule after its category', () => {
     const categories: Category[] = [{ id: 'grocery', name: 'Groceries', color: '#2E7D5B' }];
-    const rules: Rule[] = [{ id: 'a', categoryId: 'grocery', conditions: keywordsToGroup(['KROGER']) }];
+    const rules: Rule[] = [
+      { id: 'a', categoryId: 'grocery', conditions: keywordsToGroup(['KROGER']) },
+    ];
     expect([...ruleLabels(rules, categories).values()]).toEqual(['Groceries']);
   });
 
