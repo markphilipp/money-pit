@@ -4,16 +4,16 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area        | Files                                                                                      | Notes                                                                                       |
-| ----------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------- |
-| `layout`    | `Header`, `UserMenu`, `StatsStrip`, `AccountSync`                                          | `Header` is the brand lockup only; all actions live in `UserMenu`.                          |
-| `dashboard` | `Dashboard`                                                                                | The `/` screen. `page.tsx` is a server component that renders it.                           |
-| `charts`    | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                |
-| `table`     | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store.             |
-| `rules`     | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `rqbMap`            | One screen per route; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. |
-| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.  |
-| `auth`      | `SignInScreen`                                                                             | Provider buttons for `/sign-in`, and what signing in stores.                                |
-| `common`    | `ColorPickerPopover`                                                                       | Shared palette popover.                                                                     |
+| Area        | Files                                                                                      | Notes                                                                                                                                                             |
+| ----------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`    | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`                              | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`. |
+| `dashboard` | `Dashboard`                                                                                | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                 |
+| `charts`    | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                            | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                      |
+| `table`     | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu` | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                   |
+| `rules`     | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `rqbMap`            | One screen per route; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.                                                                       |
+| `upload`    | `EmptyState`, `UploadZone`                                                                 | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                        |
+| `auth`      | `SignInScreen`                                                                             | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                      |
+| `common`    | `ColorPickerPopover`                                                                       | Shared palette popover.                                                                                                                                           |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them

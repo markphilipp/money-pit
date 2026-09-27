@@ -5,8 +5,7 @@ import '@/components/charts/chartSetup';
 import { CategoryChart } from '@/components/charts/CategoryChart';
 import { PersonChart } from '@/components/charts/PersonChart';
 import chartStyles from '@/components/charts/Chart.module.css';
-import { Header } from '@/components/layout/Header';
-import { StatsStrip } from '@/components/layout/StatsStrip';
+import { Masthead } from '@/components/layout/Masthead';
 import { TransactionTable } from '@/components/table/TransactionTable';
 import { EmptyState } from '@/components/upload/EmptyState';
 import { useHydrated } from '@/store/useAppStore';
@@ -31,8 +30,7 @@ export function Dashboard() {
 
   return (
     <main className="wrap">
-      <Header />
-      <StatsStrip stats={stats} />
+      <Masthead stats={stats} />
 
       <ChartsPane>
         <div className={chartStyles.charts}>
