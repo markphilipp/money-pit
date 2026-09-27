@@ -3,7 +3,7 @@ export interface ChartsPaneState {
   minimized: boolean;
 }
 
-export const MIN_PANE_HEIGHT = 140;
+export const MIN_PANE_HEIGHT = 160;
 export const KEY_STEP = 20;
 
 const MAX_VIEWPORT_FRACTION = 0.6;
