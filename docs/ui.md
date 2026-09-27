@@ -29,7 +29,7 @@ Chart and header heights vary, so the offsets are **measured at runtime** rather
 publishes its height as a CSS var on `:root`; it returns a callback ref so it also catches nodes
 that mount late. Two vars stack:
 
-- `--charts-h` — set by the sticky charts wrapper in `page.tsx`; `.head` in `Table.module.css`
+- `--charts-h` — set by the sticky charts wrapper (`ChartsPane`); `.head` in `Table.module.css`
   sticks at `top: var(--charts-h)`.
 - `--table-head-h` — set by the transactions bar; `thead th` sticks at
   `calc(var(--charts-h) + var(--table-head-h))`.
@@ -40,6 +40,16 @@ Constraints that are easy to break by accident:
   scrollport the sticky header sticks to, and the header stops pinning to the viewport.
 - The table uses `border-collapse: separate` with `box-shadow` insets on `th`. Collapsed borders
   belong to the table and stay behind while the sticky cell moves; shadows travel with the cell.
+- The pinned charts region (`ChartsPane`) is user-resizable. A `role="separator"` handle under it
+  drags (pointer) or steps (Arrow Up/Down, Shift for bigger, Home/End) its height between
+  `MIN_PANE_HEIGHT` and 60% of the viewport (`src/lib/chartsPane.ts`); a Hide/Show charts button
+  collapses it to zero and restores the previous height. The wrapper height, handle included, feeds
+  `--charts-h`, so the table header keeps pinning. Height and minimized state persist in
+  `localStorage` (`money-pit:charts-pane`), a view preference and not statement data. The
+  chart cards flex to fill the pane (`.charts`/`.box` in `Chart.module.css`), and Chart.js
+  reflows via `responsive` + `maintainAspectRatio: false`. A community splitter
+  (react-resizable-panels) was rejected: it lays out fixed-size panels inside a bounded container,
+  whereas this page scrolls as a document with a sticky region.
 - Below **820px** sticky is switched off entirely and horizontal scrolling returns.
 - Anything new that pins must add its height to the chain, not guess a pixel offset.
 
