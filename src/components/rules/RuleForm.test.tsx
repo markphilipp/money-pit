@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { OTHER_ID } from '@/lib/types';
 import { useAppStore } from '@/store/useAppStore';
 import { resetStore } from '@/test/fixtures';
 import { routerMock } from '@/test/router';
@@ -10,29 +9,30 @@ import { RuleForm } from './RuleForm';
 describe('RuleForm', () => {
   beforeEach(resetStore);
 
-  it('edits an existing rule and returns to the list', async () => {
+  it('reassigns an existing rule to a different category and returns to the list', async () => {
     const user = userEvent.setup();
     render(<RuleForm ruleId="grocery" />);
 
-    const name = await screen.findByLabelText('Category name');
-    expect(name).toHaveValue('Groceries');
+    const select = await screen.findByLabelText('Category');
+    expect(select).toHaveValue('grocery');
 
-    await user.clear(name);
-    await user.type(name, 'Food');
+    await user.selectOptions(select, 'pets');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(useAppStore.getState().rules.find((r) => r.id === 'grocery')?.name).toBe('Food');
+    expect(useAppStore.getState().rules.find((r) => r.id === 'grocery')?.categoryId).toBe('pets');
     expect(routerMock.push).toHaveBeenCalledWith('/rules');
   });
 
-  it('creates a rule when no id is given', async () => {
+  it('creates a rule and its category when no id is given', async () => {
     const user = userEvent.setup();
     render(<RuleForm />);
 
     await user.type(await screen.findByLabelText('Category name'), 'Travel');
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
-    expect(useAppStore.getState().rules.some((r) => r.id === 'travel')).toBe(true);
+    const { categories, rules } = useAppStore.getState();
+    expect(categories.some((c) => c.id === 'travel' && c.name === 'Travel')).toBe(true);
+    expect(rules.some((r) => r.categoryId === 'travel')).toBe(true);
   });
 
   it('deletes the rule it is editing', async () => {
@@ -45,10 +45,11 @@ describe('RuleForm', () => {
     expect(routerMock.push).toHaveBeenCalledWith('/rules');
   });
 
-  it('reduces the fallback to name and color', async () => {
-    render(<RuleForm ruleId={OTHER_ID} />);
+  it('fixes conditions and hides delete for a built-in rule', async () => {
+    render(<RuleForm ruleId="payments" />);
 
-    expect(await screen.findByText(/Fallback/)).toBeInTheDocument();
+    expect(await screen.findByText(/conditions are fixed/)).toBeInTheDocument();
+    expect(screen.getByLabelText('Category')).toBeDisabled();
     expect(screen.queryByRole('button', { name: 'Delete' })).not.toBeInTheDocument();
   });
 
@@ -56,6 +57,6 @@ describe('RuleForm', () => {
     render(<RuleForm ruleId="nope" />);
 
     expect(await screen.findByRole('heading', { name: 'Rule not found' })).toBeInTheDocument();
-    expect(screen.queryByLabelText('Category name')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Category')).not.toBeInTheDocument();
   });
 });

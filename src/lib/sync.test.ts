@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { toTransactions } from './categorize';
 import { parseStatementCsv } from './csv';
-import { defaultRules } from './defaultRules';
+import { defaultCategories, defaultRules } from './defaultRules';
 import { fromStoredRows, overrideChanges, toStoredRows } from './sync';
 import { HEADER } from '@/test/fixtures';
 
@@ -13,7 +13,9 @@ const rows = parseStatementCsv(
     'Cleared,07/02/2026,"CANTEEN VENDING CHARLOTTE NC",1.50,,JAMIE SAMPLE',
   ].join('\n'),
 );
-const ids = toTransactions(rows, defaultRules, {}).map((t) => t.id);
+const ids = toTransactions(rows, { categories: defaultCategories, rules: defaultRules }, {}).map(
+  (t) => t.id,
+);
 
 describe('toStoredRows / fromStoredRows', () => {
   it('numbers identical rows so each keeps its own override', () => {

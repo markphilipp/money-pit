@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultRules } from '@/lib/defaultRules';
+import { defaultCategories, defaultRules } from '@/lib/defaultRules';
 import { toStoredRows } from '@/lib/sync';
 import { parseStatementCsv } from '@/lib/csv';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV } from '@/test/fixtures';
@@ -15,12 +15,13 @@ function fakeApi(snapshot?: Partial<Awaited<ReturnType<AccountApi['loadSnapshot'
   return {
     appendRows: vi.fn(async () => {}),
     setOverrides: vi.fn(async () => {}),
-    replaceRules: vi.fn(async () => {}),
+    replaceCategories: vi.fn(async () => {}),
     setPreference: vi.fn(async () => {}),
     resetAccount: vi.fn(async () => {}),
     claimLocal: vi.fn(async () => {}),
     loadSnapshot: vi.fn(async () => ({
       rows: [],
+      categories: defaultCategories,
       rules: defaultRules,
       preference: null,
       ...snapshot,
@@ -74,7 +75,7 @@ describe('startAccountSync', () => {
     await start(api);
     await sync!.settled();
     expect(api.appendRows).not.toHaveBeenCalled();
-    expect(api.replaceRules).not.toHaveBeenCalled();
+    expect(api.replaceCategories).not.toHaveBeenCalled();
   });
 
   it('appends only the rows an upload added, with their ordinals', async () => {
@@ -89,7 +90,7 @@ describe('startAccountSync', () => {
     ]);
   });
 
-  it('mirrors rule, override and preference changes', async () => {
+  it('mirrors category, rule, override and preference changes', async () => {
     const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
     await start(api);
     const [txn] = selectTransactions(state());
@@ -100,7 +101,10 @@ describe('startAccountSync', () => {
     state().setPersonChartMode('bar');
     await sync!.settled();
 
-    expect(api.replaceRules).toHaveBeenCalledWith(state().rules);
+    expect(api.replaceCategories).toHaveBeenCalledWith({
+      categories: state().categories,
+      rules: state().rules,
+    });
     expect(api.setOverrides).toHaveBeenCalledWith([
       expect.objectContaining({ description: txn.description, categoryOverride: 'pets' }),
     ]);
@@ -120,7 +124,7 @@ describe('startAccountSync', () => {
     await sync!.settled();
 
     expect(api.resetAccount).toHaveBeenCalledTimes(1);
-    expect(api.replaceRules).not.toHaveBeenCalled();
+    expect(api.replaceCategories).not.toHaveBeenCalled();
     expect(state().mode).toBe('account');
   });
 
@@ -159,7 +163,7 @@ describe('startAccountSync', () => {
 
     it('retries a failed write and recovers without reloading', async () => {
       const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
-      api.replaceRules
+      api.replaceCategories
         .mockRejectedValueOnce(new Error('offline'))
         .mockRejectedValueOnce(new Error('offline'));
       await startWithStatus(api);
@@ -173,7 +177,7 @@ describe('startAccountSync', () => {
         { kind: 'saving' },
         { kind: 'saved' },
       ]);
-      expect(api.replaceRules).toHaveBeenCalledTimes(3);
+      expect(api.replaceCategories).toHaveBeenCalledTimes(3);
       expect(api.loadSnapshot).toHaveBeenCalledTimes(1);
       expect(onError).not.toHaveBeenCalled();
     });
@@ -195,13 +199,13 @@ describe('startAccountSync', () => {
 
     it('gives up, reloads the snapshot and drops queued writes', async () => {
       const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
-      api.replaceRules.mockRejectedValue(new Error('boom'));
+      api.replaceCategories.mockRejectedValue(new Error('boom'));
       await startWithStatus(api);
       state().reorderRules('grocery', -1);
       state().setChartMode('bar');
       await drain();
 
-      expect(api.replaceRules).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
+      expect(api.replaceCategories).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
       expect(api.setPreference).not.toHaveBeenCalled();
       expect(api.loadSnapshot).toHaveBeenCalledTimes(2);
       expect(state().rules).toEqual(defaultRules);
@@ -211,7 +215,7 @@ describe('startAccountSync', () => {
 
     it('reports failure without a revert when the account is unreachable', async () => {
       const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
-      api.replaceRules.mockRejectedValue(new Error('offline'));
+      api.replaceCategories.mockRejectedValue(new Error('offline'));
       await startWithStatus(api);
       api.loadSnapshot.mockRejectedValue(new Error('offline'));
       state().reorderRules('grocery', -1);
@@ -221,7 +225,7 @@ describe('startAccountSync', () => {
 
     it('saves again after a failure', async () => {
       const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
-      api.replaceRules.mockRejectedValue(new Error('boom'));
+      api.replaceCategories.mockRejectedValue(new Error('boom'));
       await startWithStatus(api);
       state().reorderRules('grocery', -1);
       await drain();
@@ -286,23 +290,23 @@ describe('claiming a signed-out session', () => {
     expect(state().rawRows).toEqual([]);
   });
 
-  it('saves rows, overrides and rules to the account before loading it', async () => {
+  it('saves rows, overrides, categories and rules to the account before loading it', async () => {
     await state().uploadFiles([csvFile(SAMPLE_CSV)]);
     const [txn] = selectTransactions(state());
     state().setOverride([txn.id], 'pets');
-    state().setRule('home', { name: 'Renovations' });
+    state().setCategory('home', { name: 'Renovations' });
     confirmClaim.mockResolvedValueOnce(true);
     const api = fakeApi();
     api.loadSnapshot.mockImplementation(async () => {
       expect(api.claimLocal).toHaveBeenCalled();
-      return { rows: [], rules: defaultRules, preference: null };
+      return { rows: [], categories: defaultCategories, rules: defaultRules, preference: null };
     });
     await start(api);
 
-    const [rows, rules, preference] = claimArgs(api);
+    const [rows, categorization, preference] = claimArgs(api);
     expect(rows).toHaveLength(7);
     expect(rows.find((r) => r.description === txn.description)?.categoryOverride).toBe('pets');
-    expect(rules.find((r) => r.id === 'home')?.name).toBe('Renovations');
+    expect(categorization.categories.find((c) => c.id === 'home')?.name).toBe('Renovations');
     expect(preference).toBeNull();
   });
 

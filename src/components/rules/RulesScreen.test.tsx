@@ -21,10 +21,10 @@ describe('RulesScreen', () => {
 
   it('reorders a rule, which is what decides who wins a tie', async () => {
     const user = userEvent.setup();
+    useAppStore.getState().addCategory({ id: 'bakery', name: 'Bakery', color: '#abc123' });
     useAppStore.getState().addRule({
       id: 'bakery',
-      name: 'Bakery',
-      color: '#abc123',
+      categoryId: 'bakery',
       conditions: keywordsToGroup(['BAKERY']),
     });
     render(<RulesScreen />);
@@ -42,7 +42,7 @@ describe('RulesScreen', () => {
     await user.click(await screen.findByLabelText('Delete Groceries'));
     expect(useAppStore.getState().rules.some((r) => r.id === 'grocery')).toBe(false);
 
-    expect(screen.getByLabelText('Delete Other')).toBeDisabled();
+    expect(screen.getByLabelText('Delete Payments')).toBeDisabled();
   });
 
   it('clears any leftover selection before a hand-written rule', async () => {

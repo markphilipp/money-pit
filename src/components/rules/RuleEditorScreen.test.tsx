@@ -118,7 +118,8 @@ describe('RuleEditorScreen', () => {
     expect(state.ruleSources).toEqual([]);
     expect(routerMock.push).toHaveBeenCalledWith('/');
     expect(state.selectedIds.size).toBe(0);
-    expect(state.rules.find((r) => r.id === 'blue-ridge-bakery')).toBeTruthy();
+    expect(state.categories.find((c) => c.id === 'blue-ridge-bakery')).toBeTruthy();
+    expect(state.rules.some((r) => r.categoryId === 'blue-ridge-bakery')).toBe(true);
 
     const bakeries = selectTransactions(state).filter((t) => t.description.includes('BAKERY'));
     expect(bakeries).toHaveLength(3);
