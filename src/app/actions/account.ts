@@ -70,9 +70,14 @@ export async function loadSnapshot() {
 }
 
 /** Saves a signed-out session's rows, overrides and rules into the account; safe to retry. */
-export async function claimLocal(rows: StoredRow[], rules: CategoryRule[]) {
+export async function claimLocal(
+  rows: StoredRow[],
+  rules: CategoryRule[],
+  preference: Preference | null,
+) {
   const userId = await requireUserId();
   const local = { ...fromStoredRows(rowsInput.parse(rows)), rules: rulesInput.parse(rules) };
+  const localPreference = preferenceInput.nullable().parse(preference);
   await getDb().transaction(async (tx) => {
     const account = {
       ...fromStoredRows(await readRows(tx, userId)),
@@ -90,5 +95,6 @@ export async function claimLocal(rows: StoredRow[], rules: CategoryRule[]) {
       overrideChanges(account.rawRows, account.overrides, merged.overrides),
     );
     await writeRules(tx, userId, merged.rules);
+    if (localPreference) await upsertPreference(tx, userId, localPreference);
   });
 }

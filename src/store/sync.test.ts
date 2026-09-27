@@ -27,6 +27,9 @@ function fakeApi(snapshot?: Partial<Awaited<ReturnType<AccountApi['loadSnapshot'
   } satisfies AccountApi;
 }
 
+const claimArgs = (api: ReturnType<typeof fakeApi>) =>
+  api.claimLocal.mock.calls[0] as unknown as Parameters<AccountApi['claimLocal']>;
+
 let sync: ReturnType<typeof startAccountSync> | undefined;
 const onError = vi.fn();
 const confirmClaim = vi.fn(async () => false);
@@ -189,12 +192,26 @@ describe('claiming a signed-out session', () => {
     });
     await start(api);
 
-    const [rows, rules] = api.claimLocal.mock.calls[0] as unknown as Parameters<
-      AccountApi['claimLocal']
-    >;
+    const [rows, rules, preference] = claimArgs(api);
     expect(rows).toHaveLength(7);
     expect(rows.find((r) => r.description === txn.description)?.categoryOverride).toBe('pets');
     expect(rules.find((r) => r.id === 'home')?.name).toBe('Renovations');
+    expect(preference).toBeNull();
+  });
+
+  it('carries a changed chart type and sort order into the account', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV)]);
+    state().setChartMode('bar');
+    state().setSort('amount');
+    confirmClaim.mockResolvedValueOnce(true);
+    const api = fakeApi();
+    await start(api);
+
+    expect(claimArgs(api)[2]).toEqual({
+      chartMode: 'bar',
+      sortKey: 'amount',
+      sortDir: state().sort.dir,
+    });
   });
 
   it('keeps the session in sessionStorage when the claim fails', async () => {

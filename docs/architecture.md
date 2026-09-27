@@ -87,7 +87,9 @@ guard asks before the page is left, because a server action can't outlive the pa
 which drops the tab's statements from `sessionStorage`. So before the first load, if the rehydrated
 tab still holds signed-out rows (the case right after a sign-in), `AccountSync` asks whether to save
 them. Save calls `claimLocal`, which runs `claimInto()` from `src/lib/claim.ts` against the account
-in one transaction; Discard just loads the account. A failed claim stops before the load, so the
+in one transaction. It also saves the tab's chart type and sort order, unless both are still the
+defaults, so untouched defaults never overwrite what the account has saved. Discard just loads the
+account. A failed claim stops before the load, so the
 rows stay in the tab and a reload asks again. The prompt can't be dismissed without choosing, and
 focus starts on Save so Enter never discards.
 

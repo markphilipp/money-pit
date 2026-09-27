@@ -19,6 +19,12 @@ export type ConfirmClaim = () => Promise<boolean>;
 // Server actions cap request bodies at 1 MB; a stored row serializes to roughly 200 bytes.
 const APPEND_CHUNK = 2000;
 
+const toPreference = ({ chartMode, sort }: Pick<AppState, 'chartMode' | 'sort'>) => ({
+  chartMode,
+  sortKey: sort.key,
+  sortDir: sort.dir,
+});
+
 async function applySnapshot(api: AccountApi) {
   const { rows, rules, preference } = await api.loadSnapshot();
   const { rawRows, overrides } = fromStoredRows(rows);
@@ -94,8 +100,8 @@ export function startAccountSync(
       if (changes.length) enqueue(() => api.setOverrides(changes));
     }
     if (next.chartMode !== prev.chartMode || next.sort !== prev.sort) {
-      const { chartMode, sort } = next;
-      enqueue(() => api.setPreference({ chartMode, sortKey: sort.key, sortDir: sort.dir }));
+      const preference = toPreference(next);
+      enqueue(() => api.setPreference(preference));
     }
   };
 
@@ -104,10 +110,20 @@ export function startAccountSync(
   // from sessionStorage, so any claim has to finish first. A failed claim stops here and leaves
   // them in place for a reload to offer again.
   const claim = async () => {
-    const { rawRows, overrides, rules } = useAppStore.getState();
+    const state = useAppStore.getState();
+    const { rawRows, overrides, rules } = state;
     if (!rawRows.length || !(await confirmClaim()) || stopped) return true;
+    // Untouched defaults aren't a choice, so they never overwrite what the account has saved.
+    const untouched =
+      state.chartMode === initialState.chartMode &&
+      state.sort.key === initialState.sort.key &&
+      state.sort.dir === initialState.sort.dir;
     try {
-      await api.claimLocal(toStoredRows(rawRows, overrides), rules);
+      await api.claimLocal(
+        toStoredRows(rawRows, overrides),
+        rules,
+        untouched ? null : toPreference(state),
+      );
       return true;
     } catch {
       onError('Couldn’t save this session’s statements to your account. Reload to try again.');

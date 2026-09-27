@@ -63,6 +63,8 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
   test('saves a signed-out session to the account on sign-in', async ({ page, account }) => {
     await page.goto('/');
     await uploadAndEdit(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: 'Bars' }).click();
     await account.signIn();
     await page.goto('/');
 
@@ -70,11 +72,19 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(prompt.getByRole('button', { name: 'Save to my account' })).toBeFocused();
     await page.keyboard.press('Enter');
     await expect(pill(page)).toContainText('Renovations');
+    await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     expect(await storedKeys(page)).toEqual(['filters', 'ruleSources']);
 
     await page.reload();
     await expect(heading(page)).toContainText('(7)');
     await expect(pill(page)).toContainText('Renovations');
+    await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
     await expect(prompt).toHaveCount(0);
   });
 
