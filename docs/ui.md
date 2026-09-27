@@ -119,10 +119,10 @@ noise. Saving is retroactive for free: categorization derives from the rules on 
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (two-step confirm, in-menu), **Category rules…**, and **Sign in…**
+**Add statement**, **Start over** (confirms in a modal), **Category rules…**, and **Sign in…**
 (a link to `/sign-in`). Add statement and Start over only appear once there's data. Signed in, Start
 over also wipes the account's rows and resets its rules, but keeps the account. Sign in becomes
-**Sign out** and **Delete account…** (two-step confirm), which calls the `deleteAccount` server
+**Sign out** and **Delete account…** (same modal), which calls the `deleteAccount` server
 action. Deleting the `user` row cascades to everything, sessions included. Both sign out and delete
 clear the tab's persisted state and do a full reload to `/`, so no account data survives in the
 in-memory store. The avatar stays a generic SVG: provider names and
@@ -132,8 +132,9 @@ Two Radix gotchas encoded there, don't undo them:
 
 - The file input is clicked in a `setTimeout(…, 0)`. Radix returns focus to the trigger as it
   closes, which swallows a picker opened in the same tick.
-- "Start over" and "Delete account…" call `e.preventDefault()` on select to keep the menu open for
-  the confirm step, and `onOpenChange` resets `confirming` so a reopened menu never starts armed.
+- "Start over" and "Delete account…" close the menu and open `common/ConfirmDialog` (Radix
+  AlertDialog: Cancel focused, Escape cancels, no outside-click dismiss) driven by the `confirming`
+  state, which lives outside the dropdown.
 
 Upload errors render under the avatar in a `role="alert"` block with a dismiss control, following
 the input that produced them.

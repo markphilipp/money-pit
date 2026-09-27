@@ -3,6 +3,7 @@
 import { useContext, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { deleteAccount } from '@/app/actions/account';
 import { authClient } from '@/auth/client';
 import { SignedInContext, useAppStore } from '@/store/useAppStore';
@@ -45,7 +46,7 @@ export function UserMenu() {
 
   return (
     <>
-      <DropdownMenu.Root onOpenChange={(open) => !open && setConfirming(null)}>
+      <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
           <button className={styles.avatar} aria-label="Account menu">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -68,27 +69,9 @@ export function UserMenu() {
                 >
                   Add statement
                 </DropdownMenu.Item>
-                {confirming === 'reset' ? (
-                  <>
-                    <DropdownMenu.Item
-                      className={`${styles.item} ${styles.danger}`}
-                      onSelect={() => resetAll()}
-                    >
-                      Confirm reset
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item className={styles.item}>Cancel</DropdownMenu.Item>
-                  </>
-                ) : (
-                  <DropdownMenu.Item
-                    className={styles.item}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setConfirming('reset');
-                    }}
-                  >
-                    Start over
-                  </DropdownMenu.Item>
-                )}
+                <DropdownMenu.Item className={styles.item} onSelect={() => setConfirming('reset')}>
+                  Start over
+                </DropdownMenu.Item>
                 <DropdownMenu.Separator className={styles.separator} />
               </>
             )}
@@ -104,27 +87,9 @@ export function UserMenu() {
                 >
                   Sign out
                 </DropdownMenu.Item>
-                {confirming === 'delete' ? (
-                  <>
-                    <DropdownMenu.Item
-                      className={`${styles.item} ${styles.danger}`}
-                      onSelect={async () => setAccountError(await deleteAndLeave())}
-                    >
-                      Confirm: delete my account
-                    </DropdownMenu.Item>
-                    <DropdownMenu.Item className={styles.item}>Cancel</DropdownMenu.Item>
-                  </>
-                ) : (
-                  <DropdownMenu.Item
-                    className={styles.item}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setConfirming('delete');
-                    }}
-                  >
-                    Delete account…
-                  </DropdownMenu.Item>
-                )}
+                <DropdownMenu.Item className={styles.item} onSelect={() => setConfirming('delete')}>
+                  Delete account…
+                </DropdownMenu.Item>
               </>
             ) : (
               <DropdownMenu.Item className={styles.item} asChild>
@@ -134,6 +99,28 @@ export function UserMenu() {
           </DropdownMenu.Content>
         </DropdownMenu.Portal>
       </DropdownMenu.Root>
+
+      <ConfirmDialog
+        open={confirming === 'reset'}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title="Start over?"
+        description={
+          signedIn
+            ? 'This permanently deletes every statement you’ve uploaded, your category rules, and your category fixes from your account. Your account itself stays. This can’t be undone.'
+            : 'This clears every statement you’ve uploaded, your category rules, and your category fixes from this browser. This can’t be undone.'
+        }
+        confirmLabel="Start over"
+        onConfirm={() => resetAll()}
+      />
+
+      <ConfirmDialog
+        open={confirming === 'delete'}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        title="Delete your account?"
+        description="This permanently deletes your account and everything saved to it: statements, category rules, and category fixes. This can’t be undone."
+        confirmLabel="Delete my account"
+        onConfirm={async () => setAccountError(await deleteAndLeave())}
+      />
 
       <input
         ref={inputRef}
