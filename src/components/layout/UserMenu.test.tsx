@@ -88,6 +88,7 @@ describe('UserMenu', () => {
     await dismiss(user);
 
     expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Account menu')).toHaveFocus();
     expect(useAppStore.getState().rawRows).toHaveLength(7);
 
     await user.click(screen.getByLabelText('Account menu'));

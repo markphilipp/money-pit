@@ -40,6 +40,7 @@ export function UserMenu() {
   const resetAll = useAppStore((s) => s.resetAll);
   const hasData = useAppStore((s) => s.rawRows.length > 0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null);
   const [errors, setErrors] = useState<{ file: string; message: string }[]>([]);
   const [accountError, setAccountError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ export function UserMenu() {
     <>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
-          <button className={styles.avatar} aria-label="Account menu">
+          <button ref={triggerRef} className={styles.avatar} aria-label="Account menu">
             <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
               <circle cx="12" cy="8.5" r="3.6" />
               <path d="M4.6 20c.9-4 3.8-6 7.4-6s6.5 2 7.4 6" />
@@ -106,11 +107,12 @@ export function UserMenu() {
         title="Start over?"
         description={
           signedIn
-            ? 'This permanently deletes every statement you’ve uploaded, your category rules, and your category fixes from your account. Your account itself stays. This can’t be undone.'
-            : 'This clears every statement you’ve uploaded, your category rules, and your category fixes from this browser. This can’t be undone.'
+            ? 'This permanently deletes every statement you’ve uploaded and your category fixes from your account, and resets your rules, chart type and sort order to the defaults. Your account itself stays. This can’t be undone.'
+            : 'This clears every statement you’ve uploaded and your category fixes from this browser, and resets your rules, chart type and sort order to the defaults. This can’t be undone.'
         }
         confirmLabel="Start over"
         onConfirm={() => resetAll()}
+        returnFocusTo={triggerRef}
       />
 
       <ConfirmDialog
@@ -120,6 +122,7 @@ export function UserMenu() {
         description="This permanently deletes your account and everything saved to it: statements, category rules, and category fixes. This can’t be undone."
         confirmLabel="Delete my account"
         onConfirm={async () => setAccountError(await deleteAndLeave())}
+        returnFocusTo={triggerRef}
       />
 
       <input

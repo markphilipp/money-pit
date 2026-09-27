@@ -10,6 +10,7 @@ interface Props {
   description: string;
   confirmLabel: string;
   onConfirm: () => void;
+  returnFocusTo: React.RefObject<HTMLElement | null>;
 }
 
 export function ConfirmDialog({
@@ -19,12 +20,19 @@ export function ConfirmDialog({
   description,
   confirmLabel,
   onConfirm,
+  returnFocusTo,
 }: Props) {
   return (
     <AlertDialog.Root open={open} onOpenChange={onOpenChange}>
       <AlertDialog.Portal>
         <AlertDialog.Overlay className={styles.overlay} />
-        <AlertDialog.Content className={styles.dialog}>
+        <AlertDialog.Content
+          className={styles.dialog}
+          onCloseAutoFocus={(e) => {
+            e.preventDefault();
+            returnFocusTo.current?.focus();
+          }}
+        >
           <AlertDialog.Title className={styles.title}>{title}</AlertDialog.Title>
           <AlertDialog.Description className={styles.body}>{description}</AlertDialog.Description>
           <div className={styles.actions}>
