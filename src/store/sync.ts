@@ -1,4 +1,11 @@
 import type * as AccountActions from '@/app/actions/account';
+import {
+  idleStatus,
+  nextSaveStatus,
+  RETRY_DELAYS_MS,
+  type SaveEvent,
+  type SaveStatus,
+} from '@/lib/saveStatus';
 import { fromStoredRows, overrideChanges, toStoredRows } from '@/lib/sync';
 import { initialState, useAppStore, type AppState } from './useAppStore';
 
@@ -48,19 +55,28 @@ async function applySnapshot(api: AccountApi) {
 /**
  * Loads the account into the store, then mirrors every data change to the server. Store actions
  * stay local and synchronous; this subscriber turns their diffs into idempotent server writes, run
- * one at a time in order. A failed write drops whatever was queued behind it and reloads the
- * snapshot, so the store falls back to what the server actually holds.
+ * one at a time in order. A failed write is retried with backoff; once the retries run out it drops
+ * whatever was queued behind it and reloads the snapshot, so the store falls back to what the
+ * server actually holds. `onStatus` reports the save lifecycle as a `SaveStatus`.
  */
 export function startAccountSync(
   api: AccountApi,
   onError: (message: string) => void,
   confirmClaim: ConfirmClaim,
+  onStatus: (status: SaveStatus) => void = () => {},
 ) {
   let stopped = false;
   let applying = false;
   let generation = 0;
   let queue = Promise.resolve();
   let pending = 0;
+  let status = idleStatus;
+  const dispatch = (event: SaveEvent) => {
+    const next = nextSaveStatus(status, event);
+    if (next === status) return;
+    status = next;
+    onStatus(status);
+  };
   // Server actions can't outlive the page, so leaving mid-write would silently drop it.
   const warnOnLeave = (event: BeforeUnloadEvent) => event.preventDefault();
 
@@ -72,19 +88,43 @@ export function startAccountSync(
     applying = false;
   };
 
+  // Every write is idempotent, so replaying one whose first attempt actually landed is harmless.
+  const withRetries = async (write: () => Promise<void>) => {
+    for (let retry = 0; ; retry++) {
+      try {
+        await write();
+        if (retry > 0) dispatch({ type: 'recovered' });
+        return;
+      } catch (error) {
+        const delay = RETRY_DELAYS_MS[retry];
+        if (delay === undefined || stopped) throw error;
+        dispatch({ type: 'retrying', attempt: retry + 1 });
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        if (stopped) return;
+      }
+    }
+  };
+
   const enqueue = (write: () => Promise<void>) => {
     const queuedIn = generation;
     if (pending++ === 0) window.addEventListener('beforeunload', warnOnLeave);
+    dispatch({ type: 'queued' });
     queue = queue.then(async () => {
       try {
         if (stopped || queuedIn !== generation) return;
-        await write();
+        await withRetries(write);
       } catch {
         generation++;
-        onError('A change didn’t save to your account, so the dashboard was reloaded from it.');
-        await load().catch(() => onError('Couldn’t reach your account. Changes aren’t saving.'));
+        const reverted = await load().then(
+          () => true,
+          () => false,
+        );
+        dispatch({ type: 'gave-up', reverted });
       } finally {
-        if (--pending === 0) window.removeEventListener('beforeunload', warnOnLeave);
+        if (--pending === 0) {
+          window.removeEventListener('beforeunload', warnOnLeave);
+          dispatch({ type: 'drained' });
+        }
       }
     });
   };

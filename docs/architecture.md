@@ -78,10 +78,17 @@ subscribes to the store and turns each diff into a server action from `src/app/a
 | `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                   |
 
 Every action re-derives the user from the session cookie and parses its arguments with the zod
-schemas in `src/app/actions/input.ts`. Every write is idempotent. Writes run one at a time, in
-order. If one fails, the queue behind it is dropped, the snapshot is reloaded over local state,
-and an alert says so. There is no per-action rollback. While a write is pending, a `beforeunload`
-guard asks before the page is left, because a server action can't outlive the page.
+schemas in `src/app/actions/input.ts`. Every write is idempotent (`appendRows` conflicts on row
+identity and does nothing, the rest overwrite), so a failed write is retried in place after 1 s, 2 s
+and 4 s, and the queue behind it waits. Writes run one at a time, in order. If the retries run out,
+the queue behind the write is dropped and the snapshot is reloaded over local state. There is no
+per-action rollback. While a write is pending, a `beforeunload` guard asks before the page is left,
+because a server action can't outlive the page.
+
+**Save status.** The sync layer owns a `SaveStatus` state machine (`src/lib/saveStatus.ts`: `idle`,
+`saving`, `saved`, `retrying(attempt)`, `failed`) and reports each transition through the optional
+`onStatus` argument. `AccountSync` renders it as `SaveStatusToast`, bottom right. Signed out there
+is no sync, so no status and no toast; the privacy line already says the data stays in the browser.
 
 **Claiming a signed-out session.** Loading the snapshot switches persistence to account mode,
 which drops the tab's statements from `sessionStorage`. So before the first load, if the rehydrated

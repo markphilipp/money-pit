@@ -3,6 +3,7 @@ import { defaultRules } from '@/lib/defaultRules';
 import { toStoredRows } from '@/lib/sync';
 import { parseStatementCsv } from '@/lib/csv';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV } from '@/test/fixtures';
+import { RETRY_DELAYS_MS, type SaveStatus } from '@/lib/saveStatus';
 import { startAccountSync, type AccountApi } from './sync';
 import { selectTransactions } from './selectors';
 import { useAppStore } from './useAppStore';
@@ -123,20 +124,123 @@ describe('startAccountSync', () => {
     expect(state().mode).toBe('account');
   });
 
-  it('reloads the snapshot and drops queued writes when one fails', async () => {
-    const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
-    api.replaceRules.mockRejectedValueOnce(new Error('boom'));
-    await start(api);
+  describe('save status', () => {
+    const statuses = vi.fn<(status: SaveStatus) => void>();
+    const kinds = () => statuses.mock.calls.map(([status]) => status.kind);
 
-    state().reorderRules('grocery', -1);
-    state().setChartMode('bar');
-    await sync!.settled();
+    async function startWithStatus(api: AccountApi) {
+      statuses.mockClear();
+      sync = startAccountSync(api, onError, confirmClaim, statuses);
+      await sync.ready;
+    }
 
-    expect(onError).toHaveBeenCalledTimes(1);
-    expect(api.setPreference).not.toHaveBeenCalled();
-    expect(api.loadSnapshot).toHaveBeenCalledTimes(2);
-    expect(state().rules).toEqual(defaultRules);
-    expect(state().chartMode).toBe('donut');
+    const drain = async () => {
+      const settled = sync!.settled();
+      await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS.reduce((a, b) => a + b, 0));
+      await settled;
+    };
+
+    beforeEach(() => vi.useFakeTimers({ toFake: ['setTimeout'] }));
+    afterEach(() => vi.useRealTimers());
+
+    it('goes saving then saved for a write that lands', async () => {
+      await startWithStatus(fakeApi({ rows: toStoredRows(accountRows, {}) }));
+      state().setChartMode('bar');
+      state().setChartMode('donut');
+      await drain();
+      expect(kinds()).toEqual(['saving', 'saved']);
+    });
+
+    it('stays idle until something is written', async () => {
+      await startWithStatus(fakeApi({ rows: toStoredRows(accountRows, {}) }));
+      await drain();
+      expect(statuses).not.toHaveBeenCalled();
+    });
+
+    it('retries a failed write and recovers without reloading', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.replaceRules
+        .mockRejectedValueOnce(new Error('offline'))
+        .mockRejectedValueOnce(new Error('offline'));
+      await startWithStatus(api);
+      state().reorderRules('grocery', -1);
+      await drain();
+
+      expect(statuses.mock.calls.map(([status]) => status)).toEqual([
+        { kind: 'saving' },
+        { kind: 'retrying', attempt: 1, of: 3 },
+        { kind: 'retrying', attempt: 2, of: 3 },
+        { kind: 'saving' },
+        { kind: 'saved' },
+      ]);
+      expect(api.replaceRules).toHaveBeenCalledTimes(3);
+      expect(api.loadSnapshot).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+    });
+
+    it('backs off between attempts', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.setPreference.mockRejectedValue(new Error('offline'));
+      await startWithStatus(api);
+      state().setChartMode('bar');
+      await vi.advanceTimersByTimeAsync(0);
+      expect(api.setPreference).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0] - 1);
+      expect(api.setPreference).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(api.setPreference).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[1]);
+      expect(api.setPreference).toHaveBeenCalledTimes(3);
+    });
+
+    it('gives up, reloads the snapshot and drops queued writes', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.replaceRules.mockRejectedValue(new Error('boom'));
+      await startWithStatus(api);
+      state().reorderRules('grocery', -1);
+      state().setChartMode('bar');
+      await drain();
+
+      expect(api.replaceRules).toHaveBeenCalledTimes(RETRY_DELAYS_MS.length + 1);
+      expect(api.setPreference).not.toHaveBeenCalled();
+      expect(api.loadSnapshot).toHaveBeenCalledTimes(2);
+      expect(state().rules).toEqual(defaultRules);
+      expect(state().chartMode).toBe('donut');
+      expect(statuses).toHaveBeenLastCalledWith({ kind: 'failed', reverted: true });
+    });
+
+    it('reports failure without a revert when the account is unreachable', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.replaceRules.mockRejectedValue(new Error('offline'));
+      await startWithStatus(api);
+      api.loadSnapshot.mockRejectedValue(new Error('offline'));
+      state().reorderRules('grocery', -1);
+      await drain();
+      expect(statuses).toHaveBeenLastCalledWith({ kind: 'failed', reverted: false });
+    });
+
+    it('saves again after a failure', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.replaceRules.mockRejectedValue(new Error('boom'));
+      await startWithStatus(api);
+      state().reorderRules('grocery', -1);
+      await drain();
+      state().setChartMode('bar');
+      await drain();
+      expect(statuses).toHaveBeenLastCalledWith({ kind: 'saved' });
+      expect(api.setPreference).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops retrying once stopped', async () => {
+      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      api.setPreference.mockRejectedValue(new Error('offline'));
+      await startWithStatus(api);
+      state().setChartMode('bar');
+      await vi.advanceTimersByTimeAsync(0);
+      sync!.stop();
+      await drain();
+      expect(api.setPreference).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('keeps statement data out of sessionStorage', async () => {
