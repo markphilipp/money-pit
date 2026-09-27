@@ -107,7 +107,12 @@ const seeds: Seed[] = [
   },
 ];
 
-export const defaultCategories: Category[] = seeds.map(({ keywords: _, ...category }) => category);
+export const defaultCategories: Category[] = seeds.map(({ id, name, color, builtin }) => ({
+  id,
+  name,
+  color,
+  ...(builtin && { builtin }),
+}));
 
 // Other is the fallback for anything no rule claims, so it has no rule of its own.
 export const defaultRules: Rule[] = seeds
