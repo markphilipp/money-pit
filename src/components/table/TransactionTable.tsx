@@ -40,12 +40,15 @@ export function TransactionTable() {
   const selectAllRef = useRef<HTMLInputElement>(null);
   const headRef = useHeightVar('--table-head-h');
 
-  const rulesById = useMemo(() => new Map(state.rules.map((r) => [r.id, r])), [state.rules]);
+  const categoriesById = useMemo(
+    () => new Map(state.categories.map((c) => [c.id, c])),
+    [state.categories],
+  );
 
   const columns = useMemo(
     () =>
       buildColumns({
-        rulesById,
+        categoriesById,
         isSelected: (id) => state.selectedIds.has(id),
         onToggleRow: toggleSelected,
         onPillClick: (txn: Transaction, anchor: HTMLElement) =>
@@ -56,7 +59,7 @@ export function TransactionTable() {
             bulk: false,
           }),
       }),
-    [rulesById, state.selectedIds, toggleSelected],
+    [categoriesById, state.selectedIds, toggleSelected],
   );
 
   // Table state lives in the store, so the compiler skipping memoization here is harmless.
@@ -163,10 +166,10 @@ export function TransactionTable() {
                           columnId === 'person'
                             ? persons.map((p) => ({ value: p.name, label: personShort(p.name) }))
                             : columnId === 'category'
-                              ? state.rules.map((r) => ({
-                                  value: r.id,
-                                  label: r.name,
-                                  color: r.color,
+                              ? state.categories.map((c) => ({
+                                  value: c.id,
+                                  label: c.name,
+                                  color: c.color,
                                 }))
                               : undefined
                         }
@@ -243,7 +246,7 @@ export function TransactionTable() {
         <CategoryPicker
           rect={picker.rect}
           currentCategoryId={picker.currentCategoryId}
-          rules={state.rules}
+          categories={state.categories}
           onClose={() => setPicker(null)}
           onChoose={(categoryId) => {
             setOverride(picker.targetIds, categoryId);

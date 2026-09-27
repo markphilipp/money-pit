@@ -4,13 +4,12 @@ import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { RuleGroupType } from 'react-querybuilder';
-import type { CategoryRule } from '@/lib/types';
-import { OTHER_ID } from '@/lib/types';
-import type { RuleGroup } from '@/lib/rules/types';
-import { uniqueRuleId } from '@/lib/rules/naming';
+import type { Rule } from '@/lib/types';
+import { resolveCategoryChoice, type CategoryChoice } from '@/lib/categories';
+import { newRuleId } from '@/lib/rules/naming';
 import { nextPaletteColor } from '@/lib/palette';
-import { ColorPickerPopover } from '@/components/common/ColorPickerPopover';
 import { SignedInContext, useAppStore, useHydrated } from '@/store/useAppStore';
+import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
 import { fromRqb, toRqb } from './rqbMap';
 import screen from './RuleScreen.module.css';
@@ -52,38 +51,46 @@ function MissingRule({ ruleId }: { ruleId: string }) {
   );
 }
 
-function RuleFormFields({ rule }: { rule?: CategoryRule }) {
+function RuleFormFields({ rule }: { rule?: Rule }) {
   const router = useRouter();
+  const categories = useAppStore((s) => s.categories);
   const rules = useAppStore((s) => s.rules);
+  const addCategory = useAppStore((s) => s.addCategory);
   const addRule = useAppStore((s) => s.addRule);
   const setRule = useAppStore((s) => s.setRule);
   const deleteRule = useAppStore((s) => s.deleteRule);
 
-  const [name, setName] = useState(rule?.name ?? '');
-  const [color, setColor] = useState(rule?.color ?? nextPaletteColor(rules.map((r) => r.color)));
+  const [choice, setChoice] = useState<CategoryChoice>(
+    rule
+      ? { kind: 'existing', id: rule.categoryId }
+      : { kind: 'new', name: '', color: nextPaletteColor(categories.map((c) => c.color)) },
+  );
   const [query, setQuery] = useState<RuleGroupType>(
     rule?.conditions ? toRqb(rule.conditions) : EMPTY_QUERY,
   );
 
   const isBuiltin = !!rule?.builtin;
-  const isFallback = rule?.id === OTHER_ID;
+  const resolved = resolveCategoryChoice(choice, categories);
+  const title = rule
+    ? `Edit ${categories.find((c) => c.id === rule.categoryId)?.name ?? 'rule'} rule`
+    : 'New rule';
 
   function save() {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    const conditions = isBuiltin ? (rule!.conditions as RuleGroup) : fromRqb(query);
-
+    if (!resolved) return;
+    const { category, isNew } = resolved;
+    if (isNew) addCategory(category);
     if (rule) {
-      setRule(rule.id, { name: trimmed, color, conditions });
+      setRule(
+        rule.id,
+        isBuiltin
+          ? { categoryId: category.id }
+          : { categoryId: category.id, conditions: fromRqb(query) },
+      );
     } else {
       addRule({
-        id: uniqueRuleId(
-          trimmed,
-          rules.map((r) => r.id),
-        ),
-        name: trimmed,
-        color,
-        conditions,
+        id: newRuleId(rules.map((r) => r.id)),
+        categoryId: category.id,
+        conditions: fromRqb(query),
       });
     }
     router.push('/rules');
@@ -95,28 +102,20 @@ function RuleFormFields({ rule }: { rule?: CategoryRule }) {
         <Link href="/rules" className={screen.back}>
           ← All rules
         </Link>
-        <h1 className={screen.title}>{rule ? `Edit ${rule.name}` : 'New rule'}</h1>
+        <h1 className={screen.title}>{title}</h1>
       </div>
 
       <section className={`card ${screen.section}`}>
-        <div className={screen.identity}>
-          <ColorPickerPopover value={color} onChange={setColor} ariaLabel="Rule color" />
-          <div className="field">
-            <label htmlFor="rule-name">Category name</label>
-            <input
-              id="rule-name"
-              type="text"
-              value={name}
-              placeholder="e.g. Travel"
-              onChange={(e) => setName(e.target.value)}
-            />
-          </div>
-        </div>
+        <CategoryField
+          categories={categories}
+          value={choice}
+          onChange={setChoice}
+          placeholder="e.g. Travel"
+          disabled={isBuiltin}
+        />
 
-        {isFallback ? (
-          <p className={screen.note}>Fallback — no conditions</p>
-        ) : isBuiltin ? (
-          <p className={screen.note}>Built-in rule — name and color only</p>
+        {isBuiltin ? (
+          <p className={screen.note}>Built-in rule — conditions are fixed</p>
         ) : (
           <RuleConditionsEditor query={query} onQueryChange={setQuery} />
         )}
@@ -139,7 +138,7 @@ function RuleFormFields({ rule }: { rule?: CategoryRule }) {
         <Link href="/rules" className="btn-clear">
           Cancel
         </Link>
-        <button type="button" className={screen.save} onClick={save} disabled={!name.trim()}>
+        <button type="button" className={screen.save} onClick={save} disabled={!resolved}>
           Save
         </button>
       </div>

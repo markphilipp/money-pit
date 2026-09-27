@@ -26,12 +26,26 @@ export interface Transaction {
   categoryId: string;
 }
 
-export interface CategoryRule {
+/** What a transaction is filed under. `payments` and `other` are builtin: renameable, not deletable. */
+export interface Category {
   id: string;
   name: string;
   color: string;
+  builtin?: boolean;
+}
+
+/** Files the transactions it matches under `categoryId`. The builtin payments rule stays last. */
+export interface Rule {
+  id: string;
+  categoryId: string;
   conditions: RuleGroup;
   builtin?: boolean;
+}
+
+/** Categories and the rules that fill them, saved and synced as one unit. */
+export interface Categorization {
+  categories: Category[];
+  rules: Rule[];
 }
 
 export interface FilterState {

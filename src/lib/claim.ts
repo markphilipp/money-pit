@@ -1,14 +1,13 @@
 import { mergeRows } from './csv';
-import { defaultRules } from './defaultRules';
-import type { CategoryRule, RawStatementRow } from './types';
+import { defaultCategorization } from './defaultRules';
+import type { Categorization, RawStatementRow } from './types';
 
-export interface Dataset {
+export interface Dataset extends Categorization {
   rawRows: RawStatementRow[];
-  rules: CategoryRule[];
   overrides: Record<string, string>;
 }
 
-// Rules read back from jsonb lose their key order, so compare structurally.
+// Conditions read back from jsonb lose their key order, so compare structurally.
 function sameValue(a: unknown, b: unknown): boolean {
   if (a === b) return true;
   if (typeof a !== 'object' || typeof b !== 'object' || !a || !b) return false;
@@ -20,27 +19,32 @@ function sameValue(a: unknown, b: unknown): boolean {
   );
 }
 
+/** The account's items, then the session's that the account lacks, with the account's builtins last. */
+function union<T extends { id: string; builtin?: boolean }>(account: T[], local: T[]): T[] {
+  const ids = new Set(account.map((item) => item.id));
+  return [
+    ...account.filter((item) => !item.builtin),
+    ...local.filter((item) => !item.builtin && !ids.has(item.id)),
+    ...account.filter((item) => item.builtin),
+  ];
+}
+
 /**
  * Folds a signed-out session into an account. Rows go through `mergeRows`, so overlap with what the
  * account already holds is deduped the same way a second upload would be. Overrides are keyed by
  * `txnId`, which survives the merge, and the session's win. An account still on the seeded defaults
- * takes the session's rules wholesale; otherwise only rules the account doesn't have are added,
- * ahead of the builtins. Ids are name slugs, so a shared id is the same rule and the account's
- * version stays.
+ * takes the session's categories and rules wholesale; otherwise only the ones the account doesn't
+ * have are added, ahead of the builtins. Ids are name slugs, so a shared id is the same category
+ * or rule and the account's version stays.
  */
 export function claimInto(account: Dataset, local: Dataset): Dataset {
-  const seeded = !account.rules.length || sameValue(account.rules, defaultRules);
-  const accountIds = new Set(account.rules.map((r) => r.id));
-  const rules = seeded
-    ? local.rules
-    : [
-        ...account.rules.filter((r) => !r.builtin),
-        ...local.rules.filter((r) => !r.builtin && !accountIds.has(r.id)),
-        ...account.rules.filter((r) => r.builtin),
-      ];
+  const seeded =
+    !account.categories.length ||
+    sameValue({ categories: account.categories, rules: account.rules }, defaultCategorization);
   return {
     rawRows: mergeRows(account.rawRows, local.rawRows),
-    rules,
+    categories: seeded ? local.categories : union(account.categories, local.categories),
+    rules: seeded ? local.rules : union(account.rules, local.rules),
     overrides: { ...account.overrides, ...local.overrides },
   };
 }

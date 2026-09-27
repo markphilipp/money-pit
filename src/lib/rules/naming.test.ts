@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slugify, uniqueRuleId } from './naming';
+import { slugify, uniqueId } from './naming';
 
 describe('slugify', () => {
   it('lowercases and hyphenates, trimming the edges', () => {
@@ -11,12 +11,12 @@ describe('slugify', () => {
   });
 });
 
-describe('uniqueRuleId', () => {
+describe('uniqueId', () => {
   it('keeps the plain slug when it is free', () => {
-    expect(uniqueRuleId('Travel', ['grocery'])).toBe('travel');
+    expect(uniqueId('Travel', ['grocery'])).toBe('travel');
   });
 
   it('counts up past every id already taken', () => {
-    expect(uniqueRuleId('Travel', ['travel', 'travel-2'])).toBe('travel-3');
+    expect(uniqueId('Travel', ['travel', 'travel-2'])).toBe('travel-3');
   });
 });

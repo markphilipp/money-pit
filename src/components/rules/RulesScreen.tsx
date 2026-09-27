@@ -1,6 +1,8 @@
 'use client';
 
 import Link from 'next/link';
+import { useMemo } from 'react';
+import { ruleLabels } from '@/lib/categories';
 import { describeGroup } from '@/lib/rules/engine';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
 import screen from './RuleScreen.module.css';
@@ -9,11 +11,14 @@ import styles from './RulesScreen.module.css';
 export function RulesScreen() {
   const hydrated = useHydrated();
   const rules = useAppStore((s) => s.rules);
+  const categories = useAppStore((s) => s.categories);
   const reorderRules = useAppStore((s) => s.reorderRules);
   const deleteRule = useAppStore((s) => s.deleteRule);
   const setRuleSources = useAppStore((s) => s.setRuleSources);
 
   const movable = rules.filter((r) => !r.builtin);
+  const labels = useMemo(() => ruleLabels(rules, categories), [rules, categories]);
+  const colors = useMemo(() => new Map(categories.map((c) => [c.id, c.color])), [categories]);
 
   return (
     <main className={`wrap ${screen.screen}`}>
@@ -33,52 +38,61 @@ export function RulesScreen() {
           </p>
         ) : (
           <ul className={styles.list}>
-            {rules.map((rule, i) => (
-              <li key={rule.id} className={styles.row}>
-                <span className={styles.dot} style={{ background: rule.color }} />
-                <span className={styles.name}>{rule.name}</span>
-                <span className={styles.summary}>{describeGroup(rule.conditions)}</span>
-                <span className={styles.rowActions}>
-                  <button
-                    className={styles.iconBtn}
-                    disabled={rule.builtin || i === 0}
-                    aria-label={`Move ${rule.name} up`}
-                    onClick={() => reorderRules(rule.id, -1)}
-                  >
-                    ▲
-                  </button>
-                  <button
-                    className={styles.iconBtn}
-                    disabled={rule.builtin || i >= movable.length - 1}
-                    aria-label={`Move ${rule.name} down`}
-                    onClick={() => reorderRules(rule.id, 1)}
-                  >
-                    ▼
-                  </button>
-                  <Link
-                    className={styles.iconBtn}
-                    href={`/rules/${encodeURIComponent(rule.id)}`}
-                    aria-label={`Edit ${rule.name}`}
-                  >
-                    Edit
-                  </Link>
-                  <button
-                    className={styles.iconBtn}
-                    disabled={rule.builtin}
-                    aria-label={`Delete ${rule.name}`}
-                    title={rule.builtin ? 'Built-in categories cannot be deleted' : undefined}
-                    onClick={() => deleteRule(rule.id)}
-                  >
-                    ✕
-                  </button>
-                </span>
-              </li>
-            ))}
+            {rules.map((rule, i) => {
+              const name = labels.get(rule.id)!;
+              return (
+                <li key={rule.id} className={styles.row}>
+                  <span
+                    className={styles.dot}
+                    style={{ background: colors.get(rule.categoryId) }}
+                  />
+                  <span className={styles.name}>{name}</span>
+                  <span className={styles.summary}>{describeGroup(rule.conditions)}</span>
+                  <span className={styles.rowActions}>
+                    <button
+                      className={styles.iconBtn}
+                      disabled={rule.builtin || i === 0}
+                      aria-label={`Move ${name} up`}
+                      onClick={() => reorderRules(rule.id, -1)}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      className={styles.iconBtn}
+                      disabled={rule.builtin || i >= movable.length - 1}
+                      aria-label={`Move ${name} down`}
+                      onClick={() => reorderRules(rule.id, 1)}
+                    >
+                      ▼
+                    </button>
+                    <Link
+                      className={styles.iconBtn}
+                      href={`/rules/${encodeURIComponent(rule.id)}`}
+                      aria-label={`Edit ${name}`}
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      className={styles.iconBtn}
+                      disabled={rule.builtin}
+                      aria-label={`Delete ${name}`}
+                      title={rule.builtin ? 'Built-in rules cannot be deleted' : undefined}
+                      onClick={() => deleteRule(rule.id)}
+                    >
+                      ✕
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
 
       <div className={screen.actions}>
+        <Link href="/categories" className="btn-clear">
+          Categories
+        </Link>
         {/* A hand-written rule has no source transactions; drop any left over from the table. */}
         <Link href="/rules/new" className={screen.save} onClick={() => setRuleSources([])}>
           New rule

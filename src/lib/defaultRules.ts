@@ -1,31 +1,29 @@
 import { keywordsToGroup } from './rules/engine';
-import type { CategoryRule } from './types';
+import type { Categorization, Category, Rule } from './types';
+import { OTHER_ID } from './types';
 
-export const defaultRules: CategoryRule[] = [
+interface Seed extends Category {
+  keywords: string[];
+}
+
+const seeds: Seed[] = [
   {
     id: 'home',
     name: 'Home Improvement',
     color: '#E8641B',
-    conditions: keywordsToGroup(['LOWE', 'LOWES', 'HOME DEPOT', 'ACE HARDWARE']),
+    keywords: ['LOWE', 'LOWES', 'HOME DEPOT', 'ACE HARDWARE'],
   },
   {
     id: 'grocery',
     name: 'Groceries',
     color: '#2E7D5B',
-    conditions: keywordsToGroup([
-      'WALMART.COM',
-      'WALMART ',
-      'WALMART+ INHOME',
-      'HARRIS TEETER',
-      'KROGER',
-      'ALDI',
-    ]),
+    keywords: ['WALMART.COM', 'WALMART ', 'WALMART+ INHOME', 'HARRIS TEETER', 'KROGER', 'ALDI'],
   },
   {
     id: 'dining',
     name: 'Dining & Fast Food',
     color: '#C94F3D',
-    conditions: keywordsToGroup([
+    keywords: [
       'MCDONALD',
       'TACO BELL',
       'ARBYS',
@@ -37,25 +35,25 @@ export const defaultRules: CategoryRule[] = [
       'FIREHOUSE RESTAURA',
       'INSOMNIA COOKIES',
       'CANTEEN VENDING',
-    ]),
+    ],
   },
   {
     id: 'amazon',
     name: 'Amazon',
     color: '#D9A036',
-    conditions: keywordsToGroup(['AMAZON', 'AMZN']),
+    keywords: ['AMAZON', 'AMZN'],
   },
   {
     id: 'pets',
     name: 'Pets',
     color: '#7B5CB8',
-    conditions: keywordsToGroup(['CHEWY', 'PETSMART', 'PETCO']),
+    keywords: ['CHEWY', 'PETSMART', 'PETCO'],
   },
   {
     id: 'subs',
     name: 'Subscriptions & Software',
     color: '#3A7CA5',
-    conditions: keywordsToGroup([
+    keywords: [
       'APPLE.COM/BILL',
       'PEACOCK',
       'HULU',
@@ -67,53 +65,61 @@ export const defaultRules: CategoryRule[] = [
       'ANTHROPIC',
       'GITHUB',
       'WALMART+ MEMBER',
-    ]),
+    ],
   },
   {
     id: 'auto',
     name: 'Auto & Fuel',
     color: '#4A4E57',
-    conditions: keywordsToGroup([
-      'TESLA',
-      'ADVANCE AUTO',
-      'QT ',
-      'EXXON',
-      'SHELL OIL',
-      "LOVE'S",
-      'STATE FARM',
-      'DMV',
-    ]),
+    keywords: ['TESLA', 'ADVANCE AUTO', 'QT ', 'EXXON', 'SHELL OIL', "LOVE'S", 'STATE FARM', 'DMV'],
   },
   {
     id: 'util',
     name: 'Utilities & Phone',
     color: '#1F6F8B',
-    conditions: keywordsToGroup(['DUKE-ENERGY', 'AT&T', 'ATT*', 'SPECTRUM', 'VERIZON', 'COMCAST']),
+    keywords: ['DUKE-ENERGY', 'AT&T', 'ATT*', 'SPECTRUM', 'VERIZON', 'COMCAST'],
   },
   {
     id: 'health',
     name: 'Health & Wellness',
     color: '#5F9E62',
-    conditions: keywordsToGroup(['CVS/PHARMACY', 'WALGREENS', 'RITE AID']),
+    keywords: ['CVS/PHARMACY', 'WALGREENS', 'RITE AID'],
   },
   {
     id: 'care',
     name: 'Personal Care & Clothing',
     color: '#B85C8A',
-    conditions: keywordsToGroup(['FABLETICS', 'ULTA', 'SEPHORA', 'OLD NAVY']),
+    keywords: ['FABLETICS', 'ULTA', 'SEPHORA', 'OLD NAVY'],
   },
   {
     id: 'payments',
     name: 'Payments',
     color: '#9AA39C',
-    conditions: keywordsToGroup(['ONLINE PAYMENT', 'PAYMENT THANK YOU', 'AUTOPAY']),
+    keywords: ['ONLINE PAYMENT', 'PAYMENT THANK YOU', 'AUTOPAY'],
     builtin: true,
   },
   {
     id: 'other',
     name: 'Other',
     color: '#8A8F98',
-    conditions: { combinator: 'or', rules: [] },
+    keywords: [],
     builtin: true,
   },
 ];
+
+export const defaultCategories: Category[] = seeds.map(({ keywords: _, ...category }) => category);
+
+// Other is the fallback for anything no rule claims, so it has no rule of its own.
+export const defaultRules: Rule[] = seeds
+  .filter((seed) => seed.id !== OTHER_ID)
+  .map(({ id, keywords, builtin }) => ({
+    id,
+    categoryId: id,
+    conditions: keywordsToGroup(keywords),
+    ...(builtin && { builtin }),
+  }));
+
+export const defaultCategorization: Categorization = {
+  categories: defaultCategories,
+  rules: defaultRules,
+};

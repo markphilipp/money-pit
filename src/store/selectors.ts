@@ -1,4 +1,4 @@
-import type { CategoryRule, Transaction } from '@/lib/types';
+import type { Category, Transaction } from '@/lib/types';
 import { PAYMENTS_ID } from '@/lib/types';
 import { toTransactions } from '@/lib/categorize';
 import { matchesColumnFilter } from '@/lib/rules/engine';
@@ -8,25 +8,24 @@ import type { AppState } from './useAppStore';
 export const PERSON_COLORS = ['#E8641B', '#1F6F8B', '#7B5CB8', '#5F9E62'];
 export const DIM_SUFFIX = '40';
 
-/** Deriving transactions walks every row, so cache on the (rawRows, rules, overrides) identity triple. */
-let cache: {
-  rawRows: AppState['rawRows'];
-  rules: AppState['rules'];
-  overrides: AppState['overrides'];
-  result: Transaction[];
-} | null = null;
+type Inputs = Pick<AppState, 'rawRows' | 'categories' | 'rules' | 'overrides'>;
+
+/** Deriving transactions walks every row, so cache on the identity of every input. */
+let cache: { inputs: Inputs; result: Transaction[] } | null = null;
 
 export function selectTransactions(state: AppState): Transaction[] {
+  const { rawRows, categories, rules, overrides } = state;
   if (
     cache &&
-    cache.rawRows === state.rawRows &&
-    cache.rules === state.rules &&
-    cache.overrides === state.overrides
+    cache.inputs.rawRows === rawRows &&
+    cache.inputs.categories === categories &&
+    cache.inputs.rules === rules &&
+    cache.inputs.overrides === overrides
   ) {
     return cache.result;
   }
-  const result = toTransactions(state.rawRows, state.rules, state.overrides);
-  cache = { rawRows: state.rawRows, rules: state.rules, overrides: state.overrides, result };
+  const result = toTransactions(rawRows, { categories, rules }, overrides);
+  cache = { inputs: { rawRows, categories, rules, overrides }, result };
   return result;
 }
 
@@ -68,8 +67,8 @@ export interface CategoryTotal {
   total: number;
 }
 
-export function selectCategoryTotals(txns: Transaction[], rules: CategoryRule[]): CategoryTotal[] {
-  const byId = new Map(rules.map((r) => [r.id, r]));
+export function selectCategoryTotals(txns: Transaction[], categories: Category[]): CategoryTotal[] {
+  const byId = new Map(categories.map((c) => [c.id, c]));
   const totals = sumBy(
     txns.filter((t) => t.categoryId !== PAYMENTS_ID),
     (t) => t.categoryId,
@@ -77,8 +76,8 @@ export function selectCategoryTotals(txns: Transaction[], rules: CategoryRule[])
   return [...totals.entries()]
     .filter(([id, total]) => total > 0 && byId.has(id))
     .map(([id, total]) => {
-      const rule = byId.get(id)!;
-      return { id, name: rule.name, color: rule.color, total: +total.toFixed(2) };
+      const category = byId.get(id)!;
+      return { id, name: category.name, color: category.color, total: +total.toFixed(2) };
     })
     .sort((a, b) => b.total - a.total);
 }
@@ -127,11 +126,11 @@ export interface Stats {
   topCategory: string;
 }
 
-export function selectStats(txns: Transaction[], rules: CategoryRule[]): Stats {
+export function selectStats(txns: Transaction[], categories: Category[]): Stats {
   const spendable = txns.filter((t) => t.categoryId !== PAYMENTS_ID);
   const purchases = spendable.filter((t) => !t.isCredit).reduce((a, t) => a + t.amount, 0);
   const refunds = spendable.filter((t) => t.isCredit).reduce((a, t) => a + t.amount, 0);
-  const top = selectCategoryTotals(spendable, rules)[0];
+  const top = selectCategoryTotals(spendable, categories)[0];
   return {
     net: purchases + refunds,
     purchases,
@@ -144,9 +143,9 @@ export function selectStats(txns: Transaction[], rules: CategoryRule[]): Stats {
 export function sortTransactions(
   txns: Transaction[],
   sort: AppState['sort'],
-  rules: CategoryRule[],
+  categories: Category[],
 ): Transaction[] {
-  const nameById = new Map(rules.map((r) => [r.id, r.name]));
+  const nameById = new Map(categories.map((c) => [c.id, c.name]));
   const value = (t: Transaction): string | number => {
     switch (sort.key) {
       case 'date':

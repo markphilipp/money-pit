@@ -18,7 +18,10 @@ export function Dashboard() {
   const hydrated = useHydrated();
   const state = useAppState();
   const filtered = useFiltered();
-  const stats = useMemo(() => selectStats(filtered, state.rules), [filtered, state.rules]);
+  const stats = useMemo(
+    () => selectStats(filtered, state.categories),
+    [filtered, state.categories],
+  );
 
   if (!hydrated) return <main className={`wrap ${styles.loading}`} aria-busy="true" />;
   if (state.rawRows.length === 0)
