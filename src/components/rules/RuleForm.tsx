@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useContext, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { RuleGroupType } from 'react-querybuilder';
@@ -10,7 +10,7 @@ import type { RuleGroup } from '@/lib/rules/types';
 import { uniqueRuleId } from '@/lib/rules/naming';
 import { nextPaletteColor } from '@/lib/palette';
 import { ColorPickerPopover } from '@/components/common/ColorPickerPopover';
-import { useAppStore, useHydrated } from '@/store/useAppStore';
+import { SignedInContext, useAppStore, useHydrated } from '@/store/useAppStore';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
 import { fromRqb, toRqb } from './rqbMap';
 import screen from './RuleScreen.module.css';
@@ -33,6 +33,7 @@ export function RuleForm({ ruleId }: { ruleId?: string }) {
 }
 
 function MissingRule({ ruleId }: { ruleId: string }) {
+  const signedIn = useContext(SignedInContext);
   return (
     <main className={`wrap ${screen.screen}`}>
       <div className={screen.topBar}>
@@ -43,8 +44,8 @@ function MissingRule({ ruleId }: { ruleId: string }) {
       </div>
       <section className={`card ${screen.section}`}>
         <p className={screen.empty}>
-          There is no rule called “{ruleId}”. It may have been deleted, or this link may be from a
-          different session — rules live in this tab only.
+          There is no rule called “{ruleId}”. It may have been deleted, or this link may be from a{' '}
+          {signedIn ? 'different account' : 'different session — rules live in this tab only'}.
         </p>
       </section>
     </main>
