@@ -207,6 +207,13 @@ describe('overrides and rules', () => {
     expect(state().categories.filter((c) => c.builtin)).toHaveLength(2);
   });
 
+  it('keeps the builtin payments rule even if it is reassigned onto a category that is then deleted', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().setRule('payments', { categoryId: 'travel' });
+    state().deleteCategory('travel');
+    expect(state().rules.some((r) => r.id === 'payments')).toBe(true);
+  });
+
   it('reorders rules so an earlier rule wins, keeping builtins last', () => {
     state().addCategory({ id: 'megastore', name: 'Megastore', color: '#111' });
     state().addRule({

@@ -78,14 +78,18 @@ export interface CategorizedOverrides extends Categorization {
   overrides: Record<string, string>;
 }
 
-/** Drops a category, every rule that fills it, and every override pointing at it. Builtins stay. */
+/**
+ * Drops a category, every non-builtin rule that fills it, and every override pointing at it.
+ * Builtin categories and builtin rules both stay — a builtin rule can never be deleted, even if it
+ * somehow ends up filed under a category that is.
+ */
 export function removeCategory<T extends CategorizedOverrides>(state: T, id: string): T {
   if (!state.categories.some((c) => c.id === id && !c.builtin)) return state;
   const overrides = Object.fromEntries(Object.entries(state.overrides).filter(([, c]) => c !== id));
   return {
     ...state,
     categories: state.categories.filter((c) => c.id !== id),
-    rules: state.rules.filter((r) => r.categoryId !== id),
+    rules: state.rules.filter((r) => r.categoryId !== id || r.builtin),
     overrides,
   };
 }

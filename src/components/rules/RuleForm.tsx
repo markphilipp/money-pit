@@ -80,12 +80,9 @@ function RuleFormFields({ rule }: { rule?: Rule }) {
     const { category, isNew } = resolved;
     if (isNew) addCategory(category);
     if (rule) {
-      setRule(
-        rule.id,
-        isBuiltin
-          ? { categoryId: category.id }
-          : { categoryId: category.id, conditions: fromRqb(query) },
-      );
+      // A builtin rule's category is fixed — the field above is disabled, and this form has
+      // nothing else of its own to save for one.
+      if (!isBuiltin) setRule(rule.id, { categoryId: category.id, conditions: fromRqb(query) });
     } else {
       addRule({
         id: newRuleId(rules.map((r) => r.id)),

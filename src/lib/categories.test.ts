@@ -139,6 +139,18 @@ describe('removeCategory', () => {
   it('is a no-op for an id that does not exist', () => {
     expect(removeCategory(state, 'nope')).toBe(state);
   });
+
+  it('keeps a builtin rule even if it is filed under the category being deleted', () => {
+    const withStrandedBuiltin = {
+      ...state,
+      rules: [
+        ...state.rules,
+        { id: 'payments', categoryId: 'travel', builtin: true, conditions: empty },
+      ],
+    };
+    const next = removeCategory(withStrandedBuiltin, 'travel');
+    expect(next.rules.map((r) => r.id)).toEqual(['b', 'payments']);
+  });
 });
 
 describe('findCategoryByName', () => {
