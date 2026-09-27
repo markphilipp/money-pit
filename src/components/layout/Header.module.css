@@ -1,24 +1,3 @@
-.header {
-  position: relative;
-  margin-bottom: 26px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: center;
-}
-
-.header::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: -2px;
-  width: 76px;
-  height: 3px;
-  margin-left: -38px;
-  border-radius: 2px;
-  background: var(--accent);
-}
-
 .brand {
   display: flex;
   align-items: center;
