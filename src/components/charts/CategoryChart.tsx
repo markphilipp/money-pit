@@ -3,24 +3,18 @@
 import { useMemo } from 'react';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { fmtMoney } from '@/lib/format';
 import { checklistValues } from '@/lib/rules/engine';
 import { selectCategoryTotals } from '@/store/selectors';
 import { useAppState, useFiltered } from '@/store/hooks';
 import { useAppStore } from '@/store/useAppStore';
 import { ChartModeToggle } from './ChartModeToggle';
-import { shade } from './chartSetup';
+import { BAR_LAYOUT, BAR_SCALES, pctLabel, shade } from './chartSetup';
 import styles from './Chart.module.css';
-
-function pctLabel(value: number, all: number[]): string {
-  const total = all.reduce((a, b) => a + b, 0);
-  const pct = total ? ((value / total) * 100).toFixed(1) : '0.0';
-  return ` ${fmtMoney(value)} (${pct}%)`;
-}
 
 export function CategoryChart() {
   const state = useAppState();
   const toggleCategoryFilter = useAppStore((s) => s.toggleCategoryFilter);
+  const setChartMode = useAppStore((s) => s.setChartMode);
   const source = useFiltered({ ignoreCategory: true });
   const totals = useMemo(() => selectCategoryTotals(source, state.rules), [source, state.rules]);
   const selected = checklistValues(state.filters.columnFilters, 'category');
@@ -88,6 +82,7 @@ export function CategoryChart() {
     maintainAspectRatio: false,
     onClick,
     indexAxis: 'y',
+    layout: BAR_LAYOUT,
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -96,31 +91,12 @@ export function CategoryChart() {
         },
       },
     },
-    scales: {
-      x: {
-        grid: { color: '#DDE3DC' },
-        ticks: {
-          font: { family: "var(--font-mono), 'IBM Plex Mono', monospace", size: 11 },
-          callback: (v) => '$' + Number(v).toLocaleString(),
-        },
-      },
-      y: { grid: { display: false }, ticks: { font: { size: 12 } } },
-    },
+    scales: BAR_SCALES,
   };
 
   return (
-    <div className="card">
-      <div className={styles.cardTop}>
-        <div>
-          <h2>By Category</h2>
-          <div className="sub" style={{ marginBottom: 12 }}>
-            {isBar
-              ? 'Click bars to toggle category filters — everything below updates. Selected bars stay bright.'
-              : 'Click slices to toggle category filters — everything below updates. Selected slices stay bright.'}
-          </div>
-        </div>
-        <ChartModeToggle />
-      </div>
+    <div className={`card ${styles.card}`}>
+      <ChartModeToggle mode={state.chartMode} onChange={setChartMode} label="Category chart type" />
       <div className={styles.box}>
         {totals.length === 0 ? (
           <p className={styles.empty}>No spending matches these filters.</p>

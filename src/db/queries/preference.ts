@@ -15,6 +15,7 @@ export async function readPreference(tx: Tx, userId: string): Promise<Preference
   const [row] = await tx
     .select({
       chartMode: preference.chartMode,
+      personChartMode: preference.personChartMode,
       sortKey: preference.sortKey,
       sortDir: preference.sortDir,
     })

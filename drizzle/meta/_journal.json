@@ -15,6 +15,13 @@
       "when": 1790431287505,
       "tag": "0001_app_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790470749680,
+      "tag": "0002_tearful_energizer",
+      "breakpoints": true
     }
   ]
 }

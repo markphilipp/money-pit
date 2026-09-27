@@ -98,7 +98,7 @@ describe('CategoryChart', () => {
     expect(useAppStore.getState().chartMode).toBe('bar');
     expect(last().type).toBe('bar');
     expect((last().options as ChartOptions<'bar'>).indexAxis).toBe('y');
-    expect(screen.getByText(/Click bars to toggle/)).toBeInTheDocument();
+    expect(useAppStore.getState().personChartMode).toBe('donut');
   });
 });
 
@@ -120,6 +120,25 @@ describe('PersonChart', () => {
     clickSlice(0);
     expect(personFilter()).toEqual(['JAMIE SAMPLE', 'ALEX SAMPLE']);
     clickSlice(0);
+    expect(personFilter()).toEqual(['JAMIE SAMPLE']);
+  });
+
+  it('switches to bars independently of the category chart', async () => {
+    const user = userEvent.setup();
+    render(<PersonChart />);
+
+    await user.click(screen.getByRole('button', { name: 'Bars' }));
+
+    expect(useAppStore.getState().personChartMode).toBe('bar');
+    expect(useAppStore.getState().chartMode).toBe('donut');
+    expect(last().type).toBe('bar');
+    expect(last().data.labels).toEqual(['Alex', 'Jamie']);
+  });
+
+  it('filters by person when a bar is clicked', () => {
+    useAppStore.setState({ personChartMode: 'bar' });
+    render(<PersonChart />);
+    clickSlice(1);
     expect(personFilter()).toEqual(['JAMIE SAMPLE']);
   });
 });

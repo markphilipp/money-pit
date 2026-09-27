@@ -56,7 +56,7 @@ describe('startAccountSync', () => {
     await start(
       fakeApi({
         rows: [{ ...first, categoryOverride: 'pets' }],
-        preference: { chartMode: 'bar', sortKey: 'amount', sortDir: 1 },
+        preference: { chartMode: 'bar', personChartMode: 'bar', sortKey: 'amount', sortDir: 1 },
       }),
     );
 
@@ -64,6 +64,7 @@ describe('startAccountSync', () => {
     expect(state().rawRows).toEqual([accountRows[0]]);
     expect(selectTransactions(state())[0].categoryId).toBe('pets');
     expect(state().chartMode).toBe('bar');
+    expect(state().personChartMode).toBe('bar');
     expect(state().sort).toEqual({ key: 'amount', dir: 1 });
   });
 
@@ -95,6 +96,7 @@ describe('startAccountSync', () => {
     state().reorderRules('grocery', -1);
     state().setOverride([txn.id], 'pets');
     state().setChartMode('bar');
+    state().setPersonChartMode('bar');
     await sync!.settled();
 
     expect(api.replaceRules).toHaveBeenCalledWith(state().rules);
@@ -103,6 +105,7 @@ describe('startAccountSync', () => {
     ]);
     expect(api.setPreference).toHaveBeenCalledWith({
       chartMode: 'bar',
+      personChartMode: 'bar',
       sortKey: 'date',
       sortDir: -1,
     });
@@ -202,6 +205,7 @@ describe('claiming a signed-out session', () => {
   it('carries a changed chart type and sort order into the account', async () => {
     await state().uploadFiles([csvFile(SAMPLE_CSV)]);
     state().setChartMode('bar');
+    state().setPersonChartMode('bar');
     state().setSort('amount');
     confirmClaim.mockResolvedValueOnce(true);
     const api = fakeApi();
@@ -209,6 +213,7 @@ describe('claiming a signed-out session', () => {
 
     expect(claimArgs(api)[2]).toEqual({
       chartMode: 'bar',
+      personChartMode: 'bar',
       sortKey: 'amount',
       sortDir: state().sort.dir,
     });

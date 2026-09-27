@@ -86,6 +86,7 @@ export const rowsInput = z.array(
 
 export const preferenceInput = z.object({
   chartMode: oneOf<ChartMode>({ donut: true, bar: true }),
+  personChartMode: oneOf<ChartMode>({ donut: true, bar: true }),
   sortKey: oneOf<SortKey>({
     date: true,
     description: true,
