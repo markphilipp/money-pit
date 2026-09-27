@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { matchCategory, parseAmount, parseDate, toTransactions } from './categorize';
 import { parseStatementCsv } from './csv';
-import { defaultRules } from './defaultRules';
+import { defaultCategories, defaultRules } from './defaultRules';
 import { keywordsToGroup } from './rules/engine';
-import type { CategoryRule } from './types';
+import type { Rule } from './types';
 import { SAMPLE_CSV } from '@/test/fixtures';
 
 const rows = parseStatementCsv(SAMPLE_CSV);
+const categorization = { categories: defaultCategories, rules: defaultRules };
 
 const target = (description: string) => ({
   description,
@@ -25,20 +26,19 @@ describe('matchCategory', () => {
   });
 
   it('lets the first rule in array order win', () => {
-    const rules: CategoryRule[] = [
-      { id: 'first', name: 'First', color: '#000', conditions: keywordsToGroup(['AMAZON']) },
-      { id: 'second', name: 'Second', color: '#111', conditions: keywordsToGroup(['AMAZON']) },
+    const rules: Rule[] = [
+      { id: 'first', categoryId: 'first', conditions: keywordsToGroup(['AMAZON']) },
+      { id: 'second', categoryId: 'second', conditions: keywordsToGroup(['AMAZON']) },
     ];
     expect(matchCategory(target('AMAZON MKTPL'), rules)).toBe('first');
     expect(matchCategory(target('AMAZON MKTPL'), rules.slice().reverse())).toBe('second');
   });
 
   it('matches on non-description fields too', () => {
-    const rules: CategoryRule[] = [
+    const rules: Rule[] = [
       {
         id: 'big',
-        name: 'Big',
-        color: '#000',
+        categoryId: 'big',
         conditions: { combinator: 'and', rules: [{ field: 'amount', operator: 'gte', value: 20 }] },
       },
     ];
@@ -62,7 +62,7 @@ describe('parseDate', () => {
 
 describe('toTransactions', () => {
   it('derives categories, amounts and credit flags', () => {
-    const txns = toTransactions(rows, defaultRules, {});
+    const txns = toTransactions(rows, categorization, {});
     expect(txns).toHaveLength(rows.length);
     expect(txns[0].categoryId).toBe('subs');
     expect(txns[1].categoryId).toBe('amazon');
@@ -71,29 +71,32 @@ describe('toTransactions', () => {
   });
 
   it('lets a manual override win over the rule match', () => {
-    const base = toTransactions(rows, defaultRules, {});
-    const overridden = toTransactions(rows, defaultRules, { [base[1].id]: 'grocery' });
+    const base = toTransactions(rows, categorization, {});
+    const overridden = toTransactions(rows, categorization, { [base[1].id]: 'grocery' });
     expect(overridden[1].categoryId).toBe('grocery');
   });
 
-  it('falls back to other when an override points at a deleted rule', () => {
-    const base = toTransactions(rows, defaultRules, {});
-    const overridden = toTransactions(rows, defaultRules, { [base[1].id]: 'gone' });
+  it('falls back to other when an override points at a deleted category', () => {
+    const base = toTransactions(rows, categorization, {});
+    const overridden = toTransactions(rows, categorization, { [base[1].id]: 'gone' });
     expect(overridden[1].categoryId).toBe('other');
   });
 
   it('gives duplicate rows within a file distinct stable ids', () => {
     const dup = [rows[0], { ...rows[0] }];
-    const txns = toTransactions(dup, defaultRules, {});
+    const txns = toTransactions(dup, categorization, {});
     expect(txns[0].id).not.toBe(txns[1].id);
-    expect(toTransactions(dup, defaultRules, {}).map((t) => t.id)).toEqual(txns.map((t) => t.id));
+    expect(toTransactions(dup, categorization, {}).map((t) => t.id)).toEqual(txns.map((t) => t.id));
   });
 
   it('re-categorizes when rules change', () => {
-    const custom: CategoryRule[] = [
-      { id: 'fruit', name: 'Fruit', color: '#111', conditions: keywordsToGroup(['APPLE']) },
-      ...defaultRules,
-    ];
+    const custom = {
+      categories: [{ id: 'fruit', name: 'Fruit', color: '#111' }, ...defaultCategories],
+      rules: [
+        { id: 'fruit', categoryId: 'fruit', conditions: keywordsToGroup(['APPLE']) },
+        ...defaultRules,
+      ],
+    };
     expect(toTransactions(rows, custom, {})[0].categoryId).toBe('fruit');
   });
 });

@@ -4,9 +4,9 @@ import { eq } from 'drizzle-orm';
 import { testUtils } from 'better-auth/plugins';
 import { authOptions, getAuth } from '@/auth';
 import { getDb } from '@/db';
-import { readRules } from '@/db/queries/rules';
-import { account, categoryRule, session as sessionTable } from '@/db/schema';
-import { defaultRules } from '@/lib/defaultRules';
+import { readCategorization } from '@/db/queries/categories';
+import { account, category, categoryRule, session as sessionTable } from '@/db/schema';
+import { defaultCategorization } from '@/lib/defaultRules';
 
 const { test } = await betterAuth({ ...authOptions(), plugins: [testUtils()] }).$context;
 const auth = getAuth();
@@ -15,11 +15,13 @@ await test.saveUser(user);
 
 try {
   assert.deepEqual(
-    await getDb().transaction((tx) => readRules(tx, user.id)),
-    defaultRules,
-    'a new user is seeded with the default rules, in order',
+    await getDb().transaction((tx) => readCategorization(tx, user.id)),
+    defaultCategorization,
+    'a new user is seeded with the default categories and rules, in order',
   );
-  console.log(`new user -> ${defaultRules.length} default rules seeded in order`);
+  console.log(
+    `new user -> ${defaultCategorization.categories.length} categories, ${defaultCategorization.rules.length} rules seeded in order`,
+  );
 
   const headers = await test.getAuthHeaders({ userId: user.id });
   const session = await auth.api.getSession({ headers });
@@ -91,8 +93,10 @@ try {
   console.log('account create/update -> tokens', await storedTokens(created.id));
 } finally {
   await test.deleteUser(user.id);
-  const orphans = await getDb().$count(categoryRule, eq(categoryRule.userId, user.id));
+  const orphans =
+    (await getDb().$count(categoryRule, eq(categoryRule.userId, user.id))) +
+    (await getDb().$count(category, eq(category.userId, user.id)));
   await getDb().$client.end();
-  assert.equal(orphans, 0, 'deleting the user cascades to its rules');
+  assert.equal(orphans, 0, 'deleting the user cascades to its categories and rules');
 }
 console.log('ok');

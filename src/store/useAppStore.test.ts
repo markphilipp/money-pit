@@ -165,49 +165,60 @@ describe('overrides and rules', () => {
     expect(state().overrides[amazonTxn.id]).toBe('pets');
   });
 
-  it('drops rows to other when their overridden rule is deleted', () => {
-    const txn = selectTransactions(state())[0];
-    state().addRule({
-      id: 'travel',
-      name: 'Travel',
-      color: '#111',
-      conditions: keywordsToGroup([]),
-    });
+  it('drops rows to other when their category is deleted', () => {
+    const txn = selectTransactions(state()).find((t) => t.categoryId === 'other')!;
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().addRule({ id: 'travel', categoryId: 'travel', conditions: keywordsToGroup([]) });
     state().setOverride([txn.id], 'travel');
-    expect(selectTransactions(state())[0].categoryId).toBe('travel');
+    expect(selectTransactions(state()).find((t) => t.id === txn.id)?.categoryId).toBe('travel');
 
-    state().deleteRule('travel');
-    expect(selectTransactions(state())[0].categoryId).toBe('other');
+    state().deleteCategory('travel');
+    expect(selectTransactions(state()).find((t) => t.id === txn.id)?.categoryId).toBe('other');
   });
 
-  it('strips a deleted rule from the category checklist', () => {
-    state().addRule({
-      id: 'travel',
-      name: 'Travel',
-      color: '#111',
-      conditions: keywordsToGroup(['DELTA']),
-    });
+  it('drops the rules that file into a deleted category', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().addRule({ id: 'travel', categoryId: 'travel', conditions: keywordsToGroup(['DELTA']) });
+
+    state().deleteCategory('travel');
+    expect(state().categories.some((c) => c.id === 'travel')).toBe(false);
+    expect(state().rules.some((r) => r.categoryId === 'travel')).toBe(false);
+  });
+
+  it('strips a deleted category from the category checklist', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().addRule({ id: 'travel', categoryId: 'travel', conditions: keywordsToGroup(['DELTA']) });
     state().toggleCategoryFilter('travel');
     state().toggleCategoryFilter('pets');
 
-    state().deleteRule('travel');
+    state().deleteCategory('travel');
     expect(state().filters.columnFilters.category).toEqual({
       column: 'category',
       values: ['pets'],
     });
   });
 
-  it('refuses to delete builtin rules', () => {
+  it('refuses to delete builtin rules or categories', () => {
     state().deleteRule('payments');
-    state().deleteRule('other');
-    expect(state().rules.filter((r) => r.builtin)).toHaveLength(2);
+    expect(state().rules.filter((r) => r.builtin)).toHaveLength(1);
+
+    state().deleteCategory('payments');
+    state().deleteCategory('other');
+    expect(state().categories.filter((c) => c.builtin)).toHaveLength(2);
+  });
+
+  it('keeps the builtin payments rule even if it is reassigned onto a category that is then deleted', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().setRule('payments', { categoryId: 'travel' });
+    state().deleteCategory('travel');
+    expect(state().rules.some((r) => r.id === 'payments')).toBe(true);
   });
 
   it('reorders rules so an earlier rule wins, keeping builtins last', () => {
+    state().addCategory({ id: 'megastore', name: 'Megastore', color: '#111' });
     state().addRule({
       id: 'megastore',
-      name: 'Megastore',
-      color: '#111',
+      categoryId: 'megastore',
       conditions: keywordsToGroup(['MKTPL']),
     });
     expect(
@@ -216,7 +227,7 @@ describe('overrides and rules', () => {
 
     for (let i = 0; i < 12; i++) state().reorderRules('megastore', -1);
     expect(state().rules[0].id).toBe('megastore');
-    expect(state().rules.at(-1)?.id).toBe('other');
+    expect(state().rules.at(-1)?.id).toBe('payments');
     expect(
       selectTransactions(state()).find((t) => t.description.includes('AMAZON'))?.categoryId,
     ).toBe('megastore');
@@ -275,9 +286,9 @@ describe('selection and sorting', () => {
 
   it('sorts by the requested key', () => {
     const rows = selectFiltered(state());
-    const byAmount = sortTransactions(rows, { key: 'amount', dir: -1 }, state().rules);
+    const byAmount = sortTransactions(rows, { key: 'amount', dir: -1 }, state().categories);
     expect(byAmount[0].amount).toBe(118.37);
-    const byDesc = sortTransactions(rows, { key: 'description', dir: 1 }, state().rules);
+    const byDesc = sortTransactions(rows, { key: 'description', dir: 1 }, state().categories);
     expect(byDesc[0].description).toContain('AMAZON');
   });
 });
@@ -289,11 +300,11 @@ describe('aggregates', () => {
 
   it('excludes payments from totals and stats', () => {
     const filtered = selectFiltered(state());
-    const totals = selectCategoryTotals(filtered, state().rules);
+    const totals = selectCategoryTotals(filtered, state().categories);
     expect(totals.map((t) => t.id)).not.toContain('payments');
     expect(totals[0]).toMatchObject({ id: 'grocery', total: 118.37 });
 
-    const stats = selectStats(filtered, state().rules);
+    const stats = selectStats(filtered, state().categories);
     expect(stats.count).toBe(6);
     expect(stats.purchases).toBeCloseTo(253.62, 2);
     expect(stats.refunds).toBeCloseTo(-2.15, 2);
@@ -350,6 +361,35 @@ describe('session persistence', () => {
     expect(state().rawRows).toHaveLength(0);
     expect(state().overrides).toEqual({});
     expect(state().filters.columnFilters).toEqual({});
-    expect(state().rules).toHaveLength(12);
+    expect(state().categories).toHaveLength(12);
+    expect(state().rules).toHaveLength(11);
+  });
+
+  it('upgrades a pre-split session stored under the legacy rules key', async () => {
+    const legacy = [
+      {
+        id: 'coffee',
+        name: 'Coffee',
+        color: '#6b4f3a',
+        conditions: keywordsToGroup(['STARBUCKS']),
+      },
+      {
+        id: 'other',
+        name: 'Other',
+        color: '#8A8F98',
+        conditions: { combinator: 'and', rules: [] },
+        builtin: true,
+      },
+    ];
+    sessionStorage.setItem(
+      'money-pit',
+      JSON.stringify({ state: { rawRows: [], rules: legacy, overrides: {} }, version: 0 }),
+    );
+    await useAppStore.persist.rehydrate();
+
+    // the legacy record never had a Payments builtin; upgrading repairs that from the defaults
+    expect(state().categories.map((c) => c.id)).toEqual(['coffee', 'other', 'payments']);
+    expect(state().rules.map((r) => r.id)).toEqual(['coffee', 'payments']);
+    expect(state().categories.find((c) => c.id === 'other')?.builtin).toBe(true);
   });
 });

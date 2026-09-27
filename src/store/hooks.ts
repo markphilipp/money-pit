@@ -39,8 +39,8 @@ export function useSortedFiltered(): Transaction[] {
   const state = useAppState();
   const filtered = useFiltered();
   return useMemo(
-    () => sortTransactions(filtered, state.sort, state.rules),
-    [filtered, state.sort, state.rules],
+    () => sortTransactions(filtered, state.sort, state.categories),
+    [filtered, state.sort, state.categories],
   );
 }
 

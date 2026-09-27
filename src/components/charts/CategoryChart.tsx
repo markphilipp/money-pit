@@ -16,7 +16,10 @@ export function CategoryChart() {
   const toggleCategoryFilter = useAppStore((s) => s.toggleCategoryFilter);
   const setChartMode = useAppStore((s) => s.setChartMode);
   const source = useFiltered({ ignoreCategory: true });
-  const totals = useMemo(() => selectCategoryTotals(source, state.rules), [source, state.rules]);
+  const totals = useMemo(
+    () => selectCategoryTotals(source, state.categories),
+    [source, state.categories],
+  );
   const selected = checklistValues(state.filters.columnFilters, 'category');
   const isBar = state.chartMode === 'bar';
 

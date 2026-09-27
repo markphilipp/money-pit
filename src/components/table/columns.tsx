@@ -1,7 +1,7 @@
 'use client';
 
 import { createColumnHelper, type ColumnDef } from '@tanstack/react-table';
-import type { CategoryRule, SortKey, Transaction } from '@/lib/types';
+import type { Category, SortKey, Transaction } from '@/lib/types';
 import { fmtMoney, personShort } from '@/lib/format';
 import styles from './Table.module.css';
 
@@ -12,7 +12,7 @@ export interface ColumnMeta {
 }
 
 interface Options {
-  rulesById: Map<string, CategoryRule>;
+  categoriesById: Map<string, Category>;
   isSelected: (id: string) => boolean;
   onToggleRow: (id: string) => void;
   onPillClick: (txn: Transaction, anchor: HTMLElement) => void;
@@ -23,7 +23,7 @@ const helper = createColumnHelper<Transaction>();
 // All columns are display columns: sorting and filtering are driven by the store, so the
 // table never needs accessor values of its own.
 export function buildColumns({
-  rulesById,
+  categoriesById,
   isSelected,
   onToggleRow,
   onPillClick,
@@ -55,7 +55,7 @@ export function buildColumns({
       id: 'category',
       meta: { sortKey: 'category', headerLabel: 'Category' } satisfies ColumnMeta,
       cell: ({ row }) => {
-        const rule = rulesById.get(row.original.categoryId);
+        const category = categoriesById.get(row.original.categoryId);
         return (
           <button
             type="button"
@@ -63,8 +63,8 @@ export function buildColumns({
             title="Change category"
             onClick={(e) => onPillClick(row.original, e.currentTarget)}
           >
-            <span className={styles.dot} style={{ background: rule?.color ?? '#8A8F98' }} />
-            {rule?.name ?? 'Other'}
+            <span className={styles.dot} style={{ background: category?.color ?? '#8A8F98' }} />
+            {category?.name ?? 'Other'}
           </button>
         );
       },

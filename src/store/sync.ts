@@ -13,7 +13,7 @@ export type AccountApi = Pick<
   typeof AccountActions,
   | 'appendRows'
   | 'setOverrides'
-  | 'replaceRules'
+  | 'replaceCategories'
   | 'setPreference'
   | 'resetAccount'
   | 'loadSnapshot'
@@ -38,12 +38,13 @@ const toPreference = ({
 });
 
 async function applySnapshot(api: AccountApi) {
-  const { rows, rules, preference } = await api.loadSnapshot();
+  const { rows, categories, rules, preference } = await api.loadSnapshot();
   const { rawRows, overrides } = fromStoredRows(rows);
   return {
     mode: 'account',
     rawRows,
     overrides,
+    categories,
     rules,
     chartMode: preference?.chartMode ?? initialState.chartMode,
     personChartMode: preference?.personChartMode ?? initialState.personChartMode,
@@ -140,7 +141,10 @@ export function startAccountSync(
         enqueue(() => api.appendRows(chunk));
       }
     }
-    if (next.rules !== prev.rules) enqueue(() => api.replaceRules(next.rules));
+    if (next.categories !== prev.categories || next.rules !== prev.rules) {
+      const { categories, rules } = next;
+      enqueue(() => api.replaceCategories({ categories, rules }));
+    }
     if (next.overrides !== prev.overrides) {
       const changes = overrideChanges(next.rawRows, prev.overrides, next.overrides);
       if (changes.length) enqueue(() => api.setOverrides(changes));
@@ -161,7 +165,7 @@ export function startAccountSync(
   // them in place for a reload to offer again.
   const claim = async () => {
     const state = useAppStore.getState();
-    const { rawRows, overrides, rules } = state;
+    const { rawRows, overrides, categories, rules } = state;
     if (!rawRows.length || !(await confirmClaim()) || stopped) return true;
     // Untouched defaults aren't a choice, so they never overwrite what the account has saved.
     const untouched =
@@ -172,7 +176,7 @@ export function startAccountSync(
     try {
       await api.claimLocal(
         toStoredRows(rawRows, overrides),
-        rules,
+        { categories, rules },
         untouched ? null : toPreference(state),
       );
       return true;

@@ -2,17 +2,20 @@ import { createContext, useContext, useEffect, useSyncExternalStore } from 'reac
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import type {
-  CategoryRule,
+  Categorization,
+  Category,
   ChartMode,
   FilterState,
   RawStatementRow,
+  Rule,
   SortKey,
   SortState,
 } from '@/lib/types';
 import { OTHER_ID } from '@/lib/types';
 import type { ColumnFilter, ColumnId } from '@/lib/rules/types';
 import { CsvFormatError, mergeRows, parseStatementCsv } from '@/lib/csv';
-import { defaultRules } from '@/lib/defaultRules';
+import { defaultCategories, defaultRules } from '@/lib/defaultRules';
+import { removeCategory, upgradeLegacyRules, type LegacyRule } from '@/lib/categories';
 import { checklistValues } from '@/lib/rules/engine';
 
 export interface UploadResult {
@@ -32,7 +35,8 @@ export type StoreMode = 'local' | 'account';
 export interface AppState {
   mode: StoreMode;
   rawRows: RawStatementRow[];
-  rules: CategoryRule[];
+  categories: Category[];
+  rules: Rule[];
   overrides: Record<string, string>;
   filters: FilterState;
   chartMode: ChartMode;
@@ -43,8 +47,11 @@ export interface AppState {
   ruleSources: string[];
 
   uploadFiles: (files: File[]) => Promise<UploadResult>;
-  addRule: (rule: CategoryRule) => void;
-  setRule: (id: string, patch: Partial<Omit<CategoryRule, 'id'>>) => void;
+  addCategory: (category: Category) => void;
+  setCategory: (id: string, patch: Partial<Pick<Category, 'name' | 'color'>>) => void;
+  deleteCategory: (id: string) => void;
+  addRule: (rule: Rule) => void;
+  setRule: (id: string, patch: Partial<Pick<Rule, 'categoryId' | 'conditions'>>) => void;
   deleteRule: (id: string) => void;
   reorderRules: (id: string, direction: -1 | 1) => void;
   setOverride: (ids: string[], categoryId: string) => void;
@@ -66,6 +73,7 @@ export interface AppState {
 export const initialState = {
   mode: 'local' as StoreMode,
   rawRows: [] as RawStatementRow[],
+  categories: defaultCategories,
   rules: defaultRules,
   overrides: {} as Record<string, string>,
   filters: emptyFilters,
@@ -76,17 +84,17 @@ export const initialState = {
   ruleSources: [] as string[],
 };
 
-type PersistedState = Pick<
+/**
+ * Categories and rules persist under `categorization`, not `rules`: a tab saved before the split
+ * holds its rules under `rules`, and code from before the split would misread the new shape there.
+ */
+interface PersistedState extends Pick<
   AppState,
-  | 'rawRows'
-  | 'rules'
-  | 'overrides'
-  | 'filters'
-  | 'chartMode'
-  | 'personChartMode'
-  | 'sort'
-  | 'ruleSources'
->;
+  'rawRows' | 'overrides' | 'filters' | 'chartMode' | 'personChartMode' | 'sort' | 'ruleSources'
+> {
+  categorization: Categorization;
+  rules?: LegacyRule[];
+}
 
 const noopStorage = {
   getItem: () => null,
@@ -139,9 +147,39 @@ export const useAppStore = create<AppState>()(
         return result;
       },
 
+      addCategory: (category) =>
+        set((s) => ({
+          categories: [
+            ...s.categories.filter((c) => !c.builtin),
+            category,
+            ...s.categories.filter((c) => c.builtin),
+          ],
+        })),
+
+      setCategory: (id, patch) =>
+        set((s) => ({
+          categories: s.categories.map((c) => (c.id === id ? { ...c, ...patch } : c)),
+        })),
+
+      deleteCategory: (id) =>
+        set((s) => {
+          const next = removeCategory(s, id);
+          if (next === s) return s;
+          return {
+            categories: next.categories,
+            rules: next.rules,
+            overrides: next.overrides,
+            filters: withChecklist(
+              s.filters,
+              'category',
+              currentChecklist(s.filters, 'category').filter((c) => c !== id),
+            ),
+          };
+        }),
+
       addRule: (rule) =>
         set((s) => ({
-          // builtin fallbacks stay pinned to the bottom so a new rule can actually match
+          // the builtin payments rule stays pinned to the bottom so user rules get first look
           rules: [...s.rules.filter((r) => !r.builtin), rule, ...s.rules.filter((r) => r.builtin)],
         })),
 
@@ -152,14 +190,7 @@ export const useAppStore = create<AppState>()(
         set((s) =>
           s.rules.find((r) => r.id === id)?.builtin
             ? s
-            : {
-                rules: s.rules.filter((r) => r.id !== id),
-                filters: withChecklist(
-                  s.filters,
-                  'category',
-                  currentChecklist(s.filters, 'category').filter((c) => c !== id),
-                ),
-              },
+            : { rules: s.rules.filter((r) => r.id !== id) },
         ),
 
       reorderRules: (id, direction) =>
@@ -274,7 +305,7 @@ export const useAppStore = create<AppState>()(
           ? { filters: s.filters, ruleSources: s.ruleSources }
           : {
               rawRows: s.rawRows,
-              rules: s.rules,
+              categorization: { categories: s.categories, rules: s.rules },
               overrides: s.overrides,
               filters: s.filters,
               chartMode: s.chartMode,
@@ -285,9 +316,11 @@ export const useAppStore = create<AppState>()(
       merge: (persisted, current) => {
         const raw = persisted as Partial<PersistedState> | undefined;
         if (!raw) return current;
+        const { categorization, rules, ...rest } = raw;
         return {
           ...current,
-          ...raw,
+          ...rest,
+          ...(categorization ?? (rules && upgradeLegacyRules(rules))),
           filters: { ...emptyFilters, ...raw.filters },
         };
       },

@@ -1,6 +1,7 @@
 import {
   bigint,
   boolean,
+  foreignKey,
   integer,
   jsonb,
   pgTable,
@@ -50,6 +51,25 @@ export const statementRow = pgTable(
   ],
 );
 
+export const category = pgTable(
+  'category',
+  {
+    userId: userId(),
+    id: text('id').notNull(),
+    name: text('name').notNull(),
+    color: text('color').notNull(),
+    builtin: boolean('builtin').default(false).notNull(),
+    position: integer('position').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.id] }),
+    unique('category_position').on(t.userId, t.position),
+  ],
+);
+
+// Superseded by `category` + `rule`: each row was a rule that was also its own category. Kept, and
+// never written, for code that predates the split; an account with no `category` rows is read from
+// here. Drop it once no such deployment can serve.
 export const categoryRule = pgTable(
   'category_rule',
   {
@@ -64,6 +84,26 @@ export const categoryRule = pgTable(
   (t) => [
     primaryKey({ columns: [t.userId, t.id] }),
     unique('category_rule_position').on(t.userId, t.position),
+  ],
+);
+
+export const rule = pgTable(
+  'rule',
+  {
+    userId: userId(),
+    id: text('id').notNull(),
+    categoryId: text('category_id').notNull(),
+    conditions: jsonb('conditions').$type<RuleGroup>().notNull(),
+    builtin: boolean('builtin').default(false).notNull(),
+    position: integer('position').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.id] }),
+    unique('rule_position').on(t.userId, t.position),
+    foreignKey({
+      columns: [t.userId, t.categoryId],
+      foreignColumns: [category.userId, category.id],
+    }).onDelete('cascade'),
   ],
 );
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { CategoryRule } from '@/lib/types';
+import type { Category } from '@/lib/types';
 import { PAYMENTS_ID } from '@/lib/types';
 import styles from './CategoryPicker.module.css';
 
@@ -15,11 +15,11 @@ export interface PickerAnchor {
 }
 
 interface Props extends PickerAnchor {
-  rules: CategoryRule[];
+  categories: Category[];
   onClose: () => void;
 }
 
-export function CategoryPicker({ rect, currentCategoryId, onChoose, rules, onClose }: Props) {
+export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, onClose }: Props) {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
@@ -27,8 +27,10 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, rules, onClo
 
   const options = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rules.filter((r) => r.id !== PAYMENTS_ID && (!q || r.name.toLowerCase().includes(q)));
-  }, [rules, query]);
+    return categories.filter(
+      (c) => c.id !== PAYMENTS_ID && (!q || c.name.toLowerCase().includes(q)),
+    );
+  }, [categories, query]);
 
   useLayoutEffect(() => {
     const height = Math.min(ref.current?.offsetHeight ?? MAX_HEIGHT, MAX_HEIGHT);
@@ -99,20 +101,20 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, rules, onClo
       />
       <div className={styles.list} id="category-picker-list" role="listbox" aria-label="Categories">
         {options.length === 0 && <p className={styles.empty}>No matching category</p>}
-        {options.map((rule, i) => (
+        {options.map((category, i) => (
           <button
-            key={rule.id}
-            id={`category-option-${rule.id}`}
+            key={category.id}
+            id={`category-option-${category.id}`}
             type="button"
             role="option"
-            aria-selected={rule.id === currentCategoryId}
+            aria-selected={category.id === currentCategoryId}
             className={`${styles.item} ${i === highlight ? styles.hl : ''}`}
             onMouseEnter={() => setHighlight(i)}
-            onClick={() => choose(rule.id)}
+            onClick={() => choose(category.id)}
           >
-            <span className={styles.dot} style={{ background: rule.color }} />
-            {rule.name}
-            {rule.id === currentCategoryId && (
+            <span className={styles.dot} style={{ background: category.color }} />
+            {category.name}
+            {category.id === currentCategoryId && (
               <span className={styles.check} aria-hidden="true">
                 ✓
               </span>

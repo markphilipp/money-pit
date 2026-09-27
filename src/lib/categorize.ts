@@ -1,10 +1,15 @@
-import type { CategoryRule, RawStatementRow, Transaction } from './types';
+import type { Categorization, RawStatementRow, Rule, Transaction } from './types';
 import { OTHER_ID } from './types';
 import { matchesGroup, type MatchTarget } from './rules/engine';
 import { txnId, withOrdinals } from './hash';
 
-export function matchCategory(txn: MatchTarget, rules: CategoryRule[]): string {
-  return rules.find((rule) => matchesGroup(txn, rule.conditions))?.id ?? OTHER_ID;
+/** First match wins, so rule order is precedence. */
+export function matchRule(txn: MatchTarget, rules: Rule[]): Rule | undefined {
+  return rules.find((rule) => matchesGroup(txn, rule.conditions));
+}
+
+export function matchCategory(txn: MatchTarget, rules: Rule[]): string {
+  return matchRule(txn, rules)?.categoryId ?? OTHER_ID;
 }
 
 export function parseAmount(row: RawStatementRow): number {
@@ -20,10 +25,10 @@ export function parseDate(dateStr: string): Date {
 
 export function toTransactions(
   rows: RawStatementRow[],
-  rules: CategoryRule[],
+  { categories, rules }: Categorization,
   overrides: Record<string, string>,
 ): Transaction[] {
-  const ruleIds = new Set(rules.map((r) => r.id));
+  const categoryIds = new Set(categories.map((c) => c.id));
 
   return withOrdinals(rows).map((row) => {
     const id = txnId(row, row.ordinal);
@@ -39,14 +44,8 @@ export function toTransactions(
       person: row.person,
     };
 
-    const override = overrides[id];
-    return {
-      ...base,
-      categoryId: override
-        ? ruleIds.has(override)
-          ? override
-          : OTHER_ID
-        : matchCategory(base, rules),
-    };
+    const categoryId = overrides[id] ?? matchCategory(base, rules);
+    // A stale override or rule can point at a deleted category; its row shouldn't vanish from totals.
+    return { ...base, categoryId: categoryIds.has(categoryId) ? categoryId : OTHER_ID };
   });
 }

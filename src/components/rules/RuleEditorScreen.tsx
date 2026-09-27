@@ -3,16 +3,17 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RuleGroupType } from 'react-querybuilder';
-import type { CategoryRule, Transaction } from '@/lib/types';
-import { matchCategory } from '@/lib/categorize';
+import type { Category, Rule, Transaction } from '@/lib/types';
+import { resolveCategoryChoice, type CategoryChoice } from '@/lib/categories';
+import { matchRule } from '@/lib/categorize';
 import { matchesGroup } from '@/lib/rules/engine';
-import { uniqueRuleId } from '@/lib/rules/naming';
+import { newRuleId } from '@/lib/rules/naming';
 import { suggestRuleGroups } from '@/lib/rules/suggest';
 import { fmtMoney, personShort } from '@/lib/format';
 import { nextPaletteColor } from '@/lib/palette';
-import { ColorPickerPopover } from '@/components/common/ColorPickerPopover';
 import { useAppState, useTransactions } from '@/store/hooks';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
+import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
 import { RuleForm } from './RuleForm';
 import { fromRqb, toRqb } from './rqbMap';
@@ -27,8 +28,8 @@ const sameGroup = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringi
 interface PreviewRow {
   txn: Transaction;
   matched: boolean;
-  /** The rule that would actually claim the row, when an earlier rule beats the draft. */
-  shadowedBy?: CategoryRule;
+  /** Where the row stays, when an earlier rule beats the draft to it. */
+  shadowedBy?: Category;
   overridden: boolean;
 }
 
@@ -51,6 +52,7 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   const router = useRouter();
   const state = useAppState();
   const all = useTransactions();
+  const addCategory = useAppStore((s) => s.addCategory);
   const addRule = useAppStore((s) => s.addRule);
   const clearOverrides = useAppStore((s) => s.clearOverrides);
   const setRuleSources = useAppStore((s) => s.setRuleSources);
@@ -65,8 +67,11 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
   const [active, setActive] = useState(0);
   const [nameTouched, setNameTouched] = useState(false);
-  const [name, setName] = useState(suggestions[0]?.name ?? '');
-  const [color, setColor] = useState(nextPaletteColor(state.rules.map((r) => r.color)));
+  const [choice, setChoice] = useState<CategoryChoice>({
+    kind: 'new',
+    name: suggestions[0]?.name ?? '',
+    color: nextPaletteColor(state.categories.map((c) => c.color)),
+  });
   const [query, setQuery] = useState<RuleGroupType>(
     suggestions[0] ? toRqb(suggestions[0].group) : EMPTY_QUERY,
   );
@@ -75,16 +80,14 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   const group = useMemo(() => fromRqb(query), [query]);
   const hasConditions = group.rules.length > 0;
   const edited = !!suggestions[active] && !sameGroup(group, suggestions[active].group);
+  const resolved = resolveCategoryChoice(choice, state.categories);
+  const categoryId = resolved?.category.id;
 
   const preview = useMemo(() => {
     if (!hasConditions) return { selected: [] as PreviewRow[], others: [] as PreviewRow[] };
 
-    const draft: CategoryRule = {
-      id: DRAFT_ID,
-      name: name || 'New rule',
-      color,
-      conditions: group,
-    };
+    const draft: Rule = { id: DRAFT_ID, categoryId: categoryId ?? DRAFT_ID, conditions: group };
+    const categoriesById = new Map(state.categories.map((c) => [c.id, c]));
     const ordered = [
       ...state.rules.filter((r) => !r.builtin),
       draft,
@@ -94,12 +97,14 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
     const toRow = (txn: Transaction): PreviewRow => {
       const matched = matchesGroup(txn, group);
-      const winner = matchCategory(txn, ordered);
+      const winner = matchRule(txn, ordered);
       return {
         txn,
         matched,
         shadowedBy:
-          matched && winner !== DRAFT_ID ? ordered.find((r) => r.id === winner) : undefined,
+          matched && winner && winner.id !== DRAFT_ID && winner.categoryId !== draft.categoryId
+            ? categoriesById.get(winner.categoryId)
+            : undefined,
         overridden: state.overrides[txn.id] != null,
       };
     };
@@ -108,16 +113,27 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
       selected: sources.map(toRow),
       others: all.filter((t) => !inSource.has(t.id) && matchesGroup(t, group)).map(toRow),
     };
-  }, [all, color, group, hasConditions, name, sources, sourceIds, state.overrides, state.rules]);
+  }, [
+    all,
+    categoryId,
+    group,
+    hasConditions,
+    sources,
+    sourceIds,
+    state.categories,
+    state.overrides,
+    state.rules,
+  ]);
 
   const excluded = preview.selected.filter((r) => !r.matched).length;
   const overriddenCount = sources.filter((t) => state.overrides[t.id] != null).length;
-  const canSave = !!name.trim() && hasConditions;
+  const canSave = !!resolved && hasConditions;
 
   function chooseSuggestion(index: number) {
     setActive(index);
     setQuery(toRqb(suggestions[index].group));
-    if (!nameTouched) setName(suggestions[index].name);
+    if (!nameTouched && choice.kind === 'new')
+      setChoice({ ...choice, name: suggestions[index].name });
   }
 
   function leave() {
@@ -126,15 +142,12 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   }
 
   function save() {
-    const trimmed = name.trim();
-    if (!canSave) return;
+    if (!resolved || !hasConditions) return;
+    const { category, isNew } = resolved;
+    if (isNew) addCategory(category);
     addRule({
-      id: uniqueRuleId(
-        trimmed,
-        state.rules.map((r) => r.id),
-      ),
-      name: trimmed,
-      color,
+      id: newRuleId(state.rules.map((r) => r.id)),
+      categoryId: category.id,
       conditions: group,
     });
     if (alsoClearOverrides && overriddenCount) clearOverrides(sourceIds);
@@ -183,22 +196,17 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
       <section className={`card ${screen.section}`}>
         <h2>Rule</h2>
-        <div className={screen.identity}>
-          <ColorPickerPopover value={color} onChange={setColor} ariaLabel="Rule color" />
-          <div className="field">
-            <label htmlFor="rule-editor-name">Category name</label>
-            <input
-              id="rule-editor-name"
-              type="text"
-              value={name}
-              placeholder="e.g. Groceries"
-              onChange={(e) => {
-                setName(e.target.value);
-                setNameTouched(true);
-              }}
-            />
-          </div>
-        </div>
+        <CategoryField
+          categories={state.categories}
+          value={choice}
+          onChange={(next) => {
+            if (next.kind === 'new' && choice.kind === 'new' && next.name !== choice.name) {
+              setNameTouched(true);
+            }
+            setChoice(next);
+          }}
+          placeholder="e.g. Groceries"
+        />
         <RuleConditionsEditor query={query} onQueryChange={setQuery} />
       </section>
 

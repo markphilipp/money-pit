@@ -7,7 +7,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  description: string;
+  description: React.ReactNode;
   confirmLabel: string;
   onConfirm: () => void;
   returnFocusTo: React.RefObject<HTMLElement | null>;
@@ -34,7 +34,9 @@ export function ConfirmDialog({
           }}
         >
           <AlertDialog.Title className={styles.title}>{title}</AlertDialog.Title>
-          <AlertDialog.Description className={styles.body}>{description}</AlertDialog.Description>
+          <AlertDialog.Description asChild>
+            <div className={styles.body}>{description}</div>
+          </AlertDialog.Description>
           <div className={styles.actions}>
             <AlertDialog.Cancel className={styles.cancel}>Cancel</AlertDialog.Cancel>
             <AlertDialog.Action className={styles.confirm} onClick={onConfirm}>
