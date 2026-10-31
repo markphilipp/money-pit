@@ -2,7 +2,7 @@ import { mergeRows } from './csv';
 import { defaultCategorization } from './defaultRules';
 import type { Categorization, RawStatementRow } from './types';
 
-export interface Dataset extends Categorization {
+export interface Holdings extends Categorization {
   rawRows: RawStatementRow[];
   overrides: Record<string, string>;
 }
@@ -38,7 +38,7 @@ function union<T extends { id: string; builtin?: boolean }>(account: T[], local:
  * category and the account's version stays. Rule ids are random, so a shared id only happens for
  * the fixed-id builtins; every other rule from each side is just unioned in, never merged.
  */
-export function claimInto(account: Dataset, local: Dataset): Dataset {
+export function claimInto(account: Holdings, local: Holdings): Holdings {
   const seeded =
     !account.categories.length ||
     sameValue({ categories: account.categories, rules: account.rules }, defaultCategorization);

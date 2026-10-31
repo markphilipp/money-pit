@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { toTransactions } from './categorize';
-import { claimInto, type Dataset } from './claim';
+import { claimInto, type Holdings } from './claim';
 import { parseStatementCsv } from './csv';
 import { defaultCategories, defaultCategorization, defaultRules } from './defaultRules';
 import { keywordsToGroup } from './rules/engine';
@@ -15,7 +15,7 @@ const coffeeRule: Rule = {
   categoryId: 'coffee',
   conditions: keywordsToGroup(['STARBUCKS']),
 };
-const dataset = (patch: Partial<Dataset>): Dataset => ({
+const dataset = (patch: Partial<Holdings>): Holdings => ({
   rawRows: [],
   categories: defaultCategories,
   rules: defaultRules,
