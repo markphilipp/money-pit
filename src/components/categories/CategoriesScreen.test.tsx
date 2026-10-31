@@ -16,7 +16,22 @@ describe('CategoriesScreen', () => {
 
     expect(await screen.findByRole('heading', { name: 'Categories' })).toBeInTheDocument();
     expect(row('Groceries')).toHaveTextContent('1 rule');
-    expect(within(row('Payments')).getByText('built-in')).toBeInTheDocument();
+  });
+
+  it('omits built-in categories and sorts the rest alphabetically', async () => {
+    useAppStore.getState().addCategory({ id: 'aaa', name: 'apples', color: '#111' });
+    render(<CategoriesScreen />);
+
+    await screen.findByRole('heading', { name: 'Categories' });
+    expect(screen.queryByLabelText('Rename Payments')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Rename Other')).not.toBeInTheDocument();
+    const names = screen
+      .getAllByLabelText(/^Rename /)
+      .map((el) => el.getAttribute('aria-label')!.replace('Rename ', ''));
+    expect(names).toEqual(
+      [...names].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' })),
+    );
+    expect(names.indexOf('Amazon')).toBeLessThan(names.indexOf('apples'));
   });
 
   it('renames a category, rejecting a name already in use', async () => {
@@ -71,11 +86,6 @@ describe('CategoriesScreen', () => {
     await user.click(await screen.findByRole('button', { name: 'Cancel' }));
 
     expect(useAppStore.getState().categories.some((c) => c.id === 'grocery')).toBe(true);
-  });
-
-  it('refuses to delete a built-in category', async () => {
-    render(<CategoriesScreen />);
-    expect(await screen.findByLabelText('Delete Payments')).toBeDisabled();
   });
 
   it('warns about rules with no conditions the same as any other rule', async () => {
