@@ -4,8 +4,10 @@ import { useContext, useRef, useState } from 'react';
 import Link from 'next/link';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
+import { ShortcutsDialog } from '@/components/common/ShortcutsDialog';
 import { deleteAccount } from '@/app/actions/account';
 import { authClient } from '@/auth/client';
+import { useShortcut } from '@/hooks/useShortcut';
 import { SignedInContext, useAppStore } from '@/store/useAppStore';
 import styles from './UserMenu.module.css';
 
@@ -44,6 +46,9 @@ export function UserMenu() {
   const [confirming, setConfirming] = useState<'reset' | 'delete' | null>(null);
   const [errors, setErrors] = useState<{ file: string; message: string }[]>([]);
   const [accountError, setAccountError] = useState<string | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useShortcut('help', () => setShortcutsOpen(true));
 
   return (
     <>
@@ -81,6 +86,9 @@ export function UserMenu() {
             </DropdownMenu.Item>
             <DropdownMenu.Item className={styles.item} asChild>
               <Link href="/rules">Category rules…</Link>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item className={styles.item} onSelect={() => setShortcutsOpen(true)}>
+              Keyboard shortcuts
             </DropdownMenu.Item>
             <DropdownMenu.Separator className={styles.separator} />
             {signedIn ? (
@@ -127,6 +135,8 @@ export function UserMenu() {
         onConfirm={async () => setAccountError(await deleteAndLeave())}
         returnFocusTo={triggerRef}
       />
+
+      <ShortcutsDialog open={shortcutsOpen} onOpenChange={setShortcutsOpen} />
 
       <input
         ref={inputRef}
