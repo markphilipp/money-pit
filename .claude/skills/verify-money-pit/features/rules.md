@@ -8,7 +8,8 @@ Rules map transactions to categories. The first matching rule wins, in list orde
 - **Rules list** (`/rules`, heading "Category rules"):
   - reorder with `Move <name> up` / `Move <name> down`;
   - `Edit <name>` opens `/rules/<id>`;
-  - `Delete <name>`, which builtins don't have;
+  - `Delete <name>`, which is disabled on builtins;
+  - a "Categories" link to `/categories`;
   - "New rule" goes to `/rules/new`, and "Done" goes back to `/`.
 - **Rule editor**:
   - "Category name";
@@ -51,13 +52,13 @@ export default async ({ page, shot, fixture }) => {
   await page.getByLabel('Account menu').click();
   await page.getByRole('menuitem', { name: 'Category rules…' }).click();
   await expect(page.getByRole('heading', { name: 'Category rules' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Delete Payments' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Delete Payments' })).toBeDisabled();
   await shot('rules-list');
 };
 ```
 
 Proof: the prefilled editor, the saved rule immediately recategorizing the row on `/`, and the new
-rule in `/rules`, with builtins not deletable.
+rule in `/rules`, with builtin deletes disabled.
 
 ## Gotchas
 
