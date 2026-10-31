@@ -175,6 +175,13 @@ flattened in when it is an `or`, and appended as one nested group when it is an 
 deep-equal to one already present are skipped, so adding the same thing twice changes nothing.
 Used by the rule editor's "Add to existing rule" mode.
 
+### Searching rules — `src/lib/rules/search.ts`
+
+`searchRules(rules, labels, query)` filters rules whose `ruleLabels` label or conditions text
+contains the trimmed query, case-insensitively, keeping order; a blank query returns everything.
+The conditions text is `describeGroupFull` (`engine.ts`), the uncapped form of `describeGroup`, so a
+term beyond the rules list's 80-char summary still finds its rule.
+
 ### Discovering suggestions — `src/lib/rules/discover.ts`
 
 `discoverProposals(txns, overrides, dismissed)` offers rules nobody asked for. It looks only at the

@@ -161,9 +161,8 @@ Three stacked sections:
    marked `aria-pressed` and tagged **edited** once the builder diverges from it.
 2. **Rule** — `CategoryField` (existing category, or a new one named and colored here) and
    `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`). When at least one
-   non-builtin rule exists, a **New rule | Add to existing rule** radio group sits on top, with a
-   picker of the existing rules (labelled by `ruleLabels`, builtins excluded) once the second option
-   is chosen. See _Adding to an existing rule_ below.
+   non-builtin rule exists, a **New rule | Add to existing rule** radio group sits on top. Choosing
+   the second option shows `RulePicker`. See _Adding to an existing rule_ below.
 3. **Matches** — recomputed on every builder change.
 
 The match preview is the guardrail, and it is deliberately honest about three things:
@@ -180,8 +179,22 @@ The match preview is the guardrail, and it is deliberately honest about three th
 
 ### Adding to an existing rule
 
-The picker state is a `RuleTarget` (`{ kind: 'new' } | { kind: 'existing'; ruleId }`). A chosen rule
-that has since vanished is treated as new. With a rule R chosen:
+The target is a `RuleTarget` (`{ kind: 'new' } | { kind: 'existing'; ruleId: string | null }`).
+Choosing "Add to existing rule" starts with **no rule chosen** (`ruleId: null`), never a silent
+default. In that state the heading reads "Add N transactions to an existing rule", the category
+field is replaced by a note, the builder stays on the plain suggestion seed, and Save is disabled.
+Switching back to "New rule" restores the new-rule seed. A chosen rule that has since vanished
+falls back to the unchosen state.
+
+`RulePicker` is an inline combobox that takes focus with its list open when it appears, so the
+choice is one keystroke away. Typing filters the non-builtin rules through `searchRules`
+([data-model.md](data-model.md#searching-rules--srclibrulessearchts)); ArrowUp/ArrowDown move the
+highlight, Enter chooses it, Escape or blur closes the list. Each option (`role="option"` in a
+`role="listbox"`, as in the table's `CategoryPicker`) shows the category colour dot, the rule's
+label and its truncated condition summary, and an empty search shows "No matching rule". Once
+chosen, the input shows the rule's label.
+
+With a rule R chosen:
 
 - The category is locked to R's (`CategoryField` disabled, as `RuleForm` does for builtins), and the
   heading reads "Add N transactions to ‹Category› rule".
