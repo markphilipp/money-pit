@@ -10,6 +10,7 @@ points, a proof covers all of them.
 | Explore the table and charts | [explore.md](explore.md)           | Column menus, chart-mode toggle, Reset, reload persistence                                                          |
 | Recategorize transactions    | [recategorize.md](recategorize.md) | Category pill on a row                                                                                              |
 | Category rules               | [rules.md](rules.md)               | Account menu "Category rules…", `/rules`, row context menu, multi-select "Create rule", `/rules/new`, `/rules/[id]` |
+| Uploaded files (datasets)    | [datasets.md](datasets.md)         | Account menu "Uploaded files…", `/datasets` (also has a drop zone)                                                  |
 | Account menu, reset and auth | [account-auth.md](account-auth.md) | Account menu ("Start over" → "Confirm reset"), `/api/auth/*`                                                        |
 
 Update this map in the same change that adds, removes or renames a user-facing feature.
