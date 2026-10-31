@@ -1,14 +1,14 @@
 # Account and auth
 
-The avatar "Account menu" holds upload, reset, categories, rules and sign-in. Better Auth serves
+The avatar "Account menu" holds upload, reset, settings, keyboard shortcuts and sign-in. Better Auth serves
 `/api/auth/*` on the same origin. Signed out, the menu's "Sign in…" is an enabled link to
 `/sign-in`. Signed in, it shows "Sign out" and "Delete account…" instead.
 
 ## Sub-features
 
-- **Account menu, empty state:** "Categories…", "Category rules…" and "Sign in…". No "Add
+- **Account menu, empty state:** "Settings…", "Keyboard shortcuts" and "Sign in…". No "Add
   statement" or "Start over" until there is data.
-- **Account menu, with data:** also "Add statement" and "Start over". "Start over" opens an
+- **Account menu, with data:** also "Add statement" and "Start over", above a separator and "Settings…". "Start over" opens an
   alertdialog titled "Start over?" with Cancel and a "Start over" button. Cancel keeps every row.
   Confirming clears rows, rule edits and overrides (`resetAll`) and lands on the empty state.
 - **`/sign-in`:** heading "Sign in", one "Continue with <provider>" button per provider (Google and
@@ -38,11 +38,18 @@ import { expect } from '@playwright/test';
 export default async ({ page, shot, fixture, baseURL, log }) => {
   await page.goto('/');
   await page.getByLabel('Account menu').click();
-  await expect(page.getByRole('menuitem', { name: 'Categories…' })).toBeVisible();
-  await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Settings…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Keyboard shortcuts' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Start over' })).toHaveCount(0);
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toHaveCount(0);
   await shot('account-menu');
+  await page.getByRole('menuitem', { name: 'Settings…' }).click();
+  await expect(page).toHaveURL(/\/settings\/rules$/);
+  await expect(
+    page.getByRole('navigation', { name: 'Settings' }).getByRole('link', { name: 'Rules' }),
+  ).toHaveAttribute('aria-current', 'page');
+  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await page.getByLabel('Account menu').click();
   await page.getByRole('menuitem', { name: 'Sign in…' }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();

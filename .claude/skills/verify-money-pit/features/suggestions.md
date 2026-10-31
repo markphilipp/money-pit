@@ -12,7 +12,7 @@ every render from the loaded rows, so an upload re-checks for free. Only dismiss
   and `Dismiss <label>`.
 - **A suggestion needs 3 or more similar Other rows.** Rows with a manual override, or already
   categorized, never count, and a pattern that would also match a categorized row is dropped.
-- **Create rule** seeds `/rules/new` with the covered rows. The matching "Suggested rules" card is
+- **Create rule** seeds `/settings/rules/new` with the covered rows. The matching "Suggested rules" card is
   `aria-pressed`.
 - **Dismiss** is remembered across reload and later uploads. Signed in it syncs to the account.
 - **Selection path:** ticking rows and clicking the BulkBar "Create rule" button is the same
@@ -56,7 +56,7 @@ export default async ({ page, shot, fixture, baseURL, log }) => {
   await page
     .getByRole('button', { name: /^Create rule for contains “COPPER KETTLE ROASTERS”/ })
     .click();
-  await expect(page).toHaveURL(/\/rules\/new$/);
+  await expect(page).toHaveURL(/\/settings\/rules\/new$/);
   await page.getByLabel('Category name').fill('Coffee');
   await page.getByRole('button', { name: 'Save rule' }).click();
   await page.goto('/');

@@ -14,8 +14,8 @@ category pill and in the category chart.
   searching `payments` shows "No matching category". Arrow keys, Enter and Escape drive it.
 - The picker's search box has focus on open, from all three entry points.
 - Overrides and the created category persist across a reload.
-- A rule edit can offer to clear manual categories ("Clear N manual categor…" checkbox, only shown
-  when some are shadowing the rule). Match it with a regexp, the label is plural-sensitive. See
+- Creating a rule from selected rows can offer to clear manual categories ("Clear N manual
+  categor…" checkbox, only shown when some are shadowing the rule). Match it with a regexp, the label is plural-sensitive. See
   [rules.md](rules.md).
 - Signed out the override lives in sessionStorage. Signed in it's the `category_override` column on
   the row.

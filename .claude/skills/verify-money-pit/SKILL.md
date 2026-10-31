@@ -5,7 +5,8 @@ description: Drive The Money Pit (money-pit Next.js spending dashboard) the way 
 
 # Verify money-pit
 
-The primary surface is the web UI at `/`, `/rules`, `/rules/new` and `/rules/[id]`. The secondary
+The primary surface is the web UI at `/` and the Settings area (`/settings/rules`,
+`/settings/rules/new`, `/settings/rules/[id]`, `/settings/categories`, `/settings/datasets`). The secondary
 surface is the Better Auth HTTP API at `/api/auth/*`, reached from the `/sign-in` page. Signed-out, all
 statement data lives in the browser's `sessionStorage` and never reaches the server.
 
@@ -83,10 +84,11 @@ These are the stable handles. They come from the app's ARIA labels and match `e2
 | Reset filters  | `getByRole('button', { name: 'Reset' })`                                                                                                                                                                                                 |
 | Recategorize   | `row.getByTitle('Change category')` (or right-click "Change category…", or the "Selection actions" group), then `getByPlaceholder('Search categories…')`, then `getByRole('dialog', { name: 'Choose category' }).getByRole('option', …)` |
 | Rule from row  | Right-click the row, then `getByRole('menuitem', { name: 'Create rule from transaction' })`                                                                                                                                              |
-| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Category rules…' })`; also `Categories…` and `Sign in…`                                                                                                               |
-| Categories     | `/categories`: heading "Categories", `Rename <name>` / `Delete <name>`, `getByLabel('New category', { exact: true })` and "Add category"                                                                                                 |
+| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Settings…' })` (lands on `/settings/rules`); also `Keyboard shortcuts` and `Sign in…`                                                                                 |
+| Settings nav   | `getByRole('navigation', { name: 'Settings' })` links "Uploaded files" / "Categories" / "Rules" (`aria-current="page"` on the current one); exit with the `← Dashboard` link                                                             |
+| Categories     | `/settings/categories`: heading "Categories", `Rename <name>` / `Delete <name>`, `getByLabel('New category', { exact: true })` and "Add category"                                                                                        |
 | Suggestions    | `getByRole('button', { name: /rule suggestions? for Other/ })`, then `Create rule for <label>` / `Dismiss <label>`                                                                                                                       |
-| Rules list     | `/rules`: heading "Category rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and links "New rule" and "Done"                                                                                             |
+| Rules list     | `/settings/rules`: heading "Rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and the "New rule" link                                                                                                     |
 | Rule editor    | `getByLabel('Category name')`, `getByTestId('value-editor')`, `getByRole('button', { name: 'Save rule' })`                                                                                                                               |
 | Auth API       | `curl -s http://127.0.0.1:3310/api/auth/ok` and `/api/auth/get-session` (`null` when signed out)                                                                                                                                         |
 
