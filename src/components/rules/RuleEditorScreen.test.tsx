@@ -182,4 +182,145 @@ describe('RuleEditorScreen', () => {
     expect(await screen.findByRole('heading', { name: 'New rule' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Suggested rules' })).not.toBeInTheDocument();
   });
+
+  describe('adding to an existing rule', () => {
+    async function openWithTreatsRule() {
+      await openEditor(BAKERIES);
+      const store = useAppStore.getState();
+      store.addCategory({ id: 'treats', name: 'Treats', color: '#aa5500' });
+      store.addRule({
+        id: 'treats-rule',
+        categoryId: 'treats',
+        conditions: {
+          combinator: 'or',
+          rules: [{ field: 'description', operator: 'contains', value: 'LOWES' }],
+        },
+      });
+    }
+
+    const pickTreats = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(screen.getByRole('radio', { name: 'Add to existing rule' }));
+      await user.selectOptions(screen.getByLabelText('Existing rule'), 'Treats');
+    };
+
+    it('hides the control when only builtin rules exist', async () => {
+      await openEditor(BAKERIES);
+      useAppStore.setState((s) => ({ rules: s.rules.filter((r) => r.builtin) }));
+      render(<RuleEditorScreen />);
+
+      expect(screen.queryByRole('radiogroup', { name: 'Rule target' })).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Category name')).toBeInTheDocument();
+    });
+
+    it('defaults to a new rule and lists only non-builtin rules to pick from', async () => {
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      expect(screen.getByRole('radio', { name: 'New rule' })).toBeChecked();
+      expect(screen.queryByLabelText('Existing rule')).not.toBeInTheDocument();
+
+      await userEvent.setup().click(screen.getByRole('radio', { name: 'Add to existing rule' }));
+      const options = within(screen.getByLabelText('Existing rule'))
+        .getAllByRole('option')
+        .map((o) => o.textContent);
+      expect(options).toContain('Treats');
+      expect(options).not.toContain('Payments');
+    });
+
+    it('locks the category and merges the suggestion into the rule', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await pickTreats(user);
+
+      expect(screen.getByLabelText('Category')).toBeDisabled();
+      expect(screen.getByLabelText('Category')).toHaveValue('treats');
+      expect(screen.queryByLabelText('Category name')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('LOWES')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('BLUE RIDGE BAKERY')).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: 'Add 2 transactions to Treats rule' }),
+      ).toBeInTheDocument();
+    });
+
+    it('re-merges when another suggestion is picked and re-seeds when switching back', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await pickTreats(user);
+      const cards = within(section('Suggested rules')).getAllByRole('button');
+      await user.click(cards.at(-1)!);
+
+      expect(screen.getByDisplayValue('LOWES')).toBeInTheDocument();
+      expect(screen.getByDisplayValue(BAKERIES[0])).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('BLUE RIDGE BAKERY')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('radio', { name: 'New rule' }));
+      expect(screen.queryByDisplayValue('LOWES')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue(BAKERIES[0])).toBeInTheDocument();
+      expect(screen.getByLabelText('Category name')).toBeInTheDocument();
+    });
+
+    it('lists only the rows the rule did not already match as newly matched', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await pickTreats(user);
+
+      const matches = section(/Also newly matches 1 other transaction/);
+      expect(within(matches).getByText('BLUE RIDGE BAKERY #0311 ASHEVILLE NC')).toBeInTheDocument();
+      expect(within(matches).queryByText('LOWES #01111 BELMONT NC')).not.toBeInTheDocument();
+    });
+
+    it('saves into the chosen rule without adding a rule or category', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+      const before = useAppStore.getState();
+
+      await pickTreats(user);
+      await user.click(screen.getByRole('button', { name: 'Save rule' }));
+
+      const state = useAppStore.getState();
+      expect(state.rules).toHaveLength(before.rules.length);
+      expect(state.categories).toHaveLength(before.categories.length);
+      const rule = state.rules.find((r) => r.id === 'treats-rule')!;
+      expect(rule.categoryId).toBe('treats');
+      expect(rule.conditions).toEqual({
+        combinator: 'or',
+        rules: [
+          { field: 'description', operator: 'contains', value: 'LOWES' },
+          { field: 'description', operator: 'contains', value: 'BLUE RIDGE BAKERY' },
+        ],
+      });
+      expect(routerMock.push).toHaveBeenCalledWith('/');
+
+      const bakeries = selectTransactions(state).filter((t) => t.description.includes('BAKERY'));
+      expect(bakeries.every((t) => t.categoryId === 'treats')).toBe(true);
+    });
+
+    it('keeps a selected row an earlier rule claims tagged as staying put', async () => {
+      const user = userEvent.setup();
+      await openEditor(['HARRIS TEETER #0042 CHARLOTTE NC']);
+      const store = useAppStore.getState();
+      store.addCategory({ id: 'treats', name: 'Treats', color: '#aa5500' });
+      store.addRule({
+        id: 'treats-rule',
+        categoryId: 'treats',
+        conditions: {
+          combinator: 'or',
+          rules: [{ field: 'description', operator: 'contains', value: 'LOWES' }],
+        },
+      });
+      render(<RuleEditorScreen />);
+
+      await pickTreats(user);
+
+      const row = screen.getByText('HARRIS TEETER #0042 CHARLOTTE NC').closest('tr') as HTMLElement;
+      expect(within(row).getByText('stays in Groceries')).toBeInTheDocument();
+    });
+  });
 });

@@ -4,11 +4,13 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { RuleGroupType } from 'react-querybuilder';
 import type { Category, Rule, Transaction } from '@/lib/types';
-import { resolveCategoryChoice, type CategoryChoice } from '@/lib/categories';
+import { resolveCategoryChoice, ruleLabels, type CategoryChoice } from '@/lib/categories';
 import { matchRule } from '@/lib/categorize';
 import { matchesGroup } from '@/lib/rules/engine';
+import { mergeConditions } from '@/lib/rules/merge';
 import { newRuleId } from '@/lib/rules/naming';
 import { suggestRuleGroups } from '@/lib/rules/suggest';
+import type { RuleGroup } from '@/lib/rules/types';
 import { fmtMoney, personShort } from '@/lib/format';
 import { nextPaletteColor } from '@/lib/palette';
 import { useAppState, useTransactions } from '@/store/hooks';
@@ -24,6 +26,9 @@ import styles from './RuleEditorScreen.module.css';
 const DRAFT_ID = '__draft__';
 
 const sameGroup = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/** Whether the draft becomes a rule of its own or widens one that already exists. */
+type RuleTarget = { kind: 'new' } | { kind: 'existing'; ruleId: string };
 
 interface PreviewRow {
   txn: Transaction;
@@ -54,6 +59,7 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   const all = useTransactions();
   const addCategory = useAppStore((s) => s.addCategory);
   const addRule = useAppStore((s) => s.addRule);
+  const setRule = useAppStore((s) => s.setRule);
   const clearOverrides = useAppStore((s) => s.clearOverrides);
   const setRuleSources = useAppStore((s) => s.setRuleSources);
   const clearSelection = useAppStore((s) => s.clearSelection);
@@ -75,12 +81,25 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   const [query, setQuery] = useState<RuleGroupType>(
     suggestions[0] ? toRqb(suggestions[0].group) : EMPTY_QUERY,
   );
+  const [target, setTarget] = useState<RuleTarget>({ kind: 'new' });
   const [alsoClearOverrides, setAlsoClearOverrides] = useState(true);
+
+  const userRules = useMemo(() => state.rules.filter((r) => !r.builtin), [state.rules]);
+  const labels = useMemo(
+    () => ruleLabels(state.rules, state.categories),
+    [state.rules, state.categories],
+  );
+  const targetRule =
+    target.kind === 'existing' ? userRules.find((r) => r.id === target.ruleId) : undefined;
+  const categoryChoice: CategoryChoice = targetRule
+    ? { kind: 'existing', id: targetRule.categoryId }
+    : choice;
 
   const group = useMemo(() => fromRqb(query), [query]);
   const hasConditions = group.rules.length > 0;
-  const edited = !!suggestions[active] && !sameGroup(group, suggestions[active].group);
-  const resolved = resolveCategoryChoice(choice, state.categories);
+  const seed = suggestions[active] && seedGroup(targetRule, suggestions[active].group);
+  const edited = !!seed && !sameGroup(group, seed);
+  const resolved = resolveCategoryChoice(categoryChoice, state.categories);
   const categoryId = resolved?.category.id;
 
   const preview = useMemo(() => {
@@ -88,11 +107,9 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
     const draft: Rule = { id: DRAFT_ID, categoryId: categoryId ?? DRAFT_ID, conditions: group };
     const categoriesById = new Map(state.categories.map((c) => [c.id, c]));
-    const ordered = [
-      ...state.rules.filter((r) => !r.builtin),
-      draft,
-      ...state.rules.filter((r) => r.builtin),
-    ];
+    const ordered = targetRule
+      ? state.rules.map((r) => (r.id === targetRule.id ? draft : r))
+      : [...state.rules.filter((r) => !r.builtin), draft, ...state.rules.filter((r) => r.builtin)];
     const inSource = new Set(sourceIds);
 
     const toRow = (txn: Transaction): PreviewRow => {
@@ -111,7 +128,14 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
     return {
       selected: sources.map(toRow),
-      others: all.filter((t) => !inSource.has(t.id) && matchesGroup(t, group)).map(toRow),
+      others: all
+        .filter(
+          (t) =>
+            !inSource.has(t.id) &&
+            matchesGroup(t, group) &&
+            !(targetRule && matchesGroup(t, targetRule.conditions)),
+        )
+        .map(toRow),
     };
   }, [
     all,
@@ -120,6 +144,7 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
     hasConditions,
     sources,
     sourceIds,
+    targetRule,
     state.categories,
     state.overrides,
     state.rules,
@@ -131,9 +156,21 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
   function chooseSuggestion(index: number) {
     setActive(index);
-    setQuery(toRqb(suggestions[index].group));
+    setQuery(toRqb(seedGroup(targetRule, suggestions[index].group)));
     if (!nameTouched && choice.kind === 'new')
       setChoice({ ...choice, name: suggestions[index].name });
+  }
+
+  function chooseTarget(next: RuleTarget) {
+    const rule = next.kind === 'existing' ? userRules.find((r) => r.id === next.ruleId) : undefined;
+    setTarget(next);
+    setQuery(
+      suggestions[active]
+        ? toRqb(seedGroup(rule, suggestions[active].group))
+        : rule
+          ? toRqb(rule.conditions)
+          : EMPTY_QUERY,
+    );
   }
 
   function leave() {
@@ -143,13 +180,17 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
   function save() {
     if (!resolved || !hasConditions) return;
-    const { category, isNew } = resolved;
-    if (isNew) addCategory(category);
-    addRule({
-      id: newRuleId(state.rules.map((r) => r.id)),
-      categoryId: category.id,
-      conditions: group,
-    });
+    if (targetRule) {
+      setRule(targetRule.id, { conditions: group });
+    } else {
+      const { category, isNew } = resolved;
+      if (isNew) addCategory(category);
+      addRule({
+        id: newRuleId(state.rules.map((r) => r.id)),
+        categoryId: category.id,
+        conditions: group,
+      });
+    }
     if (alsoClearOverrides && overriddenCount) clearOverrides(sourceIds);
     clearSelection();
     leave();
@@ -162,7 +203,11 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
           ← Back
         </button>
         <h1 className={screen.title}>
-          New rule from {sources.length} transaction{sources.length === 1 ? '' : 's'}
+          {targetRule
+            ? `Add ${sources.length} transaction${sources.length === 1 ? '' : 's'} to ${
+                state.categories.find((c) => c.id === targetRule.categoryId)?.name ?? 'the'
+              } rule`
+            : `New rule from ${sources.length} transaction${sources.length === 1 ? '' : 's'}`}
         </h1>
       </div>
 
@@ -196,9 +241,50 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
       <section className={`card ${screen.section}`}>
         <h2>Rule</h2>
+        {userRules.length > 0 && (
+          <div className={styles.targetRow}>
+            <div role="radiogroup" aria-label="Rule target" className={styles.segmented}>
+              <label className={styles.segment}>
+                <input
+                  type="radio"
+                  name="rule-target"
+                  checked={!targetRule}
+                  onChange={() => chooseTarget({ kind: 'new' })}
+                />
+                New rule
+              </label>
+              <label className={styles.segment}>
+                <input
+                  type="radio"
+                  name="rule-target"
+                  checked={!!targetRule}
+                  onChange={() => chooseTarget({ kind: 'existing', ruleId: userRules[0].id })}
+                />
+                Add to existing rule
+              </label>
+            </div>
+            {targetRule && (
+              <div className="field">
+                <label htmlFor="rule-target-rule">Existing rule</label>
+                <select
+                  id="rule-target-rule"
+                  value={targetRule.id}
+                  onChange={(e) => chooseTarget({ kind: 'existing', ruleId: e.target.value })}
+                >
+                  {userRules.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {labels.get(r.id)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
         <CategoryField
           categories={state.categories}
-          value={choice}
+          disabled={!!targetRule}
+          value={categoryChoice}
           onChange={(next) => {
             if (next.kind === 'new' && choice.kind === 'new' && next.name !== choice.name) {
               setNameTouched(true);
@@ -228,8 +314,8 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
             <h3 className={styles.subhead}>
               {preview.others.length === 0
-                ? 'No other transactions match'
-                : `Also matches ${preview.others.length} other transaction${
+                ? `No other transactions ${targetRule ? 'newly ' : ''}match`
+                : `Also ${targetRule ? 'newly ' : ''}matches ${preview.others.length} other transaction${
                     preview.others.length === 1 ? '' : 's'
                   }`}
             </h3>
@@ -260,6 +346,11 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
       </div>
     </main>
   );
+}
+
+/** What the builder starts from for a suggestion: as drafted, or folded into the rule being widened. */
+function seedGroup(rule: Rule | undefined, suggestion: RuleGroup): RuleGroup {
+  return rule ? mergeConditions(rule.conditions, suggestion) : suggestion;
 }
 
 function PreviewTable({ rows, muted }: { rows: PreviewRow[]; muted?: boolean }) {
