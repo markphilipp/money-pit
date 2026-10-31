@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { parseStatementCsv } from '@/lib/csv';
 import { keywordsToGroup } from '@/lib/rules/engine';
 import { emptyFilters, useAppStore } from './useAppStore';
 import {
@@ -41,6 +42,113 @@ describe('uploadFiles', () => {
     expect(result.errors[0].file).toBe('bad.csv');
     expect(result.errors[0].message).toMatch(/Unexpected columns/);
     expect(state().rawRows).toHaveLength(7);
+  });
+});
+
+describe('datasets', () => {
+  const names = () => state().datasets.map((d) => d.name);
+
+  it('records each file as its own dataset, in upload order', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv'), csvFile(SECOND_CSV, 'b.csv')]);
+    expect(names()).toEqual(['a.csv', 'b.csv']);
+    expect(state().datasets[0].rows).toHaveLength(7);
+    expect(state().datasets[1].rows).toHaveLength(2);
+    expect(state().datasets[0].id).not.toBe(state().datasets[1].id);
+    expect(Number.isNaN(Date.parse(state().datasets[0].uploadedAt))).toBe(false);
+  });
+
+  it('treats re-uploading the same rows as a no-op that still reports ok', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv')]);
+    const { datasets, rawRows } = state();
+    const result = await state().uploadFiles([csvFile(SAMPLE_CSV, 'copy.csv')]);
+    expect(result.ok).toEqual(['copy.csv']);
+    expect(state().datasets).toBe(datasets);
+    expect(state().rawRows).toBe(rawRows);
+  });
+
+  it('keeps rawRows identity when only unrelated state changes', async () => {
+    await seedStore();
+    const { rawRows } = state();
+    state().setChartMode('bar');
+    state().setOverride(['x'], 'pets');
+    expect(state().rawRows).toBe(rawRows);
+  });
+
+  it('removes a dataset but keeps rows another file also holds', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv'), csvFile(SECOND_CSV, 'b.csv')]);
+    state().removeDataset(state().datasets[0].id);
+    expect(names()).toEqual(['b.csv']);
+    expect(state().rawRows).toEqual(state().datasets[0].rows);
+  });
+
+  it('prunes overrides for vanished rows and clears the selection', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv'), csvFile(SECOND_CSV, 'b.csv')]);
+    const txns = selectTransactions(state());
+    const lowes = txns.find((t) => t.description.startsWith('LOWES'))!;
+    const apple = txns.find((t) => t.description.startsWith('APPLE'))!;
+    state().setOverride([lowes.id, apple.id], 'pets');
+    state().toggleSelected(apple.id);
+    state().removeDataset(state().datasets[0].id);
+    expect(state().overrides).toEqual({ [lowes.id]: 'pets' });
+    expect(state().selectedIds.size).toBe(0);
+  });
+
+  it('drops a person filter nobody is left to match', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv'), csvFile(SECOND_CSV, 'b.csv')]);
+    state().togglePersonFilter('ALEX SAMPLE');
+    state().togglePersonFilter('JAMIE SAMPLE');
+    state().removeDataset(state().datasets[1].id);
+    state().removeDataset(state().datasets[0].id);
+    expect(state().filters.columnFilters.person).toBeUndefined();
+  });
+
+  it('removing the last dataset empties the data and leaves categories and rules alone', async () => {
+    await seedStore();
+    const { categories, rules } = state();
+    state().removeDataset(state().datasets[0].id);
+    expect(state().rawRows).toEqual([]);
+    expect(state().categories).toBe(categories);
+    expect(state().rules).toBe(rules);
+  });
+
+  it('ignores an unknown id', async () => {
+    await seedStore();
+    const { datasets } = state();
+    state().removeDataset('nope');
+    expect(state().datasets).toBe(datasets);
+  });
+
+  it('persists datasets, not the derived rows', async () => {
+    await seedStore();
+    const saved = JSON.parse(sessionStorage.getItem('money-pit')!).state;
+    expect(saved.datasets).toHaveLength(1);
+    expect(saved.rawRows).toBeUndefined();
+    const { datasets } = state();
+    useAppStore.setState({ datasets: [] });
+    sessionStorage.setItem('money-pit', JSON.stringify({ state: saved, version: 0 }));
+    await useAppStore.persist.rehydrate();
+    expect(state().datasets).toEqual(datasets);
+    expect(state().rawRows).toHaveLength(7);
+  });
+
+  it('hydrates a session saved before datasets as one "Earlier uploads" dataset', async () => {
+    const rows = parseStatementCsv(SAMPLE_CSV);
+    sessionStorage.setItem(
+      'money-pit',
+      JSON.stringify({ state: { rawRows: rows, overrides: {} }, version: 0 }),
+    );
+    await useAppStore.persist.rehydrate();
+    expect(state().datasets).toHaveLength(1);
+    expect(state().datasets[0]).toMatchObject({ name: 'Earlier uploads', rows });
+    expect(state().datasets[0].id).toBeTruthy();
+    expect(state().rawRows).toEqual(rows);
+  });
+
+  it('resetAll removes every dataset', async () => {
+    await seedStore();
+    state().resetAll();
+    expect(state().datasets).toEqual([]);
+    expect(state().rawRows).toEqual([]);
   });
 });
 
@@ -363,7 +471,7 @@ describe('session persistence', () => {
     });
 
     useAppStore.setState({
-      rawRows: [],
+      datasets: [],
       overrides: {},
       chartMode: 'donut',
       personChartMode: 'donut',

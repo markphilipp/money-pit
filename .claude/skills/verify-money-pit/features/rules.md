@@ -14,7 +14,8 @@ see [categories.md](categories.md).
     deleted"), and its Move buttons are disabled too;
   - a rule's name is numbered ("Groceries #2") when its category has several rules, and
     `Edit`/`Move`/`Delete` use that name;
-  - "New rule" goes to `/rules/new`, "Categories" goes to `/categories`, and "Done" goes back to `/`.
+  - a "Categories" link to `/categories`;
+  - "New rule" goes to `/rules/new`, and "Done" goes back to `/`.
 - **Rule editor from a selection** (`/rules/new` after a row or bulk or suggestion entry):
   - "Category name" (only while the choice is a new category, the default here);
   - a condition builder (react-querybuilder; the value input has `data-testid="value-editor"`);

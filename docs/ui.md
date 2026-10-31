@@ -12,9 +12,10 @@ Components, layout mechanics and styling conventions.
 | `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                    |
 | `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules. |
 | `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                    |
+| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                                              | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                                                                  |
 | `upload`     | `EmptyState`, `UploadZone`                                                                                           | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                                                                         |
 | `auth`       | `SignInScreen`                                                                                                       | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                                                                       |
-| `common`     | `ColorPickerPopover`, `ConfirmDialog`                                                                                | Shared palette popover and a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step.                                                                                       |
+| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                                             | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog.                                                  |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
@@ -83,17 +84,50 @@ checklists, description/amount/date get operator inputs). Description search and
 payments/credits toggle live in the bar above.
 
 Row actions follow one rule — **acting inside a selection applies to the whole selection, otherwise
-to that row alone** (`targetsFor` in `TransactionTable.tsx`). This covers the category pill, the
+to that row alone** (`resolveActionTargets` in `src/lib/shortcuts.ts`, wrapped by `targetsFor` in
+`TransactionTable.tsx`). This covers the category pill, the
 right-click menu and "create rule from rows", which stores the ids and routes to `/rules/new`.
 
 Payments rows are excluded unless "show payments & credits" is on; the footer total reflects only
 what's visible.
+
+## Keyboard shortcuts
+
+`SHORTCUTS` in `src/lib/shortcuts.ts` is the single source of truth: each entry has an `id`, a
+`hotkey` (react-hotkeys-hook syntax), the key labels to show, a label and a scope (`global` or
+`transactions`). `ShortcutsDialog` renders straight from it, and components bind through
+`useShortcut(id, handler)` (`src/hooks/useShortcut.ts`), so the help text can't drift from what is
+bound. `?` is bound in `UserMenu` (it renders on every route and owns the dialog); the rest are bound
+in `TransactionTable`.
+
+To add one: add an entry to `SHORTCUTS` (and a `ShortcutId`), then call `useShortcut` where the
+handler's state lives. Pass `preventDefault` only for presses you actually handle, as a function
+when that depends on state, so native behavior (page scroll on Space, typing) survives otherwise.
+Punctuation uses `useKey: true` to match the produced character rather than a physical key.
+
+Shortcuts are plain unmodified keys: any ctrl/meta/alt combination never matches, so Cmd+A and
+Cmd+C keep working. `isShortcutBlocked` decides when focus owns the key instead, and replaces the
+library's own form-tag check (`enableOnFormTags: true`), which is too coarse. It blocks text-entry
+inputs, `textarea`, `select`, contenteditable, and anything inside `dialog`, `alertdialog`, `menu`,
+`listbox`, `separator`, `slider` or `combobox`. Checkboxes and buttons are deliberately _not_
+blocked: row checkboxes keep focus after a click, and blocking them would kill every shortcut right
+after selecting a row. The charts-pane resize handle (`separator`) already owns Arrow Up/Down, and
+Radix dialogs/menus and `CategoryPicker` (`dialog`) trap keys themselves. Space additionally skips
+buttons, links, checkboxes and radios (`activatesOnSpace`), which Space already activates.
+
+The table's keyboard cursor is the highlighted row. It is a transaction id in `useState` inside
+`TransactionTable`, never in the store or persisted. The index is derived from the current `rows`
+on every render, so an id that filtering or sorting removed counts as no highlight. The row gets
+`aria-current="true"` and scrolls into view with `block: 'nearest'`; its `scroll-margin-top` is
+`--charts-h` + `--table-head-h` + `--table-thead-h`, the last published by `useHeightVar` on the
+`thead`, so the row never lands under the pinned stack.
 
 ## Routes
 
 | Route         | Screen             | Notes                                                                                          |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
 | `/`           | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
+| `/datasets`   | `DatasetsScreen`   | Uploaded files: add, remove. Reached from the account menu.                                    |
 | `/categories` | `CategoriesScreen` | Add, rename, recolor and delete categories. Reached from the account menu.                     |
 | `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
@@ -161,13 +195,26 @@ without producing invalid HTML. The confirm button reads "Delete category" or "D
 rules" depending on whether any exist, and deleting removes the category, every rule filing into it,
 and every override pointing at it in one store update.
 
+## Uploaded files screen — `DatasetsScreen`
+
+One row per dataset (one uploaded CSV): file name, transaction count, the span of its dates
+(`datasetSpan`) and when it was uploaded, with a **Remove** button whose accessible name carries the
+file name so every row's is unique. The page also holds an `UploadZone`, so a mistaken upload and its
+replacement are handled in one place. With no files it shows "No files uploaded yet." and the zone.
+
+Remove opens `RemoveDatasetDialog` on the shared `ConfirmDialog` (focus starts on Cancel, Escape
+cancels, focus returns to the Remove button). Its body comes from `datasetImpact`: how many
+transactions go, how many more stay because another file also holds them, and how many manual
+category changes are lost. Removing the only file adds that the dashboard returns to the upload
+screen while categories and rules stay. Confirming calls the store's `removeDataset`.
+
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (confirms in a modal), **Categories…**, **Category rules…**, and
+**Add statement**, **Start over** (confirms in a modal), **Uploaded files…**, **Categories…**, **Category rules…**, and
 **Sign in…** (a link to `/sign-in`). Add statement and Start over only appear once there's data.
-Signed in, Start over also wipes the account's rows and resets its categories and rules, but keeps
-the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the
+Signed in, Start over also removes the account's datasets and resets its categories and rules, but
+keeps the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the
 `deleteAccount` server action. Deleting the `user` row cascades to everything, sessions included.
 Both sign out and delete clear the tab's persisted state and do a full reload to `/`, so no account
 data survives in the in-memory store. The avatar stays a generic SVG: provider names and pictures

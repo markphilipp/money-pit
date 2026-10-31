@@ -2,6 +2,7 @@ import {
   bigint,
   boolean,
   foreignKey,
+  index,
   integer,
   jsonb,
   pgTable,
@@ -48,6 +49,40 @@ export const statementRow = pgTable(
       t.person,
       t.ordinal,
     ),
+  ],
+);
+
+// One uploaded file. Rows stay deduped in `statement_row`; a dataset only records which rows its
+// file contained, so removing it can leave behind rows another file also holds.
+export const dataset = pgTable(
+  'dataset',
+  {
+    userId: userId(),
+    id: text('id').notNull(),
+    name: text('name').notNull(),
+    uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.id] })],
+);
+
+// A row is in a dataset when its file held that (content, ordinal): the k-th copy of a row in a
+// file has ordinal k-1, which is the identity of the merged row.
+export const statementRowDataset = pgTable(
+  'statement_row_dataset',
+  {
+    rowId: bigint('row_id', { mode: 'number' })
+      .notNull()
+      .references(() => statementRow.id, { onDelete: 'cascade' }),
+    userId: text('user_id').notNull(),
+    datasetId: text('dataset_id').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.rowId, t.datasetId] }),
+    foreignKey({
+      columns: [t.userId, t.datasetId],
+      foreignColumns: [dataset.userId, dataset.id],
+    }).onDelete('cascade'),
+    index('statement_row_dataset_dataset').on(t.userId, t.datasetId),
   ],
 );
 

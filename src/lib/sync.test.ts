@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { toTransactions } from './categorize';
 import { parseStatementCsv } from './csv';
 import { defaultCategories, defaultRules } from './defaultRules';
-import { fromStoredRows, overrideChanges, toStoredRows } from './sync';
+import {
+  fromStoredDatasets,
+  fromStoredRows,
+  overrideChanges,
+  toStoredDataset,
+  toStoredRows,
+} from './sync';
 import { HEADER } from '@/test/fixtures';
 
 const rows = parseStatementCsv(
@@ -53,5 +59,23 @@ describe('overrideChanges', () => {
 
   it('skips overrides whose row is gone', () => {
     expect(overrideChanges(rows, {}, { 'no-such-row': 'dining' })).toEqual([]);
+  });
+});
+
+describe('toStoredDataset / fromStoredDatasets', () => {
+  const file = { id: 'a', name: 'july.csv', uploadedAt: '2026-07-04T00:00:00.000Z', rows };
+
+  it('numbers a file’s rows within that file, whatever else the account holds', () => {
+    const second = { ...file, id: 'b', rows: rows.slice(1) };
+    expect(toStoredDataset(second, {}).rows.map((r) => r.ordinal)).toEqual([0, 1]);
+  });
+
+  it('round-trips datasets and rebuilds the override map from the rows', () => {
+    const overrides = { [ids[0]]: 'dining', [ids[2]]: 'grocery' };
+    const stored = [toStoredDataset(file, overrides), toStoredDataset({ ...file, id: 'b' }, {})];
+    expect(fromStoredDatasets(stored)).toEqual({
+      datasets: [file, { ...file, id: 'b' }],
+      overrides,
+    });
   });
 });

@@ -26,6 +26,10 @@ describe('UserMenu', () => {
       'href',
       '/rules',
     );
+    expect(screen.getByRole('menuitem', { name: 'Uploaded files…' })).toHaveAttribute(
+      'href',
+      '/datasets',
+    );
   });
 
   it('hides the statement actions until there is data', async () => {

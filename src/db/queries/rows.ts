@@ -1,4 +1,4 @@
-import { asc, eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import type { Tx } from '@/db';
 import { statementRow } from '@/db/schema';
 import type { StoredRow } from '@/lib/sync';
@@ -17,8 +17,8 @@ const identity = [
 const INSERT_BATCH = 5000;
 
 /**
- * The client already ran `mergeRows`, so a conflict on (content, ordinal) can only be a retried
- * append of the same row, never a second copy that dedupe let through.
+ * A conflict on (content, ordinal) is a row an earlier file or a retried append already put there,
+ * so it is skipped rather than duplicated. The row stays deduped; datasets record who holds it.
  */
 export async function insertRows(tx: Tx, userId: string, rows: StoredRow[]) {
   for (let i = 0; i < rows.length; i += INSERT_BATCH) {
@@ -45,25 +45,4 @@ export async function updateOverrides(tx: Tx, userId: string, rows: StoredRow[])
       and ${statementRow.person} = v."person"
       and ${statementRow.ordinal} = v."ordinal"
   `);
-}
-
-export function readRows(tx: Tx, userId: string): Promise<StoredRow[]> {
-  return tx
-    .select({
-      status: statementRow.status,
-      dateStr: statementRow.dateStr,
-      description: statementRow.description,
-      debit: statementRow.debit,
-      credit: statementRow.credit,
-      person: statementRow.person,
-      ordinal: statementRow.ordinal,
-      categoryOverride: statementRow.categoryOverride,
-    })
-    .from(statementRow)
-    .where(eq(statementRow.userId, userId))
-    .orderBy(asc(statementRow.id));
-}
-
-export async function deleteRows(tx: Tx, userId: string) {
-  await tx.delete(statementRow).where(eq(statementRow.userId, userId));
 }

@@ -5,8 +5,10 @@ most of the unit-test weight.
 
 ## Types — `src/lib/types.ts`
 
-`RawStatementRow` is the persisted shape: six raw strings, straight off the CSV, nothing coerced.
-It goes to `sessionStorage` when signed out and to the `statement_row` table when signed in.
+`RawStatementRow` is the shape of a row: six raw strings, straight off the CSV, nothing coerced.
+`Dataset { id, name, uploadedAt, rows }` is one uploaded file's rows exactly as parsed, and
+`datasets` is what is persisted: to `sessionStorage` when signed out, to the `dataset` and
+`statement_row` tables when signed in. The flat `rawRows` the app reads is derived from them (below).
 `Transaction` is the derived shape (parsed `Date`, signed `amount`, `isCredit`, `categoryId`).
 Two ids are reserved as constants: `PAYMENTS_ID = 'payments'` and `OTHER_ID = 'other'`.
 
@@ -27,6 +29,27 @@ Statement exports overlap at period boundaries, so the same row appearing in a _
 duplicate — but two identical rows _within one file_ are two real charges. Dedupe is therefore
 per-key **multiplicity**: keep the highest count seen in any single file, never the sum across
 files. Re-uploading the same file is a no-op; uploading an overlapping month adds only the new rows.
+
+## Datasets — `src/lib/datasets.ts`
+
+`mergeDatasets(datasets)` folds the datasets in upload order through `mergeRows`, which gives the
+deduped `rawRows`. Datasets keep their own rows rather than each owning a share of the merged ones:
+overlapping files share rows, so attributing a row to its first uploader would drop rows a later
+file also contained the moment the first file was removed.
+
+**Exactness.** Removing a dataset yields exactly the state as if that file had never been uploaded,
+because the merged rows are a pure function of the remaining list. `removeDataset(state, id)`
+returns the remaining datasets and the overrides pruned to ids still present in the new merge (an
+override for a vanished row is dropped; the account does the same by deleting the row).
+`datasetImpact(datasets, overrides, id)` reports `transactions` (rows that vanish), `shared` (this
+file's rows kept because another file has them) and `lostOverrides`, for the confirm dialog.
+`datasets.test.ts` checks the exactness against an independent per-key-maximum oracle over random
+overlapping files.
+
+**Re-upload.** `addDataset` ignores a file whose rows are the same multiset (by `rowKey`) as an
+existing dataset, preserving "re-uploading the same file is a no-op". Any other file, even one that
+overlaps fully, becomes its own dataset. A file with fewer copies of a repeated row than another is
+a different file.
 
 ## Ids — `src/lib/hash.ts`
 
@@ -176,13 +199,15 @@ builtins included, from Better Auth's `user.create.after` hook.
 Signed-in state lives in Postgres, keyed by `user_id` with `ON DELETE CASCADE`. Only raw inputs are
 stored, never anything derived.
 
-| Table           | Holds                                                                                                                                                                            |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `statement_row` | One `RawStatementRow` plus its per-key `ordinal` and `category_override`. Unique on the row key + ordinal. `ORDER BY id` is `rawRows` order.                                     |
-| `category`      | The category list. `position` is the array index.                                                                                                                                |
-| `rule`          | The rule list. A composite FK ties `(user_id, category_id)` to `category`'s primary key, cascading, so a rule can't outlive its category at the database layer either.           |
-| `category_rule` | Superseded by `category` + `rule` — one row was a rule that was also its own category. Never written; kept as a read fallback for an account that hasn't saved either table yet. |
-| `preference`    | `chart_mode`, `person_chart_mode`, `sort_key`, `sort_dir`, and `dismissed_suggestions` (`jsonb` string array, default `[]`): the proposal keys the user turned down.             |
+| Table                   | Holds                                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `statement_row`         | One `RawStatementRow` plus its per-key `ordinal` and `category_override`. Unique on the row key + ordinal. Rows are deduped here, whichever files held them.                     |
+| `dataset`               | One uploaded file: `name` and `uploaded_at`, keyed by `(user_id, id)`. The id is minted in the browser.                                                                          |
+| `statement_row_dataset` | Membership: which rows a dataset's file held. `(row_id, dataset_id)` is the key; a composite FK to `dataset` and an FK to `statement_row` both cascade.                          |
+| `category`              | The category list. `position` is the array index.                                                                                                                                |
+| `rule`                  | The rule list. A composite FK ties `(user_id, category_id)` to `category`'s primary key, cascading, so a rule can't outlive its category at the database layer either.           |
+| `category_rule`         | Superseded by `category` + `rule` — one row was a rule that was also its own category. Never written; kept as a read fallback for an account that hasn't saved either table yet. |
+| `preference`            | `chart_mode`, `person_chart_mode`, `sort_key`, `sort_dir`, and `dismissed_suggestions` (`jsonb` string array, default `[]`): the proposal keys the user turned down.             |
 
 `src/db/queries/categories.ts` writes `category` and `rule` together: delete + insert both in one
 transaction, so position is always the array index and a rule never points at a category not yet
@@ -192,17 +217,39 @@ when an account has no `category` rows yet, and upgrades it in memory
 (`upgradeLegacyRules`) — the fallback table itself is never migrated in place, so an unmigrated
 account keeps reading it until its first save writes the new tables.
 
+A file's k-th copy of a row has ordinal k-1, which is the identity of the merged row, so membership
+is "this (row identity, ordinal) is in the file", and the ordinals sent for a dataset are computed
+over the whole file before it is chunked. Removing a dataset (`deleteDataset`) deletes the rows
+only it held (and their `category_override` with them), then the dataset; shared rows stay. Only
+rows the dataset held are candidates, so a row with no membership at all is never swept up.
+
+The migration was expand-only: it adds the two tables and leaves `statement_row` alone, because the
+previous deployment keeps serving while the production build migrates. Rows that belong to no
+dataset (an account from before datasets, or rows the previous deployment wrote mid-deploy) are
+adopted lazily: `loadSnapshot`, inside its transaction, creates one dataset named "Earlier uploads"
+(random id, dated by the oldest such row) and attaches every unowned row to it. It is idempotent
+and takes a per-user advisory lock so two tabs loading at once don't each create one. There is no
+backfill SQL.
+
+`loadSnapshot` returns each dataset with its rows (rows by `statement_row.id`, datasets by
+`uploaded_at` then id) and the client rebuilds `datasets`, deriving `rawRows` and the overrides map
+from them (`fromStoredDatasets`).
+
 There is no `txnId` column and no override table. `txnId` is re-derived from the row and its
 ordinal, so a stored copy would orphan every override the day the hash changed. An override is the
 `category_override` column on its row, with no FK to categories, because categorization already
-treats a missing category id as Other. Dedupe stays `mergeRows` run before the write, never `ON
-CONFLICT DO NOTHING`, which would sum across files instead of taking the per-file maximum.
+treats a missing category id as Other. Dedupe is still the per-file maximum: a dataset's rows are inserted with `ON CONFLICT DO NOTHING`
+on (key, ordinal), and since ordinals are numbered within the file, a key appearing twice in one
+file and three times in another leaves three rows, not five.
 
 ## Claiming a session — `src/lib/claim.ts`
 
-`claimInto(account, local)` folds a signed-out session into an account. Rows go through
-`mergeRows`, so overlap is deduped like a second upload. Overrides are keyed by `txnId`, which
-survives the merge, and the session's win. An account still on the seeded defaults takes the
+`claimInto(account, local)` folds a signed-out session into an account. The account keeps its
+datasets and gains the session's whose id it lacks, so claiming the same session twice adds nothing;
+rows shared between them dedupe through `mergeDatasets` like a second upload. The server inserts the
+new datasets first and only then applies the overrides (`overrideChanges` over the merged rows),
+because an override can land on a row the account only just received. Overrides are keyed by
+`txnId`, which survives the merge, and the session's win. An account still on the seeded defaults takes the
 session's categories and rules wholesale. Otherwise only the ones whose id the account lacks are
 added, ahead of the builtins: category ids are name slugs, so a shared id is the same category and
 the account's version stays. Rule conditions read back from `jsonb` lose their key order, so "still

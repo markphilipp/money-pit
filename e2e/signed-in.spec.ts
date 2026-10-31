@@ -199,6 +199,32 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     expect(await account.ruleIds()).toEqual(['coffee', 'payments']);
   });
 
+  test('removes a file from the account but keeps the rows another file holds', async ({
+    page,
+    account,
+  }) => {
+    await account.signIn();
+    await page.goto('/');
+    await expect(page.getByText(/saved to your account/)).toBeVisible();
+    // june.csv and july.csv overlap on two rows, so the account holds 8 + 6 - 2 = 12
+    await page.setInputFiles('input[type=file]', [fixture('june.csv'), fixture('july.csv')]);
+    await expect(heading(page)).toContainText('(11)');
+    await expect.poll(account.rowCount).toBe(12);
+
+    await page.getByLabel('Account menu').click();
+    await page.getByRole('menuitem', { name: 'Uploaded files…' }).click();
+    await page.getByLabel('Remove june.csv').click();
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Remove file' }).click();
+    await expect.poll(account.rowCount).toBe(6);
+
+    await page.goto('/datasets');
+    await expect(page.getByLabel('Remove july.csv')).toBeVisible();
+    await expect(page.getByLabel('Remove june.csv')).toHaveCount(0);
+    await page.goto('/');
+    await expect(heading(page)).toContainText('(6)');
+    await expect(page.getByRole('row', { name: /DUKE-ENERGY/ })).toHaveCount(0);
+  });
+
   test('starts over, keeping the account, then deletes it', async ({ page, account }) => {
     await account.signIn();
     await page.goto('/');

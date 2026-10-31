@@ -5,7 +5,9 @@ How data moves through the app, and the rules that keep the store honest.
 ## The one-way flow
 
 ```
-CSV files → rawRows (persisted)
+CSV files → datasets (persisted, one per file)
+                ↓  mergeDatasets()
+            rawRows (derived, deduped)
                 ├── + categories, rules (persisted)
                 └── + overrides (persisted)
                         ↓  toTransactions()
@@ -14,7 +16,7 @@ CSV files → rawRows (persisted)
                    charts · stats strip · table
 ```
 
-Only `rawRows`, `categories`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort`,
+Only `datasets`, `categories`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort`,
 `ruleSources` and `dismissedSuggestions` are persisted (`partialize` in `src/store/useAppStore.ts`, under the key
 `categorization` for the category/rule pair — see [data-model.md](data-model.md)). Signed out, all
 of them go to
@@ -22,7 +24,8 @@ of them go to
 (see [Signed-in sync](#signed-in-sync--srcstoresyncts)). Everything a component renders below that line is
 recomputed. **Adding a derived field to persisted state is the mistake this design exists to
 prevent** — a stale persisted category would survive a rule edit and silently disagree with the
-charts.
+charts. `rawRows` is the same kind of thing one level up: it lives on `AppState` so selectors and
+components read it, but it is recomputed from `datasets` and left out of `partialize`.
 
 `selectedIds` is deliberately _not_ persisted: a `Set` doesn't survive JSON, and a selection
 outliving a reload is not useful. `ruleEditor` isn't either — a reload should land on the dashboard,
@@ -35,8 +38,14 @@ Single Zustand store with `persist` middleware over `sessionStorage` (key `money
 Actions worth knowing before you add one:
 
 - `uploadFiles(files)` — parses each file independently and returns `{ ok, errors }`. One bad file
-  never blocks the others; callers render `errors` inline. Rows are merged through `mergeRows`
-  (see [data-model.md](data-model.md)) and only committed if at least one file parsed.
+  never blocks the others; callers render `errors` inline. Each parsed file becomes a `Dataset`
+  (random id, upload time), unless a dataset already holds exactly its rows, which is a silent no-op
+  that still reports the file in `ok`. Any other file is its own dataset even when it overlaps an
+  earlier one entirely, so removal stays exact (see [data-model.md](data-model.md)).
+- `removeDataset(id)` — routes through `removeDataset` in `src/lib/datasets.ts`: drops the dataset and
+  the overrides of any row no other dataset holds, then clears the selection and any person filter
+  nobody is left to match. Removing the last dataset empties the data only. Categories, rules and
+  preferences stay, and the dashboard falls back to `EmptyState` because `rawRows` is empty.
 - `addCategory` / `setCategory` — a new category is pinned ahead of the builtins, same as a rule.
   `setCategory` patches name or color; renaming happens here even for a builtin category.
 - `deleteCategory` — routes through `removeCategory` (`src/lib/categories.ts`): drops the category,
@@ -60,6 +69,14 @@ Actions worth knowing before you add one:
   filters. Use `checklistValues()` from `src/lib/rules/engine.ts` to read them back; the map is
   typed as the whole `ColumnFilter` union and needs narrowing.
 
+### Derived `rawRows`
+
+`deriveRawRows` wraps the store's `set` and `api.setState`, and whenever a write changes `datasets`
+it adds `rawRows: mergeDatasets(datasets)` to the same update. An action, hydration and the sync
+layer's `setState` all go through it, so no writer can leave the two out of step, and `rawRows`
+keeps its identity while `datasets` does — the transaction selector's cache depends on that. Never
+set `rawRows` yourself.
+
 ### Hydration
 
 The server renders with empty state — `sessionStorage` only exists in the browser — so `persist`
@@ -68,6 +85,9 @@ runs with `skipHydration: true` and `useHydrated()` rehydrates after mount via
 state before hydration gives you the initial state, not the session's — anything that must see
 persisted data belongs below that gate. This is why `/rules/[id]` resolves its rule _after_
 hydration rather than on the server: which rule an id refers to is not knowable there.
+
+A tab saved before datasets existed has `rawRows` and no `datasets`. `merge` hydrates that as a
+single dataset named "Earlier uploads" with a fresh random id, the same way it upgrades legacy rules.
 
 Signed in, the gate also waits for the account snapshot (`mode === 'account'`). The root layout
 reads the session on the server and passes `signedIn` down through `SignedInContext`, so the very
@@ -80,18 +100,26 @@ await the network. `AccountSync` (in the root layout) calls `startAccountSync()`
 had a valid session. It loads the snapshot into the store, sets `mode: 'account'`, and then
 subscribes to the store and turns each diff into a server action from `src/app/actions/account.ts`:
 
-| Slice                                  | Change      | Server action                                                     |
-| -------------------------------------- | ----------- | ----------------------------------------------------------------- |
-| `rawRows`                              | grew        | `appendRows` with the new tail, in chunks under the 1 MB body cap |
-| `rawRows`                              | emptied     | `resetAccount` only: `resetAll` resets every other slice too      |
-| `categories`, `rules`                  | ref changed | `replaceCategories` with both lists, written together             |
-| `overrides`                            | diff        | `setOverrides` with the changed rows, identified by content       |
-| `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                   |
-| `dismissedSuggestions`                 | changed     | `setPreference`, the same row and the same write                  |
+| Slice                                  | Change      | Server action                                                                                  |
+| -------------------------------------- | ----------- | ---------------------------------------------------------------------------------------------- |
+| `datasets`                             | added       | `createDataset`, then `appendDatasetRows` for the whole file in chunks under the 1 MB body cap |
+| `datasets`                             | removed     | `removeDataset`                                                                                |
+| `categories`, `rules`                  | ref changed | `replaceCategories` with both lists, written together                                          |
+| `overrides`                            | diff        | `setOverrides` with the changed rows, identified by content                                    |
+| `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                                                |
+| `dismissedSuggestions`                 | changed     | `setPreference`, the same row and the same write                                               |
+
+There is no whole-account reset. Start over (`resetAll`) is the ordinary diffs: every dataset
+removed, categories and rules replaced with the defaults, overrides cleared, preferences reset. Only
+the slices that actually changed produce a write. Removing the last dataset is likewise just a
+`removeDataset`, so it never touches categories. An override pruned along with its removed rows
+produces no write, because `overrideChanges` runs against the rows that are left and the server
+deleted the vanished rows (and their `category_override` column) itself.
 
 Every action re-derives the user from the session cookie and parses its arguments with the zod
-schemas in `src/app/actions/input.ts`. Every write is idempotent (`appendRows` conflicts on row
-identity and does nothing, the rest overwrite), so a failed write is retried in place after 1 s, 2 s
+schemas in `src/app/actions/input.ts`. Every write is idempotent (`createDataset` and the row and
+membership inserts conflict and do nothing, `removeDataset` finds nothing the second time, the rest
+overwrite), so a failed write is retried in place after 1 s, 2 s
 and 4 s, and the queue behind it waits. Writes run one at a time, in order. If the retries run out,
 the queue behind the write is dropped and the snapshot is reloaded over local state. There is no
 per-action rollback. While a write is pending, a `beforeunload` guard asks before the page is left,
@@ -106,7 +134,7 @@ is no sync, so no status and no toast; the privacy line already says the data st
 which drops the tab's statements from `sessionStorage`. So before the first load, if the rehydrated
 tab still holds signed-out rows (the case right after a sign-in), `AccountSync` asks whether to save
 them. Save calls `claimLocal`, which runs `claimInto()` from `src/lib/claim.ts` against the account
-in one transaction. It also saves the tab's chart type and sort order, unless both are still the
+in one transaction (`saveClaim`, `src/db/queries/claim.ts`). It also saves the tab's chart type and sort order, unless both are still the
 defaults, so untouched defaults never overwrite what the account has saved. Dismissed suggestions
 are always sent and unioned with the account's. Discard just loads the
 account. A failed claim stops before the load, so the

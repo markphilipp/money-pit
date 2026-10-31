@@ -83,6 +83,10 @@
   .table thead th {
     position: static;
   }
+
+  .table tbody tr {
+    scroll-margin-top: 0;
+  }
 }
 
 .table tbody td {
@@ -98,6 +102,34 @@
 
 .table tbody tr.selected {
   background: var(--accent-soft);
+}
+
+/* Keyboard cursor: outline the row and bar its left edge, so it reads on top of `.selected`. */
+.table tbody tr.highlighted td {
+  box-shadow:
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
+}
+
+.table tbody tr.highlighted td:first-child {
+  box-shadow:
+    inset 3px 0 0 var(--accent),
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
+}
+
+.table tbody tr.highlighted td:last-child {
+  box-shadow:
+    inset -1px 0 0 var(--accent),
+    inset 0 1px 0 var(--accent),
+    inset 0 -1px 0 var(--accent);
+}
+
+/* Keep a row scrolled into view clear of the pinned charts, bar and column header. */
+.table tbody tr {
+  scroll-margin-top: calc(
+    var(--charts-h, 0px) + var(--table-head-h, 0px) + var(--table-thead-h, 0px)
+  );
 }
 
 .sel {

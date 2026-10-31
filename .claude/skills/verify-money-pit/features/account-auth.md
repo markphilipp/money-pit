@@ -1,22 +1,24 @@
 # Account and auth
 
 The avatar "Account menu" holds upload, reset, categories, rules and sign-in. Better Auth serves
-`/api/auth/*` on the same origin, and `/sign-in` is the user-facing door to it.
+`/api/auth/*` on the same origin. Signed out, the menu's "Sign in…" is an enabled link to
+`/sign-in`. Signed in, it shows "Sign out" and "Delete account…" instead.
 
 ## Sub-features
 
-- **Account menu, empty state:** "Categories…", "Category rules…" and "Sign in…", an enabled link
-  to `/sign-in`. No "Add statement" or "Start over" until there is data.
+- **Account menu, empty state:** "Categories…", "Category rules…" and "Sign in…". No "Add
+  statement" or "Start over" until there is data.
 - **Account menu, with data:** also "Add statement" and "Start over". "Start over" opens an
   alertdialog titled "Start over?" with Cancel and a "Start over" button. Cancel keeps every row.
   Confirming clears rows, rule edits and overrides (`resetAll`) and lands on the empty state.
-- **`/sign-in`:** heading "Sign in", buttons "Continue with Google" and "Continue with GitHub", a
-  privacy note, and a "Back to the dashboard" link. Without OAuth creds a provider click shows a
-  `role="alert"` reading "<Provider> sign-in isn't set up yet." and the buttons re-enable.
-- **Signed in** (needs a minted cookie, see SKILL.md): the menu shows "Sign out" and "Delete
-  account…" instead of "Sign in…", `/sign-in` redirects to `/`, a `role="status"` save toast reports
-  saving, and signing in on a tab that holds signed-out rows asks "Save this session's statements to
-  your account?" (Discard / Save to my account).
+- **`/sign-in`:** heading "Sign in", one "Continue with <provider>" button per provider (Google and
+  GitHub), links to `/terms` and `/privacy`, a privacy note, and a "Back to the dashboard" link.
+  Without OAuth creds a provider click shows a `role="alert"` reading "<Provider> sign-in isn't set
+  up yet." and the buttons re-enable.
+- **`/privacy`, `/terms`:** static pages, 200.
+- **Signed in** (needs a minted cookie, see SKILL.md): a `role="status"` save toast reports saving,
+  `/sign-in` redirects to `/`, and signing in on a tab that holds signed-out rows asks "Save this
+  session's statements to your account?" (Discard / Save to my account).
 - **`GET /api/auth/ok`** returns `{"ok":true}`.
 - **`GET /api/auth/get-session`** returns `null` without a cookie. With a valid session cookie it
   returns the user. `name` and `image` are empty by the no-PII rule.
@@ -26,7 +28,8 @@ The avatar "Account menu" holds upload, reset, categories, rules and sign-in. Be
 
 ## How to get to it (user POV)
 
-The avatar button at the top right of every page, then "Sign in…". Or `/sign-in` directly.
+The avatar button at the top right of every page. "Sign in…" leads to `/sign-in`, which can also be
+opened directly. The API itself isn't user-facing.
 
 ## Driving it with drive.mjs
 
@@ -39,19 +42,15 @@ export default async ({ page, shot, fixture, baseURL, log }) => {
   await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
   await expect(page.getByRole('menuitem', { name: 'Start over' })).toHaveCount(0);
   await expect(page.getByRole('menuitem', { name: 'Sign out' })).toHaveCount(0);
-  await shot('account-menu-empty');
-
+  await shot('account-menu');
   await page.getByRole('menuitem', { name: 'Sign in…' }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
   await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Continue with GitHub' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Continue with / }).first()).toBeVisible();
   await shot('sign-in');
-
   const ok = await page.request.get(`${baseURL}/api/auth/ok`);
-  log(`/api/auth/ok ${ok.status()} ${await ok.text()}`);
   expect(await ok.json()).toEqual({ ok: true });
   const session = await page.request.get(`${baseURL}/api/auth/get-session`);
-  log(`/api/auth/get-session ${session.status()} ${await session.text()}`);
   expect(await session.json()).toBeNull();
 
   await page.goto('/');
@@ -71,10 +70,14 @@ export default async ({ page, shot, fixture, baseURL, log }) => {
   await page.getByRole('alertdialog').getByRole('button', { name: 'Start over' }).click();
   await expect(page.getByText('Drop statement CSVs here')).toBeVisible();
   await shot('after-start-over');
+  for (const path of ['/privacy', '/terms']) {
+    expect((await page.request.get(`${baseURL}${path}`)).status()).toBe(200);
+  }
 };
 ```
 
-For a signed-in session and the token-stripping check, run `bun run auth:check`. It exercises the
+The Continue buttons start a real OAuth redirect, so the scenario only asserts they render. For a
+signed-in session and the token-stripping check, run `bun run auth:check`. It exercises the
 real `getAuth()` against the `dev` DB and deletes its test user.
 
 ## Gotchas

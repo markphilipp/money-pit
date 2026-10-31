@@ -114,6 +114,14 @@ export const rowsInput = z.array(
   }),
 );
 
+export const datasetInput = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().max(255),
+  uploadedAt: z.iso.datetime(),
+});
+
+export const datasetsInput = z.array(datasetInput.extend({ rows: rowsInput }));
+
 export const dismissedInput = z.array(z.string().max(MAX_KEY_LENGTH)).max(MAX_DISMISSED);
 
 export const viewPreferenceInput = z.object({
