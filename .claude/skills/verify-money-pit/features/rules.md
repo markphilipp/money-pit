@@ -9,7 +9,7 @@ see [categories.md](categories.md).
 
 - **Rules list** (`/rules`, heading "Category rules"):
   - reorder with `Move <name> up` / `Move <name> down`;
-  - `Edit <name>` opens `/rules/<id>`;
+  - `Edit <name>` (a link) opens `/rules/<id>`;
   - `Delete <name>`, rendered but disabled for the builtin (title "Built-in rules cannot be
     deleted"), and its Move buttons are disabled too;
   - a rule's name is numbered ("Groceries #2") when its category has several rules, and
@@ -31,17 +31,19 @@ see [categories.md](categories.md).
 - **Create from several rows**: tick the row checkboxes (`Select <description>`), click "Create rule",
   and see suggested rules ("Suggested rules", e.g. a `contains “…”` button with `aria-pressed`;
   the quotes are curly). The BulkBar button's name is "Create rule", so use `{ exact: true }` when the
-  suggestions banner is expanded: its `Create rule for <label>` buttons substring-match.
+  suggestions banner is expanded: its `Create rule for <label>` buttons substring-match. Right-clicking
+  a selected row acts on the whole selection.
 - **Create from a dashboard suggestion:** see [suggestions.md](suggestions.md).
 - **Unknown id**: `/rules/does-not-exist` shows "Rule not found".
+- **Persistence**: signed out, rules are in sessionStorage. Signed in, every change is saved to the
+  account's `rule` and `category` tables, and a new account starts with the default rules.
 
 ## How to get to it (user POV)
 
 - Account menu, then "Category rules…", which goes to `/rules`.
 - The suggestions banner on `/` (see [suggestions.md](suggestions.md)).
 - From the table: right-click a row, or multi-select rows and use "Create rule".
-- Direct URLs `/rules`, `/rules/new` and `/rules/<id>`. They're real routes, and `[id]` is
-  server-rendered.
+- Direct URLs `/rules`, `/rules/new` and `/rules/<id>`. `[id]` is rendered on demand.
 
 ## Driving it with drive.mjs
 
@@ -49,12 +51,16 @@ see [categories.md](categories.md).
 import { expect } from '@playwright/test';
 export default async ({ page, shot, fixture }) => {
   await page.goto('/');
-  await page.setInputFiles('input[type=file]', [fixture('june.csv')]);
+  await page
+    .locator('label', { hasText: 'Drop statement CSVs here' })
+    .locator('input')
+    .setInputFiles([fixture('june.csv')]);
   const row = page.getByRole('row', { name: /Merchant Offers/ });
   await expect(row.getByTitle('Change category')).toContainText('Other');
   await row.click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
   await expect(page).toHaveURL(/\/rules\/new$/);
+  await expect(page.getByRole('heading', { name: 'New rule from 1 transaction' })).toBeVisible();
   await expect(page.getByTestId('value-editor')).toHaveValue('Merchant Offers');
   await page.getByLabel('Category name').fill('Merchant Credits');
   await shot('editor-prefilled');
@@ -67,18 +73,33 @@ export default async ({ page, shot, fixture }) => {
   await expect(page.getByRole('heading', { name: 'Category rules' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Delete Payments' })).toBeDisabled();
   await expect(page.getByRole('button', { name: /Other/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Move Payments up' })).toBeDisabled();
   await shot('rules-list');
+  await page.getByRole('link', { name: 'Edit Merchant Credits' }).click();
+  await expect(page.getByRole('heading', { name: 'Edit Merchant Credits rule' })).toBeVisible();
+  await page.getByRole('link', { name: 'Cancel' }).click();
+  await expect(page).toHaveURL(/\/rules$/);
+  await page.goto('/rules/does-not-exist');
+  await expect(page.getByRole('heading', { name: 'Rule not found' })).toBeVisible();
+  await page.goto('/');
+  await page.getByRole('checkbox', { name: /Select LOWES/ }).check();
+  await page.getByRole('checkbox', { name: /Select AMAZON/ }).check();
+  await page.getByRole('button', { name: 'Create rule' }).click();
+  await expect(page.getByRole('heading', { name: 'New rule from 2 transactions' })).toBeVisible();
+  await expect(page.getByText('Suggested rules')).toBeVisible();
+  await shot('from-selection');
 };
 ```
 
-Proof: the prefilled editor, the saved rule immediately recategorizing the row on `/`, and the new
-rule in `/rules`, with the builtin Payments rule not deletable and no "Other" row.
+Proof: the prefilled editor, the saved rule immediately recategorizing the row on `/`, the new rule
+in `/rules` with the builtin Payments rule locked and no "Other" row, the plain editor for an
+existing rule, the not-found state, and the multi-row editor.
 
 ## Gotchas
 
 - Order matters. After a reorder, prove the effect on a row that two rules both match, not just the
   list order.
 - A new rule is inserted above the Payments rule, never below it.
-- Rules persist in sessionStorage under the key `categorization`. Signed in they sync to the `rule`
+- Rules persist in sessionStorage under `money-pit`, in `state.categorization.rules`. Signed in they sync to the `rule`
   and `category` tables (`category_rule` is the legacy pre-split table), so check those rows in the
   `dev` DB.
