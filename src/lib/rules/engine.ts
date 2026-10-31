@@ -232,13 +232,17 @@ function describeCondition(condition: Condition): string {
 
 const MAX_SUMMARY = 80;
 
-export function describeGroup(group: RuleGroup, depth = 0): string {
+/** The complete one-line summary of a group, with no length cap. Search runs over this. */
+export function describeGroupFull(group: RuleGroup, depth = 0): string {
   if (!group?.rules?.length) return 'No conditions';
   const parts = group.rules.map((node) =>
-    'combinator' in node ? describeGroup(node, depth + 1) : describeCondition(node),
+    'combinator' in node ? describeGroupFull(node, depth + 1) : describeCondition(node),
   );
   const joined = parts.join(` ${group.combinator} `);
-  const wrapped = depth > 0 && parts.length > 1 ? `(${joined})` : joined;
-  if (depth > 0) return wrapped;
-  return wrapped.length > MAX_SUMMARY ? `${wrapped.slice(0, MAX_SUMMARY - 1)}…` : wrapped;
+  return depth > 0 && parts.length > 1 ? `(${joined})` : joined;
+}
+
+export function describeGroup(group: RuleGroup): string {
+  const full = describeGroupFull(group);
+  return full.length > MAX_SUMMARY ? `${full.slice(0, MAX_SUMMARY - 1)}…` : full;
 }
