@@ -69,7 +69,13 @@ describe('startAccountSync', () => {
     await start(
       fakeApi({
         datasets: [{ ...accountFile(), rows: [{ ...first, categoryOverride: 'pets' }] }],
-        preference: { chartMode: 'bar', personChartMode: 'bar', sortKey: 'amount', sortDir: 1 },
+        preference: {
+          chartMode: 'bar',
+          personChartMode: 'bar',
+          sortKey: 'amount',
+          sortDir: 1,
+          dismissedSuggestions: ['k1'],
+        },
       }),
     );
 
@@ -79,6 +85,13 @@ describe('startAccountSync', () => {
     expect(state().chartMode).toBe('bar');
     expect(state().personChartMode).toBe('bar');
     expect(state().sort).toEqual({ key: 'amount', dir: 1 });
+    expect(state().dismissedSuggestions).toEqual(['k1']);
+  });
+
+  it('falls back to no dismissals when the account has no preference row', async () => {
+    state().dismissSuggestion('stale');
+    await start(fakeApi());
+    expect(state().dismissedSuggestions).toEqual([]);
   });
 
   it('does not write the snapshot it just loaded back to the server', async () => {
@@ -169,7 +182,21 @@ describe('startAccountSync', () => {
       personChartMode: 'bar',
       sortKey: 'date',
       sortDir: -1,
+      dismissedSuggestions: [],
     });
+  });
+
+  it('mirrors a dismissal as a preference write, once', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
+    await start(api);
+    state().dismissSuggestion('k1');
+    state().dismissSuggestion('k1');
+    await sync!.settled();
+
+    expect(api.setPreference).toHaveBeenCalledTimes(1);
+    expect(api.setPreference).toHaveBeenCalledWith(
+      expect.objectContaining({ dismissedSuggestions: ['k1'] }),
+    );
   });
 
   it('turns Start over into per-slice writes with no account reset', async () => {
@@ -374,6 +401,18 @@ describe('claiming a signed-out session', () => {
     );
     expect(categorization.categories.find((c) => c.id === 'home')?.name).toBe('Renovations');
     expect(preference).toBeNull();
+    expect(claimArgs(api)[3]).toEqual([]);
+  });
+
+  it('claims dismissals even while the chart and sort choices are untouched', async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV)]);
+    state().dismissSuggestion('k1');
+    confirmClaim.mockResolvedValueOnce(true);
+    const api = fakeApi();
+    await start(api);
+
+    expect(claimArgs(api)[2]).toBeNull();
+    expect(claimArgs(api)[3]).toEqual(['k1']);
   });
 
   it('carries a changed chart type and sort order into the account', async () => {
@@ -391,6 +430,7 @@ describe('claiming a signed-out session', () => {
       sortKey: 'amount',
       sortDir: state().sort.dir,
     });
+    expect(claimArgs(api)[2]).not.toHaveProperty('dismissedSuggestions');
   });
 
   it('keeps the session in sessionStorage when the claim fails', async () => {

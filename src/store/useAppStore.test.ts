@@ -373,6 +373,32 @@ describe('selection and sorting', () => {
     expect(state().ruleSources).toEqual([]);
   });
 
+  it('remembers dismissed suggestions once, and persists them for the session', async () => {
+    state().dismissSuggestion('["description.contains:harris teeter"]');
+    const afterFirst = state().dismissedSuggestions;
+    state().dismissSuggestion('["description.contains:harris teeter"]');
+    expect(state().dismissedSuggestions).toBe(afterFirst);
+    expect(afterFirst).toEqual(['["description.contains:harris teeter"]']);
+
+    const stored = sessionStorage.getItem('money-pit');
+    useAppStore.setState({ dismissedSuggestions: [] });
+    sessionStorage.setItem('money-pit', stored!);
+    await useAppStore.persist.rehydrate();
+    expect(state().dismissedSuggestions).toEqual(afterFirst);
+  });
+
+  it('keeps only the most recent dismissals once past the cap', () => {
+    for (let i = 0; i < 502; i++) state().dismissSuggestion(`k${i}`);
+    expect(state().dismissedSuggestions).toHaveLength(500);
+    expect(state().dismissedSuggestions[0]).toBe('k2');
+  });
+
+  it('keeps dismissals out of the tab once an account owns them', () => {
+    state().dismissSuggestion('k');
+    useAppStore.setState({ mode: 'account' });
+    expect(sessionStorage.getItem('money-pit')).not.toContain('dismissedSuggestions');
+  });
+
   it('flips direction when the same column is clicked twice', () => {
     expect(state().sort).toEqual({ key: 'date', dir: -1 });
     state().setSort('date');
@@ -471,6 +497,21 @@ describe('session persistence', () => {
     expect(state().filters.columnFilters).toEqual({});
     expect(state().categories).toHaveLength(12);
     expect(state().rules).toHaveLength(11);
+  });
+
+  it('resetAll forgets dismissed suggestions', () => {
+    state().dismissSuggestion('k');
+    state().resetAll();
+    expect(state().dismissedSuggestions).toEqual([]);
+  });
+
+  it('loads a session stored before dismissals existed', async () => {
+    sessionStorage.setItem(
+      'money-pit',
+      JSON.stringify({ state: { rawRows: [], overrides: {} }, version: 0 }),
+    );
+    await useAppStore.persist.rehydrate();
+    expect(state().dismissedSuggestions).toEqual([]);
   });
 
   it('upgrades a pre-split session stored under the legacy rules key', async () => {

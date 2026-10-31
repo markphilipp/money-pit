@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { defaultCategorization } from '@/lib/defaultRules';
-import { categorizationInput, datasetInput, datasetsInput } from './input';
+import {
+  categorizationInput,
+  datasetInput,
+  datasetsInput,
+  dismissedInput,
+  preferenceInput,
+} from './input';
 
 const valid = defaultCategorization;
 
@@ -40,6 +46,31 @@ describe('categorizationInput', () => {
       ],
     };
     expect(categorizationInput.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe('preferenceInput', () => {
+  const view = { chartMode: 'donut', personChartMode: 'bar', sortKey: 'date', sortDir: -1 };
+
+  it('accepts a preference with dismissed suggestions', () => {
+    expect(preferenceInput.safeParse({ ...view, dismissedSuggestions: ['a'] }).success).toBe(true);
+  });
+
+  it('requires the dismissed list', () => {
+    expect(preferenceInput.safeParse(view).success).toBe(false);
+  });
+});
+
+describe('dismissedInput', () => {
+  it('bounds the list and each key', () => {
+    expect(dismissedInput.safeParse(Array(500).fill('k')).success).toBe(true);
+    expect(dismissedInput.safeParse(Array(501).fill('k')).success).toBe(false);
+    expect(dismissedInput.safeParse(['k'.repeat(500)]).success).toBe(true);
+    expect(dismissedInput.safeParse(['k'.repeat(501)]).success).toBe(false);
+  });
+
+  it('rejects non-string entries', () => {
+    expect(dismissedInput.safeParse([1]).success).toBe(false);
   });
 });
 

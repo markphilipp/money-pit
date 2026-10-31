@@ -4,18 +4,18 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area         | Files                                                                                            | Notes                                                                                                                                                                             |
-| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                 | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                 |
-| `dashboard`  | `Dashboard`                                                                                      | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                 |
-| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                  | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                      |
-| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`       | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                   |
-| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.              |
-| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                       | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                   |
-| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                          | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                 |
-| `upload`     | `EmptyState`, `UploadZone`                                                                       | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                        |
-| `auth`       | `SignInScreen`                                                                                   | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                      |
-| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                         | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog. |
+| Area         | Files                                                                                                                | Notes                                                                                                                                                                                                                              |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                                     | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                                                                  |
+| `dashboard`  | `Dashboard`                                                                                                          | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                                                                  |
+| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                                      | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                                                                       |
+| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                    |
+| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules. |
+| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                    |
+| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                                              | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                                                                  |
+| `upload`     | `EmptyState`, `UploadZone`                                                                                           | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                                                                         |
+| `auth`       | `SignInScreen`                                                                                                       | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                                                                       |
+| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                                             | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog.                                                  |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
@@ -54,6 +54,21 @@ Constraints that are easy to break by accident:
   whereas this page scrolls as a document with a sticky region.
 - Below **820px** sticky is switched off entirely and horizontal scrolling returns.
 - Anything new that pins must add its height to the chain, not guess a pixel offset.
+
+## Rule suggestions strip — `SuggestionsStrip`
+
+Rendered by `Dashboard` between `ChartsPane` and the table, in normal flow, so it scrolls away under
+the pinned charts and never joins the `--charts-h` chain. It memoizes `discoverProposals`
+(see [data-model.md](data-model.md#discovering-suggestions--srclibrulesdiscoverts)) over
+`useTransactions()`, the overrides and the dismissed keys, and renders nothing when there are none.
+
+Collapsed it is one line, "N rule suggestions for Other", a button with `aria-expanded`. Expanded it
+shows up to five cards, largest first, each with the rule's label, "Covers N rows in Other", up to
+three sample descriptions and two buttons whose accessible names carry the label ("Create rule for
+…", "Dismiss …"). **Create rule** calls `setRuleSources` with the proposal's `txnIds` and routes to
+`/rules/new`, where the editor takes over exactly as it does for a table selection. **Dismiss**
+stores the proposal's key and moves focus to the banner button, because the card that had it is
+gone.
 
 ## Charts
 

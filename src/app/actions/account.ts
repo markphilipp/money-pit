@@ -18,13 +18,15 @@ import { requireUserId } from '@/auth/session';
 import { fromStoredDatasets, type StoredRow } from '@/lib/sync';
 import type { StoredDataset } from '@/lib/sync';
 import type { Categorization } from '@/lib/types';
-import type { Preference } from '@/db/queries/preference';
+import type { Preference, ViewPreference } from '@/db/queries/preference';
 import {
   categorizationInput,
   datasetInput,
   datasetsInput,
+  dismissedInput,
   preferenceInput,
   rowsInput,
+  viewPreferenceInput,
 } from './input';
 
 // Server actions are public endpoints: every one takes its user from the session cookie and
@@ -87,17 +89,25 @@ export async function loadSnapshot() {
   });
 }
 
-/** Saves a signed-out session's datasets, overrides, categories and rules into the account; safe to retry. */
+/**
+ * Saves a signed-out session's datasets, overrides, categories and rules into the account; safe to
+ * retry. `view` is null while the chart and sort choices are still the defaults, so they never
+ * overwrite what the account saved. Dismissed suggestions are unioned either way.
+ */
 export async function claimLocal(
   datasets: StoredDataset[],
   categorization: Categorization,
-  preference: Preference | null,
+  view: ViewPreference | null,
+  dismissedSuggestions: string[],
 ) {
   const userId = await requireUserId();
   const local = {
     ...fromStoredDatasets(datasetsInput.parse(datasets)),
     ...categorizationInput.parse(categorization),
   };
-  const localPreference = preferenceInput.nullable().parse(preference);
-  await getDb().transaction((tx) => saveClaim(tx, userId, local, localPreference));
+  const localView = viewPreferenceInput.nullable().parse(view);
+  const localDismissed = dismissedInput.parse(dismissedSuggestions);
+  await getDb().transaction((tx) =>
+    saveClaim(tx, userId, { ...local, dismissedSuggestions: localDismissed }, localView),
+  );
 }

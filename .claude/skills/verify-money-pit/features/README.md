@@ -7,10 +7,11 @@ points, a proof covers all of them.
 | Feature                      | File                               | Entry points                                                                                                        |
 | ---------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Upload statements            | [upload.md](upload.md)             | Empty-state drop zone / file input, account menu "Add statement" (once data is loaded)                              |
-| Explore the table and charts | [explore.md](explore.md)           | Column menus, chart-mode toggle, Reset, reload persistence                                                          |
+| Explore the table and charts | [explore.md](explore.md)           | Column menus, per-chart mode toggles, charts pane hide/resize, Reset, reload persistence                            |
 | Recategorize transactions    | [recategorize.md](recategorize.md) | Category pill on a row, row context menu "Change category…", selection bar "Change category"                        |
 | Categories                   | [categories.md](categories.md)     | Account menu "Categories…", "Categories" link on `/rules`, `/categories`                                            |
 | Category rules               | [rules.md](rules.md)               | Account menu "Category rules…", `/rules`, row context menu, multi-select "Create rule", `/rules/new`, `/rules/[id]` |
+| Rule suggestions             | [suggestions.md](suggestions.md)   | Dashboard banner "N rule suggestions for Other", its Create rule and Dismiss buttons                                |
 | Uploaded files (datasets)    | [datasets.md](datasets.md)         | Account menu "Uploaded files…", `/datasets` (also has a drop zone)                                                  |
 | Account menu, reset and auth | [account-auth.md](account-auth.md) | Account menu ("Start over" confirmation, "Sign in…"), `/sign-in`, `/privacy`, `/terms`, `/api/auth/*`               |
 

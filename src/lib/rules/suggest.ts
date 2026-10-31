@@ -201,7 +201,7 @@ function jaccard(a: Set<string>, b: Set<string>): number {
 }
 
 /** Single-linkage over content-token overlap; selections are small, so O(n²) is free. */
-function clusterExamples(examples: Example[]): Example[][] {
+function clusterExamples<E extends Example>(examples: E[]): E[][] {
   const parent = examples.map((_, i) => i);
   const find = (i: number): number => {
     while (parent[i] !== i) i = parent[i] = parent[parent[i]];
@@ -215,7 +215,7 @@ function clusterExamples(examples: Example[]): Example[][] {
       if (jaccard(sets[i], sets[j]) >= CLUSTER_SIMILARITY) parent[find(i)] = find(j);
     }
   }
-  const byRoot = new Map<number, Example[]>();
+  const byRoot = new Map<number, E[]>();
   examples.forEach((example, i) => {
     const root = find(i);
     const bucket = byRoot.get(root);
@@ -223,6 +223,15 @@ function clusterExamples(examples: Example[]): Example[][] {
     else byRoot.set(root, [example]);
   });
   return [...byRoot.values()];
+}
+
+/** Groups items whose descriptions share their content words, using the same test as suggestions. */
+export function clusterByContent<T extends { description: string }>(items: T[]): T[][] {
+  const examples = items.map((item) => {
+    const description = item.description.trim();
+    return { item, description, tokens: tokenize(description) };
+  });
+  return clusterExamples(examples).map((cluster) => cluster.map((e) => e.item));
 }
 
 const containsCondition = (value: string): Condition => ({

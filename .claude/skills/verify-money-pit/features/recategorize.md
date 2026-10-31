@@ -6,15 +6,19 @@ category pill and in the category chart.
 ## Sub-features
 
 - Override from the pill, from the row context menu ("Change category…"), or from the selection
-  bar's "Change category" button (bulk).
+  bar's "Change category" button (bulk). With several rows ticked, one choice applies to all and
+  clears the selection.
 - The picker lists categories alphabetically and never offers Payments.
 - Searching the picker. A search with no match offers `Create category “<query>”`, which adds the
   category and files the targeted rows under it (Enter does the same). Payments is hidden, so
-  searching it offers nothing.
+  searching `payments` shows "No matching category". Arrow keys, Enter and Escape drive it.
 - The picker's search box has focus on open, from all three entry points.
 - Overrides and the created category persist across a reload.
-- A rule edit can offer to clear manual categories ("Clear N manual category…" checkbox in the rule
-  editor). See [rules.md](rules.md).
+- A rule edit can offer to clear manual categories ("Clear N manual categor…" checkbox, only shown
+  when some are shadowing the rule). Match it with a regexp, the label is plural-sensitive. See
+  [rules.md](rules.md).
+- Signed out the override lives in sessionStorage. Signed in it's the `category_override` column on
+  the row.
 
 ## How to get to it (user POV)
 

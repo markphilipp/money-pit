@@ -16,8 +16,8 @@ CSV files → datasets (persisted, one per file)
                    charts · stats strip · table
 ```
 
-Only `datasets`, `categories`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort`
-and `ruleSources` are persisted (`partialize` in `src/store/useAppStore.ts`, under the key
+Only `datasets`, `categories`, `rules`, `overrides`, `filters`, `chartMode`, `personChartMode`, `sort`,
+`ruleSources` and `dismissedSuggestions` are persisted (`partialize` in `src/store/useAppStore.ts`, under the key
 `categorization` for the category/rule pair — see [data-model.md](data-model.md)). Signed out, all
 of them go to
 `sessionStorage`. Signed in, only `filters` and `ruleSources` do, and the account holds the rest
@@ -59,6 +59,9 @@ Actions worth knowing before you add one:
 - `setRuleSources(ids)` — seeds `/rules/new` with the transactions to induce a rule from. The
   _route_ decides which screen shows; this only carries its subject. It is inside `partialize`, so
   reloading `/rules/new` keeps working instead of landing on a screen with no subject.
+- `dismissSuggestion(key)` — remembers a proposal key from `discoverProposals` so it stops showing.
+  Idempotent. Only the keys are stored: the proposals themselves are derived from the transactions
+  every render, which is how an upload re-checks them. `resetAll` clears them with everything else.
 - `clearOverrides(ids)` — hands rows back to the rules. Used when saving a rule that would otherwise
   be shadowed by manual categories on the very rows it was induced from.
 - `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
@@ -104,6 +107,7 @@ subscribes to the store and turns each diff into a server action from `src/app/a
 | `categories`, `rules`                  | ref changed | `replaceCategories` with both lists, written together                                          |
 | `overrides`                            | diff        | `setOverrides` with the changed rows, identified by content                                    |
 | `chartMode`, `personChartMode`, `sort` | changed     | `setPreference`                                                                                |
+| `dismissedSuggestions`                 | changed     | `setPreference`, the same row and the same write                                               |
 
 There is no whole-account reset. Start over (`resetAll`) is the ordinary diffs: every dataset
 removed, categories and rules replaced with the defaults, overrides cleared, preferences reset. Only
@@ -131,7 +135,8 @@ which drops the tab's statements from `sessionStorage`. So before the first load
 tab still holds signed-out rows (the case right after a sign-in), `AccountSync` asks whether to save
 them. Save calls `claimLocal`, which runs `claimInto()` from `src/lib/claim.ts` against the account
 in one transaction (`saveClaim`, `src/db/queries/claim.ts`). It also saves the tab's chart type and sort order, unless both are still the
-defaults, so untouched defaults never overwrite what the account has saved. Discard just loads the
+defaults, so untouched defaults never overwrite what the account has saved. Dismissed suggestions
+are always sent and unioned with the account's. Discard just loads the
 account. A failed claim stops before the load, so the
 rows stay in the tab and a reload asks again. The prompt can't be dismissed without choosing, and
 focus starts on Save so Enter never discards.

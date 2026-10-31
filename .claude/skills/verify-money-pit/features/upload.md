@@ -10,7 +10,7 @@ blocking good ones.
 - Multi-file upload with overlap dedupe. `june.csv` + `july.csv` give 11 visible rows: 8 + 6, minus
   2 shared, minus the payment row, which is hidden by default.
 - A bad file gets an inline `alert` naming the file, while other files still load.
-- A later upload adds to existing rows, through the same file input.
+- A later upload adds to existing rows, through the account menu's input.
 
 ## How to get to it (user POV)
 
@@ -18,6 +18,10 @@ blocking good ones.
 - Once data is loaded, the account menu (avatar button, "Account menu") has an "Add statement" item.
   It opens the picker for the hidden input labelled "Add statement CSV files". Drive that input
   directly with `setInputFiles`, because a native file picker can't be scripted.
+- There are two file inputs. The empty-state drop zone has its own, and the account menu's is always
+  mounted, even on the empty state. A bare `input[type=file]` resolves to the menu's (it comes first
+  in the DOM), so errors from it show in the menu's fixed `alert` with a Dismiss button, not in the
+  drop zone's inline one. Target the input you mean when you assert on the error.
 
 ## Driving it with drive.mjs
 

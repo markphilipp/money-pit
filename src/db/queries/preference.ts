@@ -4,7 +4,11 @@ import { preference } from '@/db/schema';
 
 export type Preference = Omit<typeof preference.$inferSelect, 'userId'>;
 
-export async function upsertPreference(tx: Tx, userId: string, value: Preference) {
+/** The columns a user changes by using the dashboard, as opposed to dismissing a suggestion. */
+export type ViewPreference = Omit<Preference, 'dismissedSuggestions'>;
+
+/** Columns left out keep their stored value, or their default on a first write. */
+export async function upsertPreference(tx: Tx, userId: string, value: Partial<Preference>) {
   await tx
     .insert(preference)
     .values({ userId, ...value })
@@ -18,6 +22,7 @@ export async function readPreference(tx: Tx, userId: string): Promise<Preference
       personChartMode: preference.personChartMode,
       sortKey: preference.sortKey,
       sortDir: preference.sortDir,
+      dismissedSuggestions: preference.dismissedSuggestions,
     })
     .from(preference)
     .where(eq(preference.userId, userId));

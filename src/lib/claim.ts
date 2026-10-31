@@ -1,10 +1,12 @@
 import { defaultCategorization } from './defaultRules';
+import { MAX_DISMISSED } from './rules/discover';
 import type { Categorization, Dataset } from './types';
 
 /** Everything a signed-out session or an account holds, as `claimInto` folds it. */
 export interface Holdings extends Categorization {
   datasets: Dataset[];
   overrides: Record<string, string>;
+  dismissedSuggestions: string[];
 }
 
 // Conditions read back from jsonb lose their key order, so compare structurally.
@@ -36,7 +38,8 @@ function union<T extends { id: string; builtin?: boolean }>(account: T[], local:
  * which survives the merge, and the session's win. An account still on the seeded defaults
  * takes the session's categories and rules wholesale; otherwise only the ones the account doesn't
  * have are added, ahead of the builtins. Category ids are name slugs, so a shared id is the same
- * category and the account's version stays. Rule ids are random, so a shared id only happens for
+ * category and the account's version stays. Dismissed suggestions are unioned, since a proposal
+ * turned down on either side shouldn't come back. Rule ids are random, so a shared id only happens for
  * the fixed-id builtins; every other rule from each side is just unioned in, never merged.
  */
 export function claimInto(account: Holdings, local: Holdings): Holdings {
@@ -51,5 +54,8 @@ export function claimInto(account: Holdings, local: Holdings): Holdings {
     categories: seeded ? local.categories : union(account.categories, local.categories),
     rules: seeded ? local.rules : union(account.rules, local.rules),
     overrides: { ...account.overrides, ...local.overrides },
+    dismissedSuggestions: [
+      ...new Set([...account.dismissedSuggestions, ...local.dismissedSuggestions]),
+    ].slice(-MAX_DISMISSED),
   };
 }
