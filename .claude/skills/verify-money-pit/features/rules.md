@@ -76,7 +76,7 @@ export default async ({ page, shot, fixture }) => {
   await expect(page.getByRole('button', { name: 'Move Payments up' })).toBeDisabled();
   await shot('rules-list');
   await page.getByRole('link', { name: 'Edit Merchant Credits' }).click();
-  await expect(page.getByRole('heading', { name: 'Edit Merchant Credits' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Edit Merchant Credits rule' })).toBeVisible();
   await page.getByRole('link', { name: 'Cancel' }).click();
   await expect(page).toHaveURL(/\/rules$/);
   await page.goto('/rules/does-not-exist');
@@ -100,6 +100,6 @@ existing rule, the not-found state, and the multi-row editor.
 - Order matters. After a reorder, prove the effect on a row that two rules both match, not just the
   list order.
 - A new rule is inserted above the Payments rule, never below it.
-- Rules persist in sessionStorage under the key `categorization`. Signed in they sync to the `rule`
+- Rules persist in sessionStorage under `money-pit`, in `state.categorization.rules`. Signed in they sync to the `rule`
   and `category` tables (`category_rule` is the legacy pre-split table), so check those rows in the
   `dev` DB.

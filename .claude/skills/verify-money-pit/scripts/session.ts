@@ -11,7 +11,7 @@ import { testUtils } from 'better-auth/plugins';
 import { asc, eq, like } from 'drizzle-orm';
 import { authOptions } from '@/auth';
 import { getDb } from '@/db';
-import { categoryRule, preference, session, statementRow, user } from '@/db/schema';
+import { category, dataset, preference, rule, session, statementRow, user } from '@/db/schema';
 
 const [command, userId] = process.argv.slice(2);
 const db = getDb();
@@ -26,11 +26,21 @@ async function state(id: string) {
       .from(statementRow)
       .where(eq(statementRow.userId, id))
       .then((rows) => rows.filter((r) => r.category)),
+    datasets: await db
+      .select({ id: dataset.id, name: dataset.name })
+      .from(dataset)
+      .where(eq(dataset.userId, id))
+      .orderBy(asc(dataset.uploadedAt)),
+    categories: await db
+      .select({ id: category.id, name: category.name, builtin: category.builtin })
+      .from(category)
+      .where(eq(category.userId, id))
+      .orderBy(asc(category.position)),
     rules: await db
-      .select({ id: categoryRule.id, name: categoryRule.name, builtin: categoryRule.builtin })
-      .from(categoryRule)
-      .where(eq(categoryRule.userId, id))
-      .orderBy(asc(categoryRule.position)),
+      .select({ id: rule.id, categoryId: rule.categoryId, builtin: rule.builtin })
+      .from(rule)
+      .where(eq(rule.userId, id))
+      .orderBy(asc(rule.position)),
     preference: (await db.select().from(preference).where(eq(preference.userId, id)))[0] ?? null,
     sessions: await db
       .select({ ipAddress: session.ipAddress, userAgent: session.userAgent })

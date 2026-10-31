@@ -79,7 +79,8 @@ The scenario default-exports
     upload signed out first to reach the claim dialog. Each call after the first mints a new
     session, because signing out deletes the old one.
   - `account.state()` returns what the `dev` DB holds for the user: `exists`, `rows`, `overrides`,
-    `rules` (in order), `preference` and `sessions` (with `ipAddress`/`userAgent`).
+    `datasets`, `categories` and `rules` (each in order), `preference` (with `dismissedSuggestions`)
+    and `sessions` (with `ipAddress`/`userAgent`).
   - `account.userId`.
 - Throw, or use `expect` from `@playwright/test`, to fail the run.
 

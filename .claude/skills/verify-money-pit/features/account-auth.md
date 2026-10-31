@@ -7,7 +7,7 @@ in Postgres. Every local server uses the `dev` branch. The only personal data ke
 ## Sub-features
 
 - **Account menu** ("Account menu" avatar, top right of every page):
-  - always: "Categories…" and "Category rules…";
+  - always: "Uploaded files…", "Categories…", "Category rules…" and "Keyboard shortcuts";
   - with data (none of these on the empty state): "Add statement", and "Start over". "Start over"
     opens an alertdialog titled "Start over?" with "Cancel" and a "Start over" button. Cancel keeps
     every row. Confirming clears rows, rule edits and overrides (`resetAll`) and lands on the empty
@@ -16,18 +16,20 @@ in Postgres. Every local server uses the `dev` branch. The only personal data ke
   - signed out: "Sign in…", an enabled link to `/sign-in`;
   - signed in: "Sign out", and "Delete account…" → alertdialog "Delete your account?" with "Cancel"
     and "Delete my account", which deletes the user (everything cascades) and signs out. Failures
-    show an alert: "Couldn't sign out…" or "Couldn't delete your account…".
+    show an alert: "Couldn’t sign out, so you’re still signed in. Try again." or "Couldn’t delete your account. Try again."
 - **`/sign-in`**: heading "Sign in", "Continue with Google" / "Continue with GitHub", a line linking
   the terms and the privacy policy, a privacy note, and "Back to the dashboard". A provider without
-  credentials answers 404 and the page says "<Provider> sign-in isn't set up yet.", and the buttons
+  credentials answers 404 and the page says "<Provider> sign-in isn’t set up yet.", and the buttons
   re-enable. A signed-in visitor is redirected to `/`.
-- **Claim dialog**: signing in with rows still in the tab opens "Save this session's statements to
+- **Claim dialog**: signing in with rows still in the tab opens "Save this session’s statements to
   your account?", with "Save to my account" (focused, so Enter saves) and "Discard". Escape and
   outside clicks don't close it. Chart modes and sort carry over unless they're still the defaults.
 - **Sync**: after the account snapshot loads, every change is queued to a server action
   (`createDataset`/`appendDatasetRows`/`removeDataset`, `setOverrides`, `replaceCategories`,
-  `setPreference`). A `role="status"` save toast reports saving, and a failed write shows
-  "Couldn't save…" in it. sessionStorage keeps only `filters` and `ruleSources`.
+  `setPreference`; `loadSnapshot` and `claimLocal` run once at sign-in). A `role="status"` save
+  toast reports "Saving…" and "Saved". A failed write reads "Couldn’t save. Retrying (n of 3)…",
+  then "Couldn’t save. Your last change was undone." (Dismiss) or "Couldn’t save, and your account
+  is unreachable." (Reload). sessionStorage keeps only `filters` and `ruleSources`.
 - **Empty state copy**: signed out "Without an account, nothing is uploaded…", signed in "…saved
   to your account…".
 - **What's stored**: user `name`/`image` empty for OAuth sign-ups, provider tokens (`idToken`,

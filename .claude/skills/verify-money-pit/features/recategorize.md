@@ -1,7 +1,7 @@
 # Recategorize transactions
 
 Override a row's category by hand. A manual category beats every rule, and it shows in the row's
-category pill and in the category chart. An override that points at a since-deleted rule shows as
+category pill and in the category chart. An override that points at a since-deleted category shows as
 Other.
 
 ## Sub-features
