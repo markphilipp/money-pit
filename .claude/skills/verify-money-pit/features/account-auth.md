@@ -1,15 +1,18 @@
 # Account and auth
 
-The avatar "Account menu" holds upload, reset, rules and sign-in. Better Auth serves `/api/auth/*` on the
-same origin. Sign-in UI isn't built yet: the menu item reads "Sign in" with a "coming soon" tag and is disabled.
+The avatar "Account menu" holds upload, reset, categories, rules and sign-in. Better Auth serves
+`/api/auth/*` on the same origin. Signed out, the menu's "Sign in…" is a link to `/sign-in`. Signed
+in, it shows "Sign out" and "Delete account…" instead.
 
 ## Sub-features
 
-- **Account menu, empty state:** "Category rules…" and a disabled "Sign in" item.
-- **Account menu, with data:** also "Add statement" and "Start over". "Start over" turns into
-  "Confirm reset", and picking that one clears all rows, rules edits and overrides (`resetAll`). It
-  lands back on the empty state. Once signed-in sync exists, this deletes account data, so verify it
-  asks for confirmation.
+- **Account menu, empty state:** "Categories…", "Category rules…" and "Sign in…".
+- **Account menu, with data:** also "Add statement" and "Start over". "Start over" opens a
+  confirmation dialog ("Start over?"), and confirming clears all rows, rule edits and overrides
+  (`resetAll`). It lands back on the empty state.
+- **`/sign-in`:** heading "Sign in", one "Continue with <provider>" button per provider, links to
+  `/terms` and `/privacy`, and a way back to the dashboard.
+- **`/privacy`, `/terms`:** static pages, 200.
 - **`GET /api/auth/ok`** returns `{"ok":true}`.
 - **`GET /api/auth/get-session`** returns `null` without a cookie. With a valid session cookie it
   returns the user. `name` and `image` are empty by the no-PII rule.
@@ -19,8 +22,8 @@ same origin. Sign-in UI isn't built yet: the menu item reads "Sign in" with a "c
 
 ## How to get to it (user POV)
 
-The avatar button at the top right of every page. The API isn't user-facing yet; the sign-in UI
-lands in plan step 6.
+The avatar button at the top right of every page. "Sign in…" leads to `/sign-in`. The API itself
+isn't user-facing.
 
 ## Driving it with drive.mjs
 
@@ -29,18 +32,26 @@ import { expect } from '@playwright/test';
 export default async ({ page, shot, baseURL, log }) => {
   await page.goto('/');
   await page.getByLabel('Account menu').click();
-  await expect(page.getByRole('menuitem', { name: /Sign in/ })).toBeDisabled();
+  await expect(page.getByRole('menuitem', { name: 'Categories…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
   await shot('account-menu');
+  await page.getByRole('menuitem', { name: 'Sign in…' }).click();
+  await expect(page).toHaveURL(/\/sign-in$/);
+  await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Continue with / }).first()).toBeVisible();
+  await shot('sign-in');
   const ok = await page.request.get(`${baseURL}/api/auth/ok`);
-  log(`/api/auth/ok ${ok.status()} ${await ok.text()}`);
   expect(await ok.json()).toEqual({ ok: true });
   const session = await page.request.get(`${baseURL}/api/auth/get-session`);
-  log(`/api/auth/get-session ${session.status()} ${await session.text()}`);
   expect(await session.json()).toBeNull();
+  for (const path of ['/privacy', '/terms']) {
+    expect((await page.request.get(`${baseURL}${path}`)).status()).toBe(200);
+  }
 };
 ```
 
-For a signed-in session and the token-stripping check, run `bun run auth:check`. It exercises the
+The Continue buttons start a real OAuth redirect, so the scenario only asserts they render. For a
+signed-in session and the token-stripping check, run `bun run auth:check`. It exercises the
 real `getAuth()` against the `dev` DB and deletes its test user.
 
 ## Gotchas

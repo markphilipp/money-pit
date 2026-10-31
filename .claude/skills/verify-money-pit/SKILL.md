@@ -72,21 +72,22 @@ Page `console.error` and uncaught errors are logged automatically. Put throwaway
 
 These are the stable handles. They come from the app's ARIA labels and match `e2e/*.spec.ts`:
 
-| What           | Handle                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Upload         | `page.setInputFiles('input[type=file]', [...])`. The hidden input's label is "Add statement CSV files".                                                            |
-| Empty state    | `getByText('Drop statement CSVs here')`                                                                                                                            |
-| Row count      | `getByRole('heading', { name: /Transactions/ })` shows `(N)`                                                                                                       |
-| A row          | `getByRole('row', { name: /MERCHANT/ })`                                                                                                                           |
-| Column filters | `getByRole('button', { name: 'Person column menu' })`, same for `Amount`/`Date`/`Description`. Then e.g. `getByLabel('Amount filter value')`                       |
-| Chart mode     | `getByRole('button', { name: 'Bars' })`, which carries `aria-pressed`                                                                                              |
-| Reset filters  | `getByRole('button', { name: 'Reset' })`                                                                                                                           |
-| Recategorize   | `row.getByTitle('Change category')`, then `getByPlaceholder('Search categories…')`, then `getByRole('dialog', { name: 'Choose category' }).getByRole('option', …)` |
-| Rule from row  | Right-click the row, then `getByRole('menuitem', { name: 'Create rule from transaction' })`                                                                        |
-| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Category rules…' })`                                                                            |
-| Rules list     | `/rules`: heading "Category rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and links "New rule" and "Done"                       |
-| Rule editor    | `getByLabel('Category name')`, `getByTestId('value-editor')`, `getByRole('button', { name: 'Save rule' })`                                                         |
-| Auth API       | `curl -s http://127.0.0.1:3310/api/auth/ok` and `/api/auth/get-session` (`null` when signed out)                                                                   |
+| What           | Handle                                                                                                                                                                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upload         | `page.setInputFiles('input[type=file]', [...])`. The hidden input's label is "Add statement CSV files".                                                                                                                                  |
+| Empty state    | `getByText('Drop statement CSVs here')`                                                                                                                                                                                                  |
+| Row count      | `getByRole('heading', { name: /Transactions/ })` shows `(N)`                                                                                                                                                                             |
+| A row          | `getByRole('row', { name: /MERCHANT/ })`                                                                                                                                                                                                 |
+| Column filters | `getByRole('button', { name: 'Person column menu' })`, same for `Amount`/`Date`/`Description`. Then e.g. `getByLabel('Amount filter value')`                                                                                             |
+| Chart mode     | `getByRole('button', { name: 'Bars' })`, which carries `aria-pressed`                                                                                                                                                                    |
+| Reset filters  | `getByRole('button', { name: 'Reset' })`                                                                                                                                                                                                 |
+| Recategorize   | `row.getByTitle('Change category')` (or right-click "Change category…", or the "Selection actions" group), then `getByPlaceholder('Search categories…')`, then `getByRole('dialog', { name: 'Choose category' }).getByRole('option', …)` |
+| Rule from row  | Right-click the row, then `getByRole('menuitem', { name: 'Create rule from transaction' })`                                                                                                                                              |
+| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Category rules…' })`; also `Categories…` and `Sign in…`                                                                                                               |
+| Categories     | `/categories`: heading "Categories", `Rename <name>` / `Delete <name>`, `getByLabel('New category', { exact: true })` and "Add category"                                                                                                 |
+| Rules list     | `/rules`: heading "Category rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and links "New rule" and "Done"                                                                                             |
+| Rule editor    | `getByLabel('Category name')`, `getByTestId('value-editor')`, `getByRole('button', { name: 'Save rule' })`                                                                                                                               |
+| Auth API       | `curl -s http://127.0.0.1:3310/api/auth/ok` and `/api/auth/get-session` (`null` when signed out)                                                                                                                                         |
 
 Per-feature recipes are in `features/`. Read `features/README.md` and drive **every** entry point
 the map lists for the feature you're proving, not just the convenient one.

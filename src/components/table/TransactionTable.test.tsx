@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@/store/useAppStore';
 import { resetStore, seedStore } from '@/test/fixtures';
@@ -131,6 +131,61 @@ describe('TransactionTable', () => {
     await user.keyboard('{Enter}');
 
     expect(within(bodyRows()[0]).getByTitle('Change category')).toHaveTextContent('Groceries');
+  });
+
+  it('lists picker options alphabetically', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    const names = within(screen.getByRole('dialog'))
+      .getAllByRole('option')
+      .map((o) => o.textContent ?? '');
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+  });
+
+  it('offers to create the searched category when nothing matches', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    await user.keyboard('Gym');
+    await user.click(screen.getByRole('button', { name: /Create category “Gym”/ }));
+
+    const { categories, overrides } = useAppStore.getState();
+    const gym = categories.find((c) => c.name === 'Gym');
+    expect(gym).toBeDefined();
+    expect(Object.values(overrides)).toEqual([gym!.id]);
+    expect(within(bodyRows()[0]).getByTitle('Change category')).toHaveTextContent('Gym');
+  });
+
+  it('does not offer to create Payments, which the picker hides', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    await user.keyboard('Payments');
+    expect(screen.queryByRole('button', { name: /Create category/ })).not.toBeInTheDocument();
+    expect(screen.getByText('No matching category')).toBeInTheDocument();
+  });
+
+  it('focuses the picker search from the pill, the bulk bar and the context menu', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+    const search = () => screen.getByRole('combobox', { name: 'Search categories' });
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    expect(search()).toHaveFocus();
+    await user.keyboard('{Escape}');
+
+    await user.pointer({ keys: '[MouseRight]', target: bodyRows()[0] });
+    await user.click(screen.getByRole('menuitem', { name: 'Change category…' }));
+    await waitFor(() => expect(search()).toHaveFocus());
+    await user.keyboard('{Escape}');
+
+    await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Change category' }));
+    expect(search()).toHaveFocus();
   });
 
   it('closes the picker on Escape without changing anything', async () => {

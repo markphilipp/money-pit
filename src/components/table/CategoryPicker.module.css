@@ -54,6 +54,13 @@
   flex-shrink: 0;
 }
 
+.plus {
+  width: 9px;
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
 .check {
   margin-left: auto;
   color: var(--accent);

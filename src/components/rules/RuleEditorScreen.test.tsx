@@ -45,6 +45,13 @@ describe('RuleEditorScreen', () => {
     expect(screen.getByLabelText('Category name')).toHaveValue('Blue Ridge Bakery');
   });
 
+  it('focuses the new category name on arrival', async () => {
+    await openEditor(BAKERIES);
+    render(<RuleEditorScreen />);
+
+    expect(screen.getByLabelText('Category name')).toHaveFocus();
+  });
+
   it('always offers the exact descriptions as the last starting point', async () => {
     await openEditor(BAKERIES);
     render(<RuleEditorScreen />);
