@@ -42,7 +42,16 @@ async function applySnapshot(api: AccountApi) {
   const { rawRows, overrides } = fromStoredRows(rows);
   return {
     mode: 'account',
-    rawRows,
+    datasets: rawRows.length
+      ? [
+          {
+            id: 'account',
+            name: 'Earlier uploads',
+            uploadedAt: new Date(0).toISOString(),
+            rows: rawRows,
+          },
+        ]
+      : [],
     overrides,
     categories,
     rules,

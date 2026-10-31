@@ -337,6 +337,6 @@ describe('claiming a signed-out session', () => {
     expect(onError).toHaveBeenCalledWith(expect.stringMatching(/Reload to try again/));
     expect(api.loadSnapshot).not.toHaveBeenCalled();
     expect(state().mode).toBe('local');
-    expect(JSON.parse(sessionStorage.getItem('money-pit')!).state.rawRows).toHaveLength(7);
+    expect(JSON.parse(sessionStorage.getItem('money-pit')!).state.datasets).toHaveLength(1);
   });
 });
