@@ -11,8 +11,14 @@ import { defaultCategorization } from '@/lib/defaultRules';
 import { claimInto } from '@/lib/claim';
 import { fromStoredRows, overrideChanges, toStoredRows, type StoredRow } from '@/lib/sync';
 import type { Categorization } from '@/lib/types';
-import type { Preference } from '@/db/queries/preference';
-import { categorizationInput, preferenceInput, rowsInput } from './input';
+import type { Preference, ViewPreference } from '@/db/queries/preference';
+import {
+  categorizationInput,
+  dismissedInput,
+  preferenceInput,
+  rowsInput,
+  viewPreferenceInput,
+} from './input';
 
 // Server actions are public endpoints: every one takes its user from the session cookie and
 // parses its arguments, whatever their declared types.
@@ -68,24 +74,31 @@ export async function loadSnapshot() {
   });
 }
 
-/** Saves a signed-out session's rows, overrides, categories and rules into the account; safe to retry. */
+/**
+ * Saves a signed-out session's rows, overrides, categories and rules into the account; safe to
+ * retry. `view` is null while the chart and sort choices are still the defaults, so they never
+ * overwrite what the account saved. Dismissed suggestions are unioned either way.
+ */
 export async function claimLocal(
   rows: StoredRow[],
   categorization: Categorization,
-  preference: Preference | null,
+  view: ViewPreference | null,
+  dismissedSuggestions: string[],
 ) {
   const userId = await requireUserId();
   const local = {
     ...fromStoredRows(rowsInput.parse(rows)),
     ...categorizationInput.parse(categorization),
   };
-  const localPreference = preferenceInput.nullable().parse(preference);
+  const localView = viewPreferenceInput.nullable().parse(view);
+  const localDismissed = dismissedInput.parse(dismissedSuggestions);
   await getDb().transaction(async (tx) => {
     const account = {
       ...fromStoredRows(await readRows(tx, userId)),
       ...(await readCategorization(tx, userId)),
+      dismissedSuggestions: (await readPreference(tx, userId))?.dismissedSuggestions ?? [],
     };
-    const merged = claimInto(account, local);
+    const merged = claimInto(account, { ...local, dismissedSuggestions: localDismissed });
     await insertRows(
       tx,
       userId,
@@ -97,6 +110,11 @@ export async function claimLocal(
       overrideChanges(account.rawRows, account.overrides, merged.overrides),
     );
     await replaceCategorization(tx, userId, merged);
-    if (localPreference) await upsertPreference(tx, userId, localPreference);
+    if (localView || merged.dismissedSuggestions.length > account.dismissedSuggestions.length) {
+      await upsertPreference(tx, userId, {
+        ...localView,
+        dismissedSuggestions: merged.dismissedSuggestions,
+      });
+    }
   });
 }

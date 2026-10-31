@@ -6,6 +6,7 @@ import { CategoryChart } from '@/components/charts/CategoryChart';
 import { PersonChart } from '@/components/charts/PersonChart';
 import chartStyles from '@/components/charts/Chart.module.css';
 import { Masthead } from '@/components/layout/Masthead';
+import { SuggestionsStrip } from '@/components/rules/SuggestionsStrip';
 import { TransactionTable } from '@/components/table/TransactionTable';
 import { EmptyState } from '@/components/upload/EmptyState';
 import { useHydrated } from '@/store/useAppStore';
@@ -41,6 +42,8 @@ export function Dashboard() {
           <PersonChart />
         </div>
       </ChartsPane>
+
+      <SuggestionsStrip />
 
       <TransactionTable />
     </main>

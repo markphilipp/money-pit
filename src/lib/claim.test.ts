@@ -20,10 +20,25 @@ const dataset = (patch: Partial<Dataset>): Dataset => ({
   categories: defaultCategories,
   rules: defaultRules,
   overrides: {},
+  dismissedSuggestions: [],
   ...patch,
 });
 
 describe('claimInto', () => {
+  it('unions dismissed suggestions from both sides, once each', () => {
+    const merged = claimInto(
+      dataset({ dismissedSuggestions: ['a', 'b'] }),
+      dataset({ dismissedSuggestions: ['b', 'c'] }),
+    );
+    expect(merged.dismissedSuggestions).toEqual(['a', 'b', 'c']);
+  });
+
+  it('claims a session twice without changing the dismissals', () => {
+    const local = dataset({ dismissedSuggestions: ['b', 'c'] });
+    const once = claimInto(dataset({ dismissedSuggestions: ['a'] }), local);
+    expect(claimInto(once, local).dismissedSuggestions).toEqual(once.dismissedSuggestions);
+  });
+
   it('dedupes the session against the account like a second upload', () => {
     const merged = claimInto(dataset({ rawRows: sample }), dataset({ rawRows: second }));
     expect(merged.rawRows).toHaveLength(8);

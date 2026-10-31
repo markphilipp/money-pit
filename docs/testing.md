@@ -60,7 +60,9 @@ Existing specs cover the empty state, multi-file upload with overlap dedupe, inl
 column-menu filtering + reload persistence, recategorizing from a pill, creating a rule from a row,
 inducing a merchant rule from several selected rows (`merchants.csv` — three stores of one synthetic
 merchant), managing rules on `/rules`, editing a rule on its own URL and returning through browser
-history, the 404 status for an unknown URL, and bulk selection.
+history, the 404 status for an unknown URL, bulk selection, and the dashboard's rule suggestions (`suggestions-a.csv` and `suggestions-b.csv`,
+which overlap): dismiss one, upload the second file, and see it stay gone while a newly eligible
+merchant appears.
 
 Routing assertions belong here, not in the unit tests: this is the only layer running a real
 router.

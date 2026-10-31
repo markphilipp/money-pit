@@ -6,10 +6,17 @@ category pill and in the category chart.
 ## Sub-features
 
 - Single-row override from the pill.
-- Searching the category list in the picker.
+- The same picker from the row's right-click "Change category…" and from the selection bar's
+  "Change category" button. With several rows ticked, one choice applies to all and clears the
+  selection.
+- Searching the category list in the picker. Payments is never offered, so searching `payments`
+  shows "No matching category". Arrow keys, Enter and Escape drive it.
 - Overrides persist across a reload.
-- A rule edit can offer to clear manual categories ("Clear N manual category…" checkbox in the rule
-  editor). See [rules.md](rules.md).
+- A rule edit can offer to clear manual categories ("Clear N manual categor…" checkbox, only shown
+  when some are shadowing the rule). Match it with a regexp, the label is plural-sensitive. See
+  [rules.md](rules.md).
+- Signed out the override lives in sessionStorage. Signed in it's the `category_override` column on
+  the row.
 
 ## How to get to it (user POV)
 

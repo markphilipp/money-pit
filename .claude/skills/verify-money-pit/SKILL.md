@@ -6,7 +6,7 @@ description: Drive The Money Pit (money-pit Next.js spending dashboard) the way 
 # Verify money-pit
 
 The primary surface is the web UI at `/`, `/rules`, `/rules/new` and `/rules/[id]`. The secondary
-surface is the Better Auth HTTP API at `/api/auth/*`. There is no sign-in UI yet. Signed-out, all
+surface is the Better Auth HTTP API at `/api/auth/*`, reached from the `/sign-in` page. Signed-out, all
 statement data lives in the browser's `sessionStorage` and never reaches the server.
 
 Every helper lives in `.claude/skills/verify-money-pit/scripts/` and runs from the repo root. Each
@@ -63,7 +63,7 @@ The scenario default-exports `async ({ page, shot, fixture, baseURL, log }) => {
 - `page` is a Playwright `Page` whose `baseURL` is the instance, so `page.goto('/')` works.
 - `shot(label)` saves a full-page screenshot.
 - `fixture(name)` resolves a synthetic CSV in `e2e/fixtures/`: `june.csv`, `july.csv`,
-  `merchants.csv`, `broken.csv`.
+  `merchants.csv`, `broken.csv`, `suggestions-a.csv`, `suggestions-b.csv`.
 - `log(msg)` appends to the run log.
 - Throw, or use `expect` from `@playwright/test`, to fail the run.
 
@@ -72,21 +72,22 @@ Page `console.error` and uncaught errors are logged automatically. Put throwaway
 
 These are the stable handles. They come from the app's ARIA labels and match `e2e/*.spec.ts`:
 
-| What           | Handle                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Upload         | `page.setInputFiles('input[type=file]', [...])`. The hidden input's label is "Add statement CSV files".                                                            |
-| Empty state    | `getByText('Drop statement CSVs here')`                                                                                                                            |
-| Row count      | `getByRole('heading', { name: /Transactions/ })` shows `(N)`                                                                                                       |
-| A row          | `getByRole('row', { name: /MERCHANT/ })`                                                                                                                           |
-| Column filters | `getByRole('button', { name: 'Person column menu' })`, same for `Amount`/`Date`/`Description`. Then e.g. `getByLabel('Amount filter value')`                       |
-| Chart mode     | `getByRole('button', { name: 'Bars' })`, which carries `aria-pressed`                                                                                              |
-| Reset filters  | `getByRole('button', { name: 'Reset' })`                                                                                                                           |
-| Recategorize   | `row.getByTitle('Change category')`, then `getByPlaceholder('Search categories…')`, then `getByRole('dialog', { name: 'Choose category' }).getByRole('option', …)` |
-| Rule from row  | Right-click the row, then `getByRole('menuitem', { name: 'Create rule from transaction' })`                                                                        |
-| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Category rules…' })`                                                                            |
-| Rules list     | `/rules`: heading "Category rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and links "New rule" and "Done"                       |
-| Rule editor    | `getByLabel('Category name')`, `getByTestId('value-editor')`, `getByRole('button', { name: 'Save rule' })`                                                         |
-| Auth API       | `curl -s http://127.0.0.1:3310/api/auth/ok` and `/api/auth/get-session` (`null` when signed out)                                                                   |
+| What           | Handle                                                                                                                                                                    |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upload         | `page.setInputFiles('input[type=file]', [...])`. The hidden input's label is "Add statement CSV files".                                                                   |
+| Empty state    | `getByText('Drop statement CSVs here')`                                                                                                                                   |
+| Row count      | `getByRole('heading', { name: /Transactions/ })` shows `(N)`                                                                                                              |
+| A row          | `getByRole('row', { name: /MERCHANT/ })`                                                                                                                                  |
+| Column filters | `getByRole('button', { name: 'Person column menu' })`, same for `Amount`/`Date`/`Description`. Then e.g. `getByLabel('Amount filter value')`                              |
+| Chart mode     | `getByRole('group', { name: 'Category chart type' }).getByRole('button', { name: 'Bars' })` (or `Person chart type`), which carries `aria-pressed`. Unscoped matches two. |
+| Reset filters  | `getByRole('button', { name: 'Reset' })`                                                                                                                                  |
+| Recategorize   | `row.getByTitle('Change category')`, then `getByPlaceholder('Search categories…')`, then `getByRole('dialog', { name: 'Choose category' }).getByRole('option', …)`        |
+| Rule from row  | Right-click the row, then `getByRole('menuitem', { name: 'Create rule from transaction' })`                                                                               |
+| Account menu   | `getByLabel('Account menu')`, then `getByRole('menuitem', { name: 'Category rules…' })`, `'Categories…'` or `'Sign in…'`                                                  |
+| Suggestions    | `getByRole('button', { name: /rule suggestions? for Other/ })`, then `Create rule for <label>` / `Dismiss <label>`                                                        |
+| Rules list     | `/rules`: heading "Category rules", `Edit <name>` / `Move <name> up` / `Move <name> down` / `Delete <name>`, and links "New rule" and "Done"                              |
+| Rule editor    | `getByLabel('Category name')`, `getByTestId('value-editor')`, `getByRole('button', { name: 'Save rule' })`                                                                |
+| Auth API       | `curl -s http://127.0.0.1:3310/api/auth/ok` and `/api/auth/get-session` (`null` when signed out)                                                                          |
 
 Per-feature recipes are in `features/`. Read `features/README.md` and drive **every** entry point
 the map lists for the feature you're proving, not just the convenient one.
@@ -104,11 +105,12 @@ Proof standards:
 - **Capture the action and the result.** Take a `shot` before the interaction and after it, and
   assert the changed state (row count, pill text, URL). Don't settle for a single final frame.
 - **Verify side effects, not just pixels.**
-  - Persistence: `page.reload()`, then assert the state survived. It's in sessionStorage today.
+  - Persistence: `page.reload()`, then assert the state survived. Signed out it's in sessionStorage;
+    signed in the account owns rows, rules and overrides.
   - Rows written when signed in (future steps): query the `dev` branch.
   - Privacy: record `page.on('request')`. Signed-out flows must make no request carrying statement
     data. Only same-origin page, asset and RSC fetches are allowed.
-- **Signed-in flows need a real session.** There is no sign-in UI yet. Mint a cookie the way
+- **Signed-in flows need a real session.** A real OAuth login can't complete on a verification port. Mint a cookie the way
   `scripts/auth-session-check.ts` does, with Better Auth's `testUtils` on a test-only instance, then
   `context.addCookies`. Delete the test user afterwards.
 - **No mocks** except at a production boundary. OAuth providers stay unreachable; don't fake them.

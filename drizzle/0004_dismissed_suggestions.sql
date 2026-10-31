@@ -1,0 +1,1 @@
+ALTER TABLE "preference" ADD COLUMN "dismissed_suggestions" jsonb DEFAULT '[]'::jsonb NOT NULL;

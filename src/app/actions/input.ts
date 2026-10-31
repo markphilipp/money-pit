@@ -8,6 +8,7 @@ import type {
 } from '@/lib/rules/types';
 import { OTHER_ID, PAYMENTS_ID } from '@/lib/types';
 import type { ChartMode, SortKey } from '@/lib/types';
+import { MAX_DISMISSED, MAX_KEY_LENGTH } from '@/lib/rules/discover';
 
 // A Record forces every member of the union to be listed, so a new operator can't be silently
 // rejected here.
@@ -113,7 +114,9 @@ export const rowsInput = z.array(
   }),
 );
 
-export const preferenceInput = z.object({
+export const dismissedInput = z.array(z.string().max(MAX_KEY_LENGTH)).max(MAX_DISMISSED);
+
+export const viewPreferenceInput = z.object({
   chartMode: oneOf<ChartMode>({ donut: true, bar: true }),
   personChartMode: oneOf<ChartMode>({ donut: true, bar: true }),
   sortKey: oneOf<SortKey>({
@@ -125,3 +128,5 @@ export const preferenceInput = z.object({
   }),
   sortDir: z.union([z.literal(1), z.literal(-1)]),
 });
+
+export const preferenceInput = viewPreferenceInput.extend({ dismissedSuggestions: dismissedInput });

@@ -17,6 +17,7 @@ import { CsvFormatError, mergeRows, parseStatementCsv } from '@/lib/csv';
 import { defaultCategories, defaultRules } from '@/lib/defaultRules';
 import { removeCategory, upgradeLegacyRules, type LegacyRule } from '@/lib/categories';
 import { checklistValues } from '@/lib/rules/engine';
+import { MAX_DISMISSED } from '@/lib/rules/discover';
 
 export interface UploadResult {
   ok: string[];
@@ -45,6 +46,8 @@ export interface AppState {
   selectedIds: Set<string>;
   /** Seeds `/rules/new`; persisted so the route survives a reload rather than losing its subject. */
   ruleSources: string[];
+  /** Keys of rule proposals the user turned down (see `discoverProposals`); the proposals themselves are derived. */
+  dismissedSuggestions: string[];
 
   uploadFiles: (files: File[]) => Promise<UploadResult>;
   addCategory: (category: Category) => void;
@@ -57,6 +60,7 @@ export interface AppState {
   setOverride: (ids: string[], categoryId: string) => void;
   clearOverrides: (ids: string[]) => void;
   setRuleSources: (ids: string[]) => void;
+  dismissSuggestion: (key: string) => void;
   setFilter: (patch: Partial<FilterState>) => void;
   setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
@@ -82,6 +86,7 @@ export const initialState = {
   sort: { key: 'date', dir: -1 } as SortState,
   selectedIds: new Set<string>(),
   ruleSources: [] as string[],
+  dismissedSuggestions: [] as string[],
 };
 
 /**
@@ -90,7 +95,14 @@ export const initialState = {
  */
 interface PersistedState extends Pick<
   AppState,
-  'rawRows' | 'overrides' | 'filters' | 'chartMode' | 'personChartMode' | 'sort' | 'ruleSources'
+  | 'rawRows'
+  | 'overrides'
+  | 'filters'
+  | 'chartMode'
+  | 'personChartMode'
+  | 'sort'
+  | 'ruleSources'
+  | 'dismissedSuggestions'
 > {
   categorization: Categorization;
   rules?: LegacyRule[];
@@ -221,6 +233,13 @@ export const useAppStore = create<AppState>()(
 
       setRuleSources: (ids) => set({ ruleSources: ids }),
 
+      dismissSuggestion: (key) =>
+        set((s) =>
+          s.dismissedSuggestions.includes(key)
+            ? s
+            : { dismissedSuggestions: [...s.dismissedSuggestions, key].slice(-MAX_DISMISSED) },
+        ),
+
       setFilter: (patch) => set((s) => ({ filters: { ...s.filters, ...patch } })),
 
       setColumnFilter: (column, filter) =>
@@ -312,6 +331,7 @@ export const useAppStore = create<AppState>()(
               personChartMode: s.personChartMode,
               sort: s.sort,
               ruleSources: s.ruleSources,
+              dismissedSuggestions: s.dismissedSuggestions,
             },
       merge: (persisted, current) => {
         const raw = persisted as Partial<PersistedState> | undefined;

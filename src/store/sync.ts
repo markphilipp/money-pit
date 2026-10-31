@@ -26,7 +26,7 @@ export type ConfirmClaim = () => Promise<boolean>;
 // Server actions cap request bodies at 1 MB; a stored row serializes to roughly 200 bytes.
 const APPEND_CHUNK = 2000;
 
-const toPreference = ({
+const toViewPreference = ({
   chartMode,
   personChartMode,
   sort,
@@ -35,6 +35,11 @@ const toPreference = ({
   personChartMode,
   sortKey: sort.key,
   sortDir: sort.dir,
+});
+
+const toPreference = (state: AppState) => ({
+  ...toViewPreference(state),
+  dismissedSuggestions: state.dismissedSuggestions,
 });
 
 async function applySnapshot(api: AccountApi) {
@@ -49,6 +54,7 @@ async function applySnapshot(api: AccountApi) {
     chartMode: preference?.chartMode ?? initialState.chartMode,
     personChartMode: preference?.personChartMode ?? initialState.personChartMode,
     sort: preference ? { key: preference.sortKey, dir: preference.sortDir } : initialState.sort,
+    dismissedSuggestions: preference?.dismissedSuggestions ?? initialState.dismissedSuggestions,
     selectedIds: new Set<string>(),
   } satisfies Partial<AppState>;
 }
@@ -152,7 +158,8 @@ export function startAccountSync(
     if (
       next.chartMode !== prev.chartMode ||
       next.personChartMode !== prev.personChartMode ||
-      next.sort !== prev.sort
+      next.sort !== prev.sort ||
+      next.dismissedSuggestions !== prev.dismissedSuggestions
     ) {
       const preference = toPreference(next);
       enqueue(() => api.setPreference(preference));
@@ -165,7 +172,7 @@ export function startAccountSync(
   // them in place for a reload to offer again.
   const claim = async () => {
     const state = useAppStore.getState();
-    const { rawRows, overrides, categories, rules } = state;
+    const { rawRows, overrides, categories, rules, dismissedSuggestions } = state;
     if (!rawRows.length || !(await confirmClaim()) || stopped) return true;
     // Untouched defaults aren't a choice, so they never overwrite what the account has saved.
     const untouched =
@@ -177,7 +184,8 @@ export function startAccountSync(
       await api.claimLocal(
         toStoredRows(rawRows, overrides),
         { categories, rules },
-        untouched ? null : toPreference(state),
+        untouched ? null : toViewPreference(state),
+        dismissedSuggestions,
       );
       return true;
     } catch {

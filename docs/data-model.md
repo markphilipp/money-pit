@@ -143,6 +143,27 @@ Rejections that keep the output honest:
 Groups are emitted **flat** (a single-level OR) even though the engine supports nesting — nested
 groups are hard to read back in the builder, and nothing here needs them.
 
+### Discovering suggestions — `src/lib/rules/discover.ts`
+
+`discoverProposals(txns, overrides, dismissed)` offers rules nobody asked for. It looks only at the
+**Other pool**: rows whose `categoryId` is `other` and that carry no override. Suggestions are
+derived on read from what is already stored, never persisted, so an upload re-checks them for free;
+only the keys of dismissed proposals are saved.
+
+1. Distinct pool descriptions are clustered with the same content-token Jaccard test the selection
+   flow uses (`clusterByContent` in `suggest.ts`). A cluster needs at least `MIN_CLUSTER` (3) rows.
+2. `suggestRuleGroups` runs on each cluster and the first candidate that isn't `exact-or` wins.
+   A cluster with no induced pattern is skipped: a literal-description rule isn't worth proposing.
+3. The group is re-run over every transaction. Any match outside the pool (already categorized,
+   overridden, or a payment) rejects the proposal, because the rule would steal those rows.
+   `txnIds` is every pool row the group matches, not only the cluster it came from.
+4. `key` is the lowercased, sorted condition list as JSON, so the same pattern keeps the same key as
+   rows are added. Proposals dedupe on it, and keys in `dismissed` are dropped. A key longer than
+   `MAX_KEY_LENGTH` is never proposed, since it couldn't be saved to an account.
+
+Proposals sort by `txnIds.length` descending, then label. Only description conditions are induced,
+never amount, person or date.
+
 ## Default rules — `src/lib/defaultRules.ts`
 
 Seed categories built from keyword lists. `payments` and `other` are `builtin: true`: renameable and
@@ -161,7 +182,7 @@ stored, never anything derived.
 | `category`      | The category list. `position` is the array index.                                                                                                                                |
 | `rule`          | The rule list. A composite FK ties `(user_id, category_id)` to `category`'s primary key, cascading, so a rule can't outlive its category at the database layer either.           |
 | `category_rule` | Superseded by `category` + `rule` — one row was a rule that was also its own category. Never written; kept as a read fallback for an account that hasn't saved either table yet. |
-| `preference`    | `chart_mode`, `person_chart_mode`, `sort_key`, `sort_dir`.                                                                                                                       |
+| `preference`    | `chart_mode`, `person_chart_mode`, `sort_key`, `sort_dir`, and `dismissed_suggestions` (`jsonb` string array, default `[]`): the proposal keys the user turned down.             |
 
 `src/db/queries/categories.ts` writes `category` and `rule` together: delete + insert both in one
 transaction, so position is always the array index and a rule never points at a category not yet
@@ -185,7 +206,8 @@ survives the merge, and the session's win. An account still on the seeded defaul
 session's categories and rules wholesale. Otherwise only the ones whose id the account lacks are
 added, ahead of the builtins: category ids are name slugs, so a shared id is the same category and
 the account's version stays. Rule conditions read back from `jsonb` lose their key order, so "still
-on the defaults" is a structural comparison. Claiming the same session twice changes nothing.
+on the defaults" is a structural comparison. Dismissed suggestion keys from both sides are
+unioned. Claiming the same session twice changes nothing.
 
 ## Formatting & color
 
