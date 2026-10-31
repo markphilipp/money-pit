@@ -8,6 +8,8 @@ import { fmtMoney, personShort } from '@/lib/format';
 import { activatesOnSpace, moveHighlight, resolveActionTargets } from '@/lib/shortcuts';
 import { useHeightVar } from '@/hooks/useHeightVar';
 import { useShortcut } from '@/hooks/useShortcut';
+import { nextPaletteColor } from '@/lib/palette';
+import { uniqueId } from '@/lib/rules/naming';
 import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
 import { emptyFilters, useAppStore } from '@/store/useAppStore';
@@ -33,6 +35,7 @@ export function TransactionTable() {
   const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setSort = useAppStore((s) => s.setSort);
   const setOverride = useAppStore((s) => s.setOverride);
+  const addCategory = useAppStore((s) => s.addCategory);
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
   const clearSelection = useAppStore((s) => s.clearSelection);
@@ -325,6 +328,19 @@ export function TransactionTable() {
           onClose={() => setPicker(null)}
           onChoose={(categoryId) => {
             setOverride(picker.targetIds, categoryId);
+            if (picker.bulk) clearSelection();
+          }}
+          onCreate={(name) => {
+            const id = uniqueId(
+              name,
+              state.categories.map((c) => c.id),
+            );
+            addCategory({
+              id,
+              name,
+              color: nextPaletteColor(state.categories.map((c) => c.color)),
+            });
+            setOverride(picker.targetIds, id);
             if (picker.bulk) clearSelection();
           }}
         />
