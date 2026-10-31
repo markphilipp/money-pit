@@ -9,6 +9,15 @@ export interface RawStatementRow {
   person: string;
 }
 
+/** One uploaded CSV file: the rows exactly as parsed, so removing it can be undone cleanly. */
+export interface Dataset {
+  id: string;
+  name: string;
+  /** ISO timestamp. */
+  uploadedAt: string;
+  rows: RawStatementRow[];
+}
+
 /** `ordinal` counts earlier identical rows, so `txnId(row, ordinal)` tells real duplicates apart. */
 export interface OrdinalRow extends RawStatementRow {
   ordinal: number;

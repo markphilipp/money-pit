@@ -82,6 +82,9 @@ export function UserMenu() {
               </>
             )}
             <DropdownMenu.Item className={styles.item} asChild>
+              <Link href="/datasets">Uploaded files…</Link>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item className={styles.item} asChild>
               <Link href="/categories">Categories…</Link>
             </DropdownMenu.Item>
             <DropdownMenu.Item className={styles.item} asChild>

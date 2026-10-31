@@ -73,7 +73,9 @@ is the only place a migration is guaranteed to land before the code that needs i
 The old deployment keeps serving while the new build migrates, and a failed build leaves the
 migration applied. So every migration is **expand/contract**: add columns nullable or with a
 default, ship the writer, backfill, and only then tighten or drop in a later deploy. Never add a
-`NOT NULL` column without a default in the same deploy as its first writer.
+`NOT NULL` column without a default in the same deploy as its first writer. The datasets
+migration (`0004_datasets.sql`) is an example: it only adds tables, and rows the previous deployment
+writes without a dataset are adopted when the snapshot next loads, so nothing needs a backfill.
 
 Schema lives in `src/db/schema/`. Better Auth owns `auth.ts`: regenerate it with
 `bun run auth:generate` (it reads `scripts/auth-cli.config.ts`, because the CLI needs an exported

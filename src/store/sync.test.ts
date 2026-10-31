@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { defaultCategories, defaultRules } from '@/lib/defaultRules';
-import { toStoredRows } from '@/lib/sync';
+import { toStoredDataset, toStoredRows } from '@/lib/sync';
 import { parseStatementCsv } from '@/lib/csv';
 import { csvFile, resetStore, SAMPLE_CSV, SECOND_CSV } from '@/test/fixtures';
 import { RETRY_DELAYS_MS, type SaveStatus } from '@/lib/saveStatus';
@@ -10,17 +10,28 @@ import { useAppStore } from './useAppStore';
 
 const state = () => useAppStore.getState();
 const accountRows = parseStatementCsv(SAMPLE_CSV);
+const accountFile = () =>
+  toStoredDataset(
+    {
+      id: 'account-file',
+      name: 'statement.csv',
+      uploadedAt: '2026-07-04T00:00:00.000Z',
+      rows: accountRows,
+    },
+    {},
+  );
 
 function fakeApi(snapshot?: Partial<Awaited<ReturnType<AccountApi['loadSnapshot']>>>) {
   return {
-    appendRows: vi.fn(async () => {}),
+    createDataset: vi.fn(async () => {}),
+    appendDatasetRows: vi.fn(async () => {}),
+    removeDataset: vi.fn(async () => {}),
     setOverrides: vi.fn(async () => {}),
     replaceCategories: vi.fn(async () => {}),
     setPreference: vi.fn(async () => {}),
-    resetAccount: vi.fn(async () => {}),
     claimLocal: vi.fn(async () => {}),
     loadSnapshot: vi.fn(async () => ({
-      rows: [],
+      datasets: [],
       categories: defaultCategories,
       rules: defaultRules,
       preference: null,
@@ -57,7 +68,7 @@ describe('startAccountSync', () => {
     const [first] = toStoredRows(accountRows, {});
     await start(
       fakeApi({
-        rows: [{ ...first, categoryOverride: 'pets' }],
+        datasets: [{ ...accountFile(), rows: [{ ...first, categoryOverride: 'pets' }] }],
         preference: { chartMode: 'bar', personChartMode: 'bar', sortKey: 'amount', sortDir: 1 },
       }),
     );
@@ -71,27 +82,72 @@ describe('startAccountSync', () => {
   });
 
   it('does not write the snapshot it just loaded back to the server', async () => {
-    const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+    const api = fakeApi({ datasets: [accountFile()] });
     await start(api);
     await sync!.settled();
-    expect(api.appendRows).not.toHaveBeenCalled();
+    expect(api.createDataset).not.toHaveBeenCalled();
+    expect(api.appendDatasetRows).not.toHaveBeenCalled();
     expect(api.replaceCategories).not.toHaveBeenCalled();
   });
 
-  it('appends only the rows an upload added, with their ordinals', async () => {
-    const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+  it('creates an upload as a dataset, then appends its rows numbered within the file', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
     await start(api);
-    await state().uploadFiles([csvFile(SECOND_CSV)]);
+    await state().uploadFiles([csvFile(SECOND_CSV, 'july.csv')]);
     await sync!.settled();
 
-    expect(api.appendRows).toHaveBeenCalledTimes(1);
-    expect(api.appendRows).toHaveBeenCalledWith([
+    const added = state().datasets[1];
+    expect(api.createDataset).toHaveBeenCalledWith({
+      id: added.id,
+      name: 'july.csv',
+      uploadedAt: added.uploadedAt,
+    });
+    // the whole file goes, including the row the account already holds: membership, not just new rows
+    expect(api.appendDatasetRows).toHaveBeenCalledTimes(1);
+    expect(api.appendDatasetRows).toHaveBeenCalledWith(added.id, [
+      expect.objectContaining({ description: 'LOWES #01111 BELMONT NC', ordinal: 0 }),
       expect.objectContaining({ description: 'HULU 123-456-7890 CA', ordinal: 0 }),
     ]);
+    expect(api.createDataset.mock.invocationCallOrder[0]).toBeLessThan(
+      api.appendDatasetRows.mock.invocationCallOrder[0],
+    );
+  });
+
+  it('sends nothing for a re-upload of a file the account already holds', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
+    await start(api);
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'again.csv')]);
+    await sync!.settled();
+    expect(api.createDataset).not.toHaveBeenCalled();
+  });
+
+  it('removes a dataset on the account and leaves categories alone', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
+    await start(api);
+    state().removeDataset('account-file');
+    await sync!.settled();
+
+    expect(api.removeDataset).toHaveBeenCalledWith('account-file');
+    expect(api.replaceCategories).not.toHaveBeenCalled();
+    expect(api.setOverrides).not.toHaveBeenCalled();
+    expect(state().rawRows).toEqual([]);
+  });
+
+  it('writes no override change for a row that went away with its dataset', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
+    await start(api);
+    const [txn] = selectTransactions(state());
+    state().setOverride([txn.id], 'pets');
+    await sync!.settled();
+    api.setOverrides.mockClear();
+
+    state().removeDataset('account-file');
+    await sync!.settled();
+    expect(api.setOverrides).not.toHaveBeenCalled();
   });
 
   it('mirrors category, rule, override and preference changes', async () => {
-    const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+    const api = fakeApi({ datasets: [accountFile()] });
     await start(api);
     const [txn] = selectTransactions(state());
 
@@ -116,15 +172,22 @@ describe('startAccountSync', () => {
     });
   });
 
-  it('turns Start over into a single account reset', async () => {
-    const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+  it('turns Start over into per-slice writes with no account reset', async () => {
+    const api = fakeApi({ datasets: [accountFile()] });
     await start(api);
     state().setChartMode('bar');
+    state().setCategory('home', { name: 'Renovations' });
     state().resetAll();
     await sync!.settled();
 
-    expect(api.resetAccount).toHaveBeenCalledTimes(1);
-    expect(api.replaceCategories).not.toHaveBeenCalled();
+    expect(api.removeDataset).toHaveBeenCalledWith('account-file');
+    expect(api.replaceCategories).toHaveBeenLastCalledWith({
+      categories: defaultCategories,
+      rules: defaultRules,
+    });
+    expect(api.setPreference).toHaveBeenLastCalledWith(
+      expect.objectContaining({ chartMode: 'donut' }),
+    );
     expect(state().mode).toBe('account');
   });
 
@@ -148,7 +211,7 @@ describe('startAccountSync', () => {
     afterEach(() => vi.useRealTimers());
 
     it('goes saving then saved for a write that lands', async () => {
-      await startWithStatus(fakeApi({ rows: toStoredRows(accountRows, {}) }));
+      await startWithStatus(fakeApi({ datasets: [accountFile()] }));
       state().setChartMode('bar');
       state().setChartMode('donut');
       await drain();
@@ -156,13 +219,13 @@ describe('startAccountSync', () => {
     });
 
     it('stays idle until something is written', async () => {
-      await startWithStatus(fakeApi({ rows: toStoredRows(accountRows, {}) }));
+      await startWithStatus(fakeApi({ datasets: [accountFile()] }));
       await drain();
       expect(statuses).not.toHaveBeenCalled();
     });
 
     it('retries a failed write and recovers without reloading', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.replaceCategories
         .mockRejectedValueOnce(new Error('offline'))
         .mockRejectedValueOnce(new Error('offline'));
@@ -183,7 +246,7 @@ describe('startAccountSync', () => {
     });
 
     it('backs off between attempts', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.setPreference.mockRejectedValue(new Error('offline'));
       await startWithStatus(api);
       state().setChartMode('bar');
@@ -198,7 +261,7 @@ describe('startAccountSync', () => {
     });
 
     it('gives up, reloads the snapshot and drops queued writes', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.replaceCategories.mockRejectedValue(new Error('boom'));
       await startWithStatus(api);
       state().reorderRules('grocery', -1);
@@ -214,7 +277,7 @@ describe('startAccountSync', () => {
     });
 
     it('reports failure without a revert when the account is unreachable', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.replaceCategories.mockRejectedValue(new Error('offline'));
       await startWithStatus(api);
       api.loadSnapshot.mockRejectedValue(new Error('offline'));
@@ -224,7 +287,7 @@ describe('startAccountSync', () => {
     });
 
     it('saves again after a failure', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.replaceCategories.mockRejectedValue(new Error('boom'));
       await startWithStatus(api);
       state().reorderRules('grocery', -1);
@@ -236,7 +299,7 @@ describe('startAccountSync', () => {
     });
 
     it('stops retrying once stopped', async () => {
-      const api = fakeApi({ rows: toStoredRows(accountRows, {}) });
+      const api = fakeApi({ datasets: [accountFile()] });
       api.setPreference.mockRejectedValue(new Error('offline'));
       await startWithStatus(api);
       state().setChartMode('bar');
@@ -248,7 +311,7 @@ describe('startAccountSync', () => {
   });
 
   it('keeps statement data out of sessionStorage', async () => {
-    await start(fakeApi({ rows: toStoredRows(accountRows, {}) }));
+    await start(fakeApi({ datasets: [accountFile()] }));
     state().setFilter({ search: 'LOWES' });
 
     const stored = JSON.parse(sessionStorage.getItem('money-pit')!).state;
@@ -290,7 +353,7 @@ describe('claiming a signed-out session', () => {
     expect(state().rawRows).toEqual([]);
   });
 
-  it('saves rows, overrides, categories and rules to the account before loading it', async () => {
+  it('saves datasets, overrides, categories and rules to the account before loading it', async () => {
     await state().uploadFiles([csvFile(SAMPLE_CSV)]);
     const [txn] = selectTransactions(state());
     state().setOverride([txn.id], 'pets');
@@ -299,13 +362,16 @@ describe('claiming a signed-out session', () => {
     const api = fakeApi();
     api.loadSnapshot.mockImplementation(async () => {
       expect(api.claimLocal).toHaveBeenCalled();
-      return { rows: [], categories: defaultCategories, rules: defaultRules, preference: null };
+      return { datasets: [], categories: defaultCategories, rules: defaultRules, preference: null };
     });
     await start(api);
 
-    const [rows, categorization, preference] = claimArgs(api);
-    expect(rows).toHaveLength(7);
-    expect(rows.find((r) => r.description === txn.description)?.categoryOverride).toBe('pets');
+    const [datasets, categorization, preference] = claimArgs(api);
+    expect(datasets.map((d) => d.name)).toEqual(['statement.csv']);
+    expect(datasets[0].rows).toHaveLength(7);
+    expect(datasets[0].rows.find((r) => r.description === txn.description)?.categoryOverride).toBe(
+      'pets',
+    );
     expect(categorization.categories.find((c) => c.id === 'home')?.name).toBe('Renovations');
     expect(preference).toBeNull();
   });
@@ -337,6 +403,6 @@ describe('claiming a signed-out session', () => {
     expect(onError).toHaveBeenCalledWith(expect.stringMatching(/Reload to try again/));
     expect(api.loadSnapshot).not.toHaveBeenCalled();
     expect(state().mode).toBe('local');
-    expect(JSON.parse(sessionStorage.getItem('money-pit')!).state.rawRows).toHaveLength(7);
+    expect(JSON.parse(sessionStorage.getItem('money-pit')!).state.datasets).toHaveLength(1);
   });
 });

@@ -6,16 +6,17 @@ import {
   type SaveEvent,
   type SaveStatus,
 } from '@/lib/saveStatus';
-import { fromStoredRows, overrideChanges, toStoredRows } from '@/lib/sync';
+import { fromStoredDatasets, overrideChanges, toStoredDataset } from '@/lib/sync';
 import { initialState, useAppStore, type AppState } from './useAppStore';
 
 export type AccountApi = Pick<
   typeof AccountActions,
-  | 'appendRows'
+  | 'createDataset'
+  | 'appendDatasetRows'
+  | 'removeDataset'
   | 'setOverrides'
   | 'replaceCategories'
   | 'setPreference'
-  | 'resetAccount'
   | 'loadSnapshot'
   | 'claimLocal'
 >;
@@ -38,11 +39,11 @@ const toPreference = ({
 });
 
 async function applySnapshot(api: AccountApi) {
-  const { rows, categories, rules, preference } = await api.loadSnapshot();
-  const { rawRows, overrides } = fromStoredRows(rows);
+  const { datasets: stored, categories, rules, preference } = await api.loadSnapshot();
+  const { datasets, overrides } = fromStoredDatasets(stored);
   return {
     mode: 'account',
-    rawRows,
+    datasets,
     overrides,
     categories,
     rules,
@@ -132,13 +133,19 @@ export function startAccountSync(
 
   const mirror = (next: AppState, prev: AppState) => {
     if (applying) return;
-    if (next.rawRows !== prev.rawRows) {
-      // resetAll is the only way rows empty, and it resets every other slice to defaults too.
-      if (!next.rawRows.length) return enqueue(() => api.resetAccount());
-      const added = toStoredRows(next.rawRows, next.overrides).slice(prev.rawRows.length);
-      for (let i = 0; i < added.length; i += APPEND_CHUNK) {
-        const chunk = added.slice(i, i + APPEND_CHUNK);
-        enqueue(() => api.appendRows(chunk));
+    if (next.datasets !== prev.datasets) {
+      const kept = new Set(next.datasets.map((d) => d.id));
+      const known = new Set(prev.datasets.map((d) => d.id));
+      for (const { id } of prev.datasets) {
+        if (!kept.has(id)) enqueue(() => api.removeDataset(id));
+      }
+      for (const added of next.datasets.filter((d) => !known.has(d.id))) {
+        const { id, name, uploadedAt, rows } = toStoredDataset(added, next.overrides);
+        enqueue(() => api.createDataset({ id, name, uploadedAt }));
+        for (let i = 0; i < rows.length; i += APPEND_CHUNK) {
+          const chunk = rows.slice(i, i + APPEND_CHUNK);
+          enqueue(() => api.appendDatasetRows(id, chunk));
+        }
       }
     }
     if (next.categories !== prev.categories || next.rules !== prev.rules) {
@@ -165,8 +172,8 @@ export function startAccountSync(
   // them in place for a reload to offer again.
   const claim = async () => {
     const state = useAppStore.getState();
-    const { rawRows, overrides, categories, rules } = state;
-    if (!rawRows.length || !(await confirmClaim()) || stopped) return true;
+    const { datasets, overrides, categories, rules } = state;
+    if (!datasets.length || !(await confirmClaim()) || stopped) return true;
     // Untouched defaults aren't a choice, so they never overwrite what the account has saved.
     const untouched =
       state.chartMode === initialState.chartMode &&
@@ -175,7 +182,7 @@ export function startAccountSync(
       state.sort.dir === initialState.sort.dir;
     try {
       await api.claimLocal(
-        toStoredRows(rawRows, overrides),
+        datasets.map((d) => toStoredDataset(d, overrides)),
         { categories, rules },
         untouched ? null : toPreference(state),
       );

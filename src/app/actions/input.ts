@@ -113,6 +113,14 @@ export const rowsInput = z.array(
   }),
 );
 
+export const datasetInput = z.object({
+  id: z.string().min(1).max(64),
+  name: z.string().max(255),
+  uploadedAt: z.iso.datetime(),
+});
+
+export const datasetsInput = z.array(datasetInput.extend({ rows: rowsInput }));
+
 export const preferenceInput = z.object({
   chartMode: oneOf<ChartMode>({ donut: true, bar: true }),
   personChartMode: oneOf<ChartMode>({ donut: true, bar: true }),

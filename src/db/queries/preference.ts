@@ -23,7 +23,3 @@ export async function readPreference(tx: Tx, userId: string): Promise<Preference
     .where(eq(preference.userId, userId));
   return row ?? null;
 }
-
-export async function deletePreference(tx: Tx, userId: string) {
-  await tx.delete(preference).where(eq(preference.userId, userId));
-}

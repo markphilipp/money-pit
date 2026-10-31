@@ -7,7 +7,10 @@ Testing trophy, weighted like this:
 1. **Unit (`src/lib/*.test.ts`)** — parsing, dedupe, hashing, categorization, the rule engine,
    formatting. Cheap and exhaustive; any new business rule gets its cases here.
    `src/store/sync.test.ts` drives the signed-in subscriber against the real store with a fake
-   `AccountApi`, so sync behavior is tested without a server or a database.
+   `AccountApi`, so sync behavior is tested without a server or a database. The SQL in
+   `src/db/queries/` (dataset membership, removal, adoption, claim) has no hermetic test: CI has no
+   database, and the only DB-backed layer is the signed-in e2e project. Exercise a change to it
+   against a real Postgres before trusting it.
 2. **Integration (RTL, `*.test.tsx`)** — the bulk of the confidence. Render the real component
    against the **real store**; don't mock the store or the selectors. If a test needs a mocked
    store to pass, the component is probably reaching for state it shouldn't.
@@ -60,9 +63,11 @@ Chromium only. Specs run against `next start` on port 3210, so **`bun run build`
 Existing specs cover the empty state, multi-file upload with overlap dedupe, inline per-file errors,
 column-menu filtering + reload persistence, recategorizing from a pill, creating a rule from a row,
 inducing a merchant rule from several selected rows (`merchants.csv` — three stores of one synthetic
-merchant), managing rules on `/rules`, editing a rule on its own URL and returning through browser
-history, the 404 status for an unknown URL, bulk selection, and keyboard shortcuts (focus after a
-checkbox click, `?` as a real browser produces it, the highlighted row clearing the sticky header).
+merchant), removing an uploaded file (`datasets.spec.ts`: shared rows survive, the last removal
+lands on the empty state with rules intact), managing rules on `/rules`, editing a rule on its own
+URL and returning through browser history, the 404 status for an unknown URL, bulk selection, and
+keyboard shortcuts (focus after a checkbox click, `?` as a real browser produces it, the highlighted
+row clearing the sticky header).
 
 Routing assertions belong here, not in the unit tests: this is the only layer running a real
 router.
@@ -76,7 +81,7 @@ would silently discover zero tests.
 Specs tagged `@signed-in` (`e2e/signed-in.spec.ts`) run in their own `signed-in` project, and
 `bun run e2e` (the `chromium` project) leaves them out, so the default suite needs no database. The
 signed-in project covers sync into a fresh browser context, saving a signed-out session on sign-in,
-and deleting account data then signing out.
+removing an uploaded file from the account, and deleting account data then signing out.
 
 The `account` fixture in `e2e/account.ts` builds a Better Auth instance with the `testUtils` plugin,
 mints a throwaway user per test, and deletes it afterwards. `account.signIn(context?)` adds that

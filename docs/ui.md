@@ -12,6 +12,7 @@ Components, layout mechanics and styling conventions.
 | `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`       | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                   |
 | `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.              |
 | `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                       | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                   |
+| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                          | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                 |
 | `upload`     | `EmptyState`, `UploadZone`                                                                       | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                        |
 | `auth`       | `SignInScreen`                                                                                   | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                      |
 | `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                         | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog. |
@@ -111,6 +112,7 @@ on every render, so an id that filtering or sorting removed counts as no highlig
 | Route         | Screen             | Notes                                                                                          |
 | ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
 | `/`           | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
+| `/datasets`   | `DatasetsScreen`   | Uploaded files: add, remove. Reached from the account menu.                                    |
 | `/categories` | `CategoriesScreen` | Add, rename, recolor and delete categories. Reached from the account menu.                     |
 | `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
 | `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
@@ -178,13 +180,26 @@ without producing invalid HTML. The confirm button reads "Delete category" or "D
 rules" depending on whether any exist, and deleting removes the category, every rule filing into it,
 and every override pointing at it in one store update.
 
+## Uploaded files screen — `DatasetsScreen`
+
+One row per dataset (one uploaded CSV): file name, transaction count, the span of its dates
+(`datasetSpan`) and when it was uploaded, with a **Remove** button whose accessible name carries the
+file name so every row's is unique. The page also holds an `UploadZone`, so a mistaken upload and its
+replacement are handled in one place. With no files it shows "No files uploaded yet." and the zone.
+
+Remove opens `RemoveDatasetDialog` on the shared `ConfirmDialog` (focus starts on Cancel, Escape
+cancels, focus returns to the Remove button). Its body comes from `datasetImpact`: how many
+transactions go, how many more stay because another file also holds them, and how many manual
+category changes are lost. Removing the only file adds that the dashboard returns to the upload
+screen while categories and rules stay. Confirming calls the store's `removeDataset`.
+
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (confirms in a modal), **Categories…**, **Category rules…**, and
+**Add statement**, **Start over** (confirms in a modal), **Uploaded files…**, **Categories…**, **Category rules…**, and
 **Sign in…** (a link to `/sign-in`). Add statement and Start over only appear once there's data.
-Signed in, Start over also wipes the account's rows and resets its categories and rules, but keeps
-the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the
+Signed in, Start over also removes the account's datasets and resets its categories and rules, but
+keeps the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the
 `deleteAccount` server action. Deleting the `user` row cascades to everything, sessions included.
 Both sign out and delete clear the tab's persisted state and do a full reload to `/`, so no account
 data survives in the in-memory store. The avatar stays a generic SVG: provider names and pictures
