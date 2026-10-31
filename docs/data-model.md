@@ -166,6 +166,15 @@ Rejections that keep the output honest:
 Groups are emitted **flat** (a single-level OR) even though the engine supports nesting — nested
 groups are hard to read back in the builder, and nothing here needs them.
 
+### Merging into an existing rule — `src/lib/rules/merge.ts`
+
+`mergeConditions(existing, addition)` folds a suggested group into a rule's current conditions so
+the result matches everything either did. An empty side returns the other. An `or` rule is extended
+in place; an `and` rule becomes the first branch of a new `or`. The addition's top-level items are
+flattened in when it is an `or`, and appended as one nested group when it is an `and`. Items
+deep-equal to one already present are skipped, so adding the same thing twice changes nothing.
+Used by the rule editor's "Add to existing rule" mode.
+
 ### Discovering suggestions — `src/lib/rules/discover.ts`
 
 `discoverProposals(txns, overrides, dismissed)` offers rules nobody asked for. It looks only at the

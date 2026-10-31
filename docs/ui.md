@@ -160,7 +160,10 @@ Three stacked sections:
    pre-fills the new category's name, unless the user has already typed one. The active card is
    marked `aria-pressed` and tagged **edited** once the builder diverges from it.
 2. **Rule** — `CategoryField` (existing category, or a new one named and colored here) and
-   `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`).
+   `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`). When at least one
+   non-builtin rule exists, a **New rule | Add to existing rule** radio group sits on top, with a
+   picker of the existing rules (labelled by `ruleLabels`, builtins excluded) once the second option
+   is chosen. See _Adding to an existing rule_ below.
 3. **Matches** — recomputed on every builder change.
 
 The match preview is the guardrail, and it is deliberately honest about three things:
@@ -174,6 +177,23 @@ The match preview is the guardrail, and it is deliberately honest about three th
 - **Manual overrides beat every rule.** A selected row with an override is tagged
   _manual category wins_, and saving offers to clear those overrides — otherwise "applies to
   everything it matches" would silently skip exactly the rows the user hand-corrected.
+
+### Adding to an existing rule
+
+The picker state is a `RuleTarget` (`{ kind: 'new' } | { kind: 'existing'; ruleId }`). A chosen rule
+that has since vanished is treated as new. With a rule R chosen:
+
+- The category is locked to R's (`CategoryField` disabled, as `RuleForm` does for builtins), and the
+  heading reads "Add N transactions to ‹Category› rule".
+- The builder is seeded from `mergeConditions(R.conditions, suggestion.group)`
+  ([data-model.md](data-model.md#merging-into-an-existing-rule--srclibrulesmergets)). Picking another
+  suggestion card, or switching target, re-seeds it and overwrites manual edits, exactly as picking a
+  card does for a new rule. What is in the builder at Save is the rule's new conditions.
+- The preview puts the draft in R's slot of the precedence order instead of before the builtins, so
+  _stays in ‹category›_ stays honest. "Also newly matches N other transactions" lists only rows the
+  draft matches that R did not already match.
+- Save calls `setRule(R.id, { conditions })`. No category or rule is added. The clear-overrides
+  checkbox and the redirect behave as for a new rule.
 
 An emptied builder means "no rule yet", not "a rule that excludes everything" — `fromRqb` drops
 half-finished conditions, so mid-edit the group is briefly empty and flagging every row would be
