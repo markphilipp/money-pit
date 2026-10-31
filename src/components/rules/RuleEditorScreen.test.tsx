@@ -193,14 +193,28 @@ describe('RuleEditorScreen', () => {
         categoryId: 'treats',
         conditions: {
           combinator: 'or',
-          rules: [{ field: 'description', operator: 'contains', value: 'LOWES' }],
+          rules: [
+            { field: 'description', operator: 'contains', value: 'LOWES' },
+            { field: 'description', operator: 'contains', value: 'GELATO' },
+          ],
         },
       });
     }
 
-    const pickTreats = async (user: ReturnType<typeof userEvent.setup>) => {
-      await user.click(screen.getByRole('radio', { name: 'Add to existing rule' }));
-      await user.selectOptions(screen.getByLabelText('Existing rule'), 'Treats');
+    type User = ReturnType<typeof userEvent.setup>;
+
+    const startAdding = (user: User) =>
+      user.click(screen.getByRole('radio', { name: 'Add to existing rule' }));
+
+    const picker = () => screen.getByRole('combobox', { name: 'Existing rule' });
+
+    const rulesListed = () => within(screen.getByRole('listbox')).queryAllByRole('option');
+
+    const pickTreats = async (user: User) => {
+      await startAdding(user);
+      await user.click(
+        within(screen.getByRole('listbox')).getByRole('option', { name: /^Treats/ }),
+      );
     };
 
     it('hides the control when only builtin rules exist', async () => {
@@ -212,19 +226,108 @@ describe('RuleEditorScreen', () => {
       expect(screen.getByLabelText('Category name')).toBeInTheDocument();
     });
 
-    it('defaults to a new rule and lists only non-builtin rules to pick from', async () => {
+    it('defaults to a new rule', async () => {
       await openWithTreatsRule();
       render(<RuleEditorScreen />);
 
       expect(screen.getByRole('radio', { name: 'New rule' })).toBeChecked();
-      expect(screen.queryByLabelText('Existing rule')).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Existing rule' })).not.toBeInTheDocument();
+    });
 
-      await userEvent.setup().click(screen.getByRole('radio', { name: 'Add to existing rule' }));
-      const options = within(screen.getByLabelText('Existing rule'))
-        .getAllByRole('option')
-        .map((o) => o.textContent);
-      expect(options).toContain('Treats');
-      expect(options).not.toContain('Payments');
+    it('starts with no rule chosen and Save disabled', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+
+      expect(picker()).toHaveFocus();
+      expect(picker()).toHaveValue('');
+      expect(
+        screen.getByRole('heading', { name: 'Add 2 transactions to an existing rule' }),
+      ).toBeInTheDocument();
+      expect(screen.queryByLabelText('Category')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Category name')).not.toBeInTheDocument();
+      expect(screen.getByDisplayValue('BLUE RIDGE BAKERY')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('LOWES')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save rule' })).toBeDisabled();
+    });
+
+    it('offers only non-builtin rules, with their conditions', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+
+      const options = rulesListed().map((o) => o.textContent);
+      expect(options.some((o) => o?.startsWith('Treats'))).toBe(true);
+      expect(options.some((o) => o?.includes('description contains LOWES or'))).toBe(true);
+      expect(options.some((o) => o?.startsWith('Payments'))).toBe(false);
+    });
+
+    it('filters the rules by label as you type', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+      await user.type(picker(), 'TREATS');
+
+      const options = rulesListed();
+      expect(options).toHaveLength(1);
+      expect(options[0]).toHaveTextContent(/^Treats/);
+    });
+
+    it('finds a rule by a term in its conditions', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+      await user.type(picker(), 'gelato');
+
+      const options = rulesListed();
+      expect(options).toHaveLength(1);
+      expect(options[0]).toHaveTextContent(/^Treats/);
+    });
+
+    it('says so when no rule matches the search', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+      await user.type(picker(), 'zzzz-nothing');
+
+      expect(rulesListed()).toHaveLength(0);
+      expect(screen.getByText('No matching rule')).toBeInTheDocument();
+    });
+
+    it('picks the highlighted rule with Enter', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+      await user.type(picker(), 'gelato{Enter}');
+
+      expect(picker()).toHaveValue('Treats');
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByLabelText('Category')).toHaveValue('treats');
+      expect(screen.getByRole('button', { name: 'Save rule' })).toBeEnabled();
+    });
+
+    it('closes the list on Escape without choosing', async () => {
+      const user = userEvent.setup();
+      await openWithTreatsRule();
+      render(<RuleEditorScreen />);
+
+      await startAdding(user);
+      await user.keyboard('{Escape}');
+
+      expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Save rule' })).toBeDisabled();
     });
 
     it('locks the category and merges the suggestion into the rule', async () => {
@@ -293,6 +396,7 @@ describe('RuleEditorScreen', () => {
         combinator: 'or',
         rules: [
           { field: 'description', operator: 'contains', value: 'LOWES' },
+          { field: 'description', operator: 'contains', value: 'GELATO' },
           { field: 'description', operator: 'contains', value: 'BLUE RIDGE BAKERY' },
         ],
       });

@@ -18,6 +18,7 @@ import { useAppStore, useHydrated } from '@/store/useAppStore';
 import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
 import { RuleForm } from './RuleForm';
+import { RulePicker } from './RulePicker';
 import { fromRqb, toRqb } from './rqbMap';
 import screen from './RuleScreen.module.css';
 import styles from './RuleEditorScreen.module.css';
@@ -28,7 +29,7 @@ const DRAFT_ID = '__draft__';
 const sameGroup = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /** Whether the draft becomes a rule of its own or widens one that already exists. */
-type RuleTarget = { kind: 'new' } | { kind: 'existing'; ruleId: string };
+type RuleTarget = { kind: 'new' } | { kind: 'existing'; ruleId: string | null };
 
 interface PreviewRow {
   txn: Transaction;
@@ -89,8 +90,10 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
     () => ruleLabels(state.rules, state.categories),
     [state.rules, state.categories],
   );
+  const adding = target.kind === 'existing' && userRules.length > 0;
   const targetRule =
-    target.kind === 'existing' ? userRules.find((r) => r.id === target.ruleId) : undefined;
+    adding && target.ruleId ? userRules.find((r) => r.id === target.ruleId) : undefined;
+  const awaitingRule = adding && !targetRule;
   const categoryChoice: CategoryChoice = targetRule
     ? { kind: 'existing', id: targetRule.categoryId }
     : choice;
@@ -99,7 +102,7 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   const hasConditions = group.rules.length > 0;
   const seed = suggestions[active] && seedGroup(targetRule, suggestions[active].group);
   const edited = !!seed && !sameGroup(group, seed);
-  const resolved = resolveCategoryChoice(categoryChoice, state.categories);
+  const resolved = awaitingRule ? null : resolveCategoryChoice(categoryChoice, state.categories);
   const categoryId = resolved?.category.id;
 
   const preview = useMemo(() => {
@@ -162,7 +165,10 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   }
 
   function chooseTarget(next: RuleTarget) {
-    const rule = next.kind === 'existing' ? userRules.find((r) => r.id === next.ruleId) : undefined;
+    const rule =
+      next.kind === 'existing' && next.ruleId
+        ? userRules.find((r) => r.id === next.ruleId)
+        : undefined;
     setTarget(next);
     setQuery(
       suggestions[active]
@@ -203,10 +209,12 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
           ← Back
         </button>
         <h1 className={screen.title}>
-          {targetRule
+          {adding
             ? `Add ${sources.length} transaction${sources.length === 1 ? '' : 's'} to ${
-                state.categories.find((c) => c.id === targetRule.categoryId)?.name ?? 'the'
-              } rule`
+                targetRule
+                  ? `${state.categories.find((c) => c.id === targetRule.categoryId)?.name ?? 'the'} rule`
+                  : 'an existing rule'
+              }`
             : `New rule from ${sources.length} transaction${sources.length === 1 ? '' : 's'}`}
         </h1>
       </div>
@@ -248,7 +256,7 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
                 <input
                   type="radio"
                   name="rule-target"
-                  checked={!targetRule}
+                  checked={!adding}
                   onChange={() => chooseTarget({ kind: 'new' })}
                 />
                 New rule
@@ -257,42 +265,42 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
                 <input
                   type="radio"
                   name="rule-target"
-                  checked={!!targetRule}
-                  onChange={() => chooseTarget({ kind: 'existing', ruleId: userRules[0].id })}
+                  checked={adding}
+                  onChange={() => chooseTarget({ kind: 'existing', ruleId: null })}
                 />
                 Add to existing rule
               </label>
             </div>
-            {targetRule && (
-              <div className="field">
-                <label htmlFor="rule-target-rule">Existing rule</label>
-                <select
-                  id="rule-target-rule"
-                  value={targetRule.id}
-                  onChange={(e) => chooseTarget({ kind: 'existing', ruleId: e.target.value })}
-                >
-                  {userRules.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {labels.get(r.id)}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            {adding && (
+              <RulePicker
+                rules={userRules}
+                labels={labels}
+                categories={state.categories}
+                value={targetRule?.id ?? null}
+                onChange={(ruleId) => chooseTarget({ kind: 'existing', ruleId })}
+                autoFocus
+              />
             )}
           </div>
         )}
-        <CategoryField
-          categories={state.categories}
-          disabled={!!targetRule}
-          value={categoryChoice}
-          onChange={(next) => {
-            if (next.kind === 'new' && choice.kind === 'new' && next.name !== choice.name) {
-              setNameTouched(true);
-            }
-            setChoice(next);
-          }}
-          placeholder="e.g. Groceries"
-        />
+        {awaitingRule ? (
+          <p className={screen.note}>
+            Choose a rule — its category is used for these transactions.
+          </p>
+        ) : (
+          <CategoryField
+            categories={state.categories}
+            disabled={!!targetRule}
+            value={categoryChoice}
+            onChange={(next) => {
+              if (next.kind === 'new' && choice.kind === 'new' && next.name !== choice.name) {
+                setNameTouched(true);
+              }
+              setChoice(next);
+            }}
+            placeholder="e.g. Groceries"
+          />
+        )}
         <RuleConditionsEditor query={query} onQueryChange={setQuery} />
       </section>
 
