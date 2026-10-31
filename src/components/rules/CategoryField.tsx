@@ -63,6 +63,7 @@ export function CategoryField({
           <input
             id="rule-category-name"
             type="text"
+            autoFocus
             value={value.name}
             placeholder={placeholder}
             onChange={(e) => onChange({ ...value, name: e.target.value })}

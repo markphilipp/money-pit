@@ -52,7 +52,7 @@ export function BulkBar({ count, onChangeCategory, onCreateRule, onClear }: Bulk
         onClick={onCreateRule}
       >
         <Icon>
-          <path d="M2 4h12M4.5 8h7M7 12h2" />
+          <path d="M9 1.5L3.5 9H8l-1 5.5L12.5 7H8z" />
         </Icon>
       </button>
       <button
