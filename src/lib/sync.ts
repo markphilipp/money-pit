@@ -1,5 +1,5 @@
 import { txnId, withOrdinals } from './hash';
-import type { OrdinalRow, RawStatementRow } from './types';
+import type { Dataset, OrdinalRow, RawStatementRow } from './types';
 
 /** How a signed-in account stores a row: by content + ordinal, never by the derived `txnId`. */
 export interface StoredRow extends OrdinalRow {
@@ -14,6 +14,30 @@ export function toStoredRows(
     ...row,
     categoryOverride: overrides[txnId(row, row.ordinal)] ?? null,
   }));
+}
+
+/** A dataset as the account stores it: the rows its file held, numbered within that file. */
+export interface StoredDataset extends Omit<Dataset, 'rows'> {
+  rows: StoredRow[];
+}
+
+/**
+ * A file's k-th copy of a row has ordinal k-1, the same identity as the merged row, so numbering
+ * per file is what ties a dataset's rows to the account's deduped ones.
+ */
+export const toStoredDataset = (
+  { rows, ...dataset }: Dataset,
+  overrides: Record<string, string>,
+): StoredDataset => ({ ...dataset, rows: toStoredRows(rows, overrides) });
+
+export function fromStoredDatasets(stored: StoredDataset[]) {
+  const overrides: Record<string, string> = {};
+  const datasets = stored.map(({ rows, ...dataset }): Dataset => {
+    const parts = fromStoredRows(rows);
+    Object.assign(overrides, parts.overrides);
+    return { ...dataset, rows: parts.rawRows };
+  });
+  return { datasets, overrides };
 }
 
 export function fromStoredRows(stored: StoredRow[]) {

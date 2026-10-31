@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { defaultCategorization } from '@/lib/defaultRules';
-import { categorizationInput } from './input';
+import { categorizationInput, datasetInput, datasetsInput } from './input';
 
 const valid = defaultCategorization;
 
@@ -40,5 +40,39 @@ describe('categorizationInput', () => {
       ],
     };
     expect(categorizationInput.safeParse(bad).success).toBe(false);
+  });
+});
+
+describe('datasetInput', () => {
+  const dataset = { id: 'a1', name: 'june.csv', uploadedAt: '2026-07-04T10:00:00.000Z' };
+
+  it('accepts an id, a name and an ISO timestamp', () => {
+    expect(datasetInput.safeParse(dataset).success).toBe(true);
+  });
+
+  it.each([
+    ['an empty id', { ...dataset, id: '' }],
+    ['an overlong id', { ...dataset, id: 'x'.repeat(65) }],
+    ['an overlong name', { ...dataset, name: 'x'.repeat(256) }],
+    ['a timestamp that is not ISO', { ...dataset, uploadedAt: 'yesterday' }],
+  ])('rejects %s', (_, bad) => {
+    expect(datasetInput.safeParse(bad).success).toBe(false);
+  });
+
+  it('parses a dataset together with its rows', () => {
+    const row = {
+      status: 'Cleared',
+      dateStr: '07/03/2026',
+      description: 'APPLE.COM/BILL CUPERTINO CA',
+      debit: '4.99',
+      credit: '',
+      person: 'ALEX SAMPLE',
+      ordinal: 0,
+      categoryOverride: null,
+    };
+    expect(datasetsInput.safeParse([{ ...dataset, rows: [row] }]).success).toBe(true);
+    expect(datasetsInput.safeParse([{ ...dataset, rows: [{ ...row, ordinal: -1 }] }]).success).toBe(
+      false,
+    );
   });
 });

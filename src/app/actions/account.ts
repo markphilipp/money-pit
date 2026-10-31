@@ -3,24 +3,51 @@
 import { eq } from 'drizzle-orm';
 import { getDb } from '@/db';
 import { user } from '@/db/schema';
-import { deletePreference, readPreference, upsertPreference } from '@/db/queries/preference';
+import { readPreference, upsertPreference } from '@/db/queries/preference';
 import { readCategorization, replaceCategorization } from '@/db/queries/categories';
-import { deleteRows, insertRows, readRows, updateOverrides } from '@/db/queries/rows';
+import { saveClaim } from '@/db/queries/claim';
+import { updateOverrides } from '@/db/queries/rows';
+import {
+  adoptUnownedRows,
+  deleteDataset,
+  insertDataset,
+  insertDatasetRows,
+  readDatasets,
+} from '@/db/queries/datasets';
 import { requireUserId } from '@/auth/session';
-import { defaultCategorization } from '@/lib/defaultRules';
-import { claimInto } from '@/lib/claim';
-import { fromStoredRows, overrideChanges, toStoredRows, type StoredRow } from '@/lib/sync';
+import { fromStoredDatasets, type StoredRow } from '@/lib/sync';
+import type { StoredDataset } from '@/lib/sync';
 import type { Categorization } from '@/lib/types';
 import type { Preference } from '@/db/queries/preference';
-import { categorizationInput, preferenceInput, rowsInput } from './input';
+import {
+  categorizationInput,
+  datasetInput,
+  datasetsInput,
+  preferenceInput,
+  rowsInput,
+} from './input';
 
 // Server actions are public endpoints: every one takes its user from the session cookie and
 // parses its arguments, whatever their declared types.
 
-export async function appendRows(rows: StoredRow[]) {
+export async function createDataset(value: { id: string; name: string; uploadedAt: string }) {
   const userId = await requireUserId();
+  const parsed = datasetInput.parse(value);
+  await getDb().transaction((tx) => insertDataset(tx, userId, parsed));
+}
+
+/** Rows arrive in chunks under the body cap, each already numbered within the whole file. */
+export async function appendDatasetRows(datasetId: string, rows: StoredRow[]) {
+  const userId = await requireUserId();
+  const parsedId = datasetInput.shape.id.parse(datasetId);
   const parsed = rowsInput.parse(rows);
-  await getDb().transaction((tx) => insertRows(tx, userId, parsed));
+  await getDb().transaction((tx) => insertDatasetRows(tx, userId, parsedId, parsed));
+}
+
+export async function removeDataset(id: string) {
+  const userId = await requireUserId();
+  const parsedId = datasetInput.shape.id.parse(id);
+  await getDb().transaction((tx) => deleteDataset(tx, userId, parsedId));
 }
 
 export async function setOverrides(rows: StoredRow[]) {
@@ -42,15 +69,6 @@ export async function setPreference(value: Preference) {
   await getDb().transaction((tx) => upsertPreference(tx, userId, parsed));
 }
 
-export async function resetAccount() {
-  const userId = await requireUserId();
-  await getDb().transaction(async (tx) => {
-    await deleteRows(tx, userId);
-    await deletePreference(tx, userId);
-    await replaceCategorization(tx, userId, defaultCategorization);
-  });
-}
-
 /** Every other table cascades from `user`, sessions included, so this also signs the user out. */
 export async function deleteAccount() {
   const userId = await requireUserId();
@@ -60,43 +78,26 @@ export async function deleteAccount() {
 export async function loadSnapshot() {
   const userId = await requireUserId();
   return getDb().transaction(async (tx) => {
+    await adoptUnownedRows(tx, userId);
     return {
-      rows: await readRows(tx, userId),
+      datasets: await readDatasets(tx, userId),
       ...(await readCategorization(tx, userId)),
       preference: await readPreference(tx, userId),
     };
   });
 }
 
-/** Saves a signed-out session's rows, overrides, categories and rules into the account; safe to retry. */
+/** Saves a signed-out session's datasets, overrides, categories and rules into the account; safe to retry. */
 export async function claimLocal(
-  rows: StoredRow[],
+  datasets: StoredDataset[],
   categorization: Categorization,
   preference: Preference | null,
 ) {
   const userId = await requireUserId();
   const local = {
-    ...fromStoredRows(rowsInput.parse(rows)),
+    ...fromStoredDatasets(datasetsInput.parse(datasets)),
     ...categorizationInput.parse(categorization),
   };
   const localPreference = preferenceInput.nullable().parse(preference);
-  await getDb().transaction(async (tx) => {
-    const account = {
-      ...fromStoredRows(await readRows(tx, userId)),
-      ...(await readCategorization(tx, userId)),
-    };
-    const merged = claimInto(account, local);
-    await insertRows(
-      tx,
-      userId,
-      toStoredRows(merged.rawRows, merged.overrides).slice(account.rawRows.length),
-    );
-    await updateOverrides(
-      tx,
-      userId,
-      overrideChanges(account.rawRows, account.overrides, merged.overrides),
-    );
-    await replaceCategorization(tx, userId, merged);
-    if (localPreference) await upsertPreference(tx, userId, localPreference);
-  });
+  await getDb().transaction((tx) => saveClaim(tx, userId, local, localPreference));
 }
