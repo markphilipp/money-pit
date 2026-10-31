@@ -10,12 +10,14 @@ Filter, sort and chart the loaded transactions. Filters and chart mode persist a
     upper value").
   - Description has a text filter.
 - Charts:
-  - Spending by category. The "Chart type" group has a "Bars" toggle with `aria-pressed`; the
-    alternative is a donut.
-  - Spending by cardholder, a donut.
+  - Spending by category. The "Category chart type" group has a "Bars" toggle with
+    `aria-pressed`; the alternative is a donut.
+  - Spending by cardholder. The "Person chart type" group has its own "Bars" toggle, so scope the
+    handle to the group.
 - Table footer total. `tfoot` contains "Total" and the filtered sum.
 - "Reset" clears every filter.
 - Reload keeps filters and chart mode.
+- The two charts toggle independently.
 
 ## How to get to it (user POV)
 
@@ -40,10 +42,13 @@ export default async ({ page, shot, fixture }) => {
   await page.keyboard.press('Escape');
   await expect(count).toContainText('(1)');
   await expect(page.locator('tfoot')).toContainText('$64.20');
-  await page.getByRole('button', { name: 'Bars' }).click();
+  const bars = page
+    .getByRole('group', { name: 'Category chart type' })
+    .getByRole('button', { name: 'Bars' });
+  await bars.click();
   await shot('filtered-bars');
   await page.reload();
-  await expect(page.getByRole('button', { name: 'Bars' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(bars).toHaveAttribute('aria-pressed', 'true');
   await expect(count).toContainText('(1)');
   await shot('after-reload');
   await page.getByRole('button', { name: 'Reset' }).click();

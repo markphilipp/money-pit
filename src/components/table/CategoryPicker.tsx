@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { findCategoryByName } from '@/lib/categories';
 import type { Category } from '@/lib/types';
 import { PAYMENTS_ID } from '@/lib/types';
 import styles from './CategoryPicker.module.css';
@@ -12,6 +13,7 @@ export interface PickerAnchor {
   rect: DOMRect;
   currentCategoryId: string | null;
   onChoose: (categoryId: string) => void;
+  onCreate: (name: string) => void;
 }
 
 interface Props extends PickerAnchor {
@@ -19,18 +21,29 @@ interface Props extends PickerAnchor {
   onClose: () => void;
 }
 
-export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, onClose }: Props) {
+export function CategoryPicker({
+  rect,
+  currentCategoryId,
+  onChoose,
+  onCreate,
+  categories,
+  onClose,
+}: Props) {
   const [query, setQuery] = useState('');
   const [highlight, setHighlight] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const [pos, setPos] = useState({ left: rect.left, top: rect.bottom + 6 });
 
   const options = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return categories.filter(
-      (c) => c.id !== PAYMENTS_ID && (!q || c.name.toLowerCase().includes(q)),
-    );
+    return categories
+      .filter((c) => c.id !== PAYMENTS_ID && (!q || c.name.toLowerCase().includes(q)))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [categories, query]);
+
+  const newName = query.trim();
+  const canCreate = options.length === 0 && !!newName && !findCategoryByName(categories, newName);
 
   useLayoutEffect(() => {
     const height = Math.min(ref.current?.offsetHeight ?? MAX_HEIGHT, MAX_HEIGHT);
@@ -42,6 +55,13 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, 
     if (rect.bottom + height > window.innerHeight - 8) top = rect.top - height - 6;
     setPos({ left: Math.max(left, 8), top: Math.max(top, 8) });
   }, [rect]);
+
+  // A context menu that opened the picker restores focus as it unmounts, so focus after it settles.
+  useEffect(() => {
+    inputRef.current?.focus();
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   useEffect(() => {
     const onDocMouseDown = (e: MouseEvent) => {
@@ -56,6 +76,11 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, 
     onClose();
   };
 
+  const create = () => {
+    onCreate(newName);
+    onClose();
+  };
+
   return (
     <div
       ref={ref}
@@ -67,7 +92,7 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, 
       <input
         className={styles.search}
         type="text"
-        autoFocus
+        ref={inputRef}
         autoComplete="off"
         placeholder="Search categories…"
         role="combobox"
@@ -93,6 +118,7 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, 
             e.preventDefault();
             const option = options[highlight];
             if (option) choose(option.id);
+            else if (canCreate) create();
           } else if (e.key === 'Escape') {
             e.preventDefault();
             onClose();
@@ -100,7 +126,15 @@ export function CategoryPicker({ rect, currentCategoryId, onChoose, categories, 
         }}
       />
       <div className={styles.list} id="category-picker-list" role="listbox" aria-label="Categories">
-        {options.length === 0 && <p className={styles.empty}>No matching category</p>}
+        {options.length === 0 && !canCreate && <p className={styles.empty}>No matching category</p>}
+        {canCreate && (
+          <button type="button" className={`${styles.item} ${styles.hl}`} onClick={create}>
+            <span className={styles.plus} aria-hidden="true">
+              +
+            </span>
+            Create category “{newName}”
+          </button>
+        )}
         {options.map((category, i) => (
           <button
             key={category.id}

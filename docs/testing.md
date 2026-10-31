@@ -30,10 +30,11 @@ never commit a CSV outside `e2e/fixtures/`.
 
 ## Vitest setup — `vitest.setup.ts`
 
-jsdom is missing two things the app uses; both are shimmed there:
+jsdom is missing three things the app uses; all are shimmed there:
 
 - `Blob.prototype.text` — used by `uploadFiles`.
 - `ResizeObserver` — a no-op class is enough, `useHeightVar` only needs it to exist.
+- `Element.prototype.scrollIntoView` — a no-op; the table calls it when the highlighted row changes.
 
 `afterEach` runs `cleanup()`, resets the router spies and clears `sessionStorage`, so tests don't
 leak state into each other. Environment is jsdom with globals on; `@/` resolves to `src/`.
@@ -63,8 +64,10 @@ Existing specs cover the empty state, multi-file upload with overlap dedupe, inl
 column-menu filtering + reload persistence, recategorizing from a pill, creating a rule from a row,
 inducing a merchant rule from several selected rows (`merchants.csv` — three stores of one synthetic
 merchant), removing an uploaded file (`datasets.spec.ts`: shared rows survive, the last removal
-lands on the empty state with rules intact), managing rules on `/rules`, editing a rule on its own URL and returning through browser
-history, the 404 status for an unknown URL, and bulk selection.
+lands on the empty state with rules intact), managing rules on `/rules`, editing a rule on its own
+URL and returning through browser history, the 404 status for an unknown URL, bulk selection, and
+keyboard shortcuts (focus after a checkbox click, `?` as a real browser produces it, the highlighted
+row clearing the sticky header).
 
 Routing assertions belong here, not in the unit tests: this is the only layer running a real
 router.

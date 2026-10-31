@@ -5,7 +5,11 @@ import { useRouter } from 'next/navigation';
 import { flexRender, getCoreRowModel, useReactTable } from '@tanstack/react-table';
 import type { Transaction } from '@/lib/types';
 import { fmtMoney, personShort } from '@/lib/format';
+import { activatesOnSpace, moveHighlight, resolveActionTargets } from '@/lib/shortcuts';
 import { useHeightVar } from '@/hooks/useHeightVar';
+import { useShortcut } from '@/hooks/useShortcut';
+import { nextPaletteColor } from '@/lib/palette';
+import { uniqueId } from '@/lib/rules/naming';
 import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
 import { emptyFilters, useAppStore } from '@/store/useAppStore';
@@ -31,6 +35,7 @@ export function TransactionTable() {
   const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setSort = useAppStore((s) => s.setSort);
   const setOverride = useAppStore((s) => s.setOverride);
+  const addCategory = useAppStore((s) => s.addCategory);
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
   const clearSelection = useAppStore((s) => s.clearSelection);
@@ -38,7 +43,12 @@ export function TransactionTable() {
   const router = useRouter();
   const [picker, setPicker] = useState<PickerState | null>(null);
   const selectAllRef = useRef<HTMLInputElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const rowEls = useRef(new Map<string, HTMLTableRowElement>());
   const headRef = useHeightVar('--table-head-h');
+  const theadRef = useHeightVar('--table-thead-h');
+  // Ephemeral keyboard cursor. Filtering or sorting can drop the row, so it only counts while visible.
+  const [highlight, setHighlight] = useState<string | null>(null);
 
   const categoriesById = useMemo(
     () => new Map(state.categories.map((c) => [c.id, c])),
@@ -73,6 +83,7 @@ export function TransactionTable() {
   });
 
   const visibleIds = rows.map((r) => r.id);
+  const highlightedId = highlight !== null && visibleIds.includes(highlight) ? highlight : null;
   const allSelected = visibleIds.length > 0 && visibleIds.every((id) => state.selectedIds.has(id));
   const someSelected = !allSelected && visibleIds.some((id) => state.selectedIds.has(id));
 
@@ -80,13 +91,75 @@ export function TransactionTable() {
     if (selectAllRef.current) selectAllRef.current.indeterminate = someSelected;
   }, [someSelected]);
 
-  /** Acting inside a selection applies to the whole selection, otherwise to that row alone. */
-  const targetsFor = (id: string) => (state.selectedIds.has(id) ? [...state.selectedIds] : [id]);
+  useEffect(() => {
+    if (highlightedId) rowEls.current.get(highlightedId)?.scrollIntoView({ block: 'nearest' });
+  }, [highlightedId]);
+
+  const targetsFor = (id: string) => resolveActionTargets(id, state.selectedIds);
 
   const startRuleFrom = (ids: string[]) => {
     setRuleSources(ids);
     router.push('/rules/new');
   };
+
+  const openPicker = (targetIds: string[], rect: DOMRect) => {
+    setPicker({
+      rect,
+      currentCategoryId:
+        targetIds.length > 1 ? null : (rows.find((r) => r.id === targetIds[0])?.categoryId ?? null),
+      targetIds,
+      bulk: targetIds.length > 1,
+    });
+  };
+
+  const keyboardTargets = () => resolveActionTargets(highlightedId, state.selectedIds);
+
+  const step = (dir: 1 | -1) => setHighlight(moveHighlight(visibleIds, highlightedId, dir));
+
+  useShortcut(
+    'search',
+    () => {
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    },
+    { preventDefault: true },
+  );
+  useShortcut('firstRow', () => setHighlight(visibleIds[0] ?? null));
+  useShortcut('nextRow', () => step(1), { preventDefault: () => rows.length > 0, repeat: true });
+  useShortcut('prevRow', () => step(-1), { preventDefault: () => rows.length > 0, repeat: true });
+  useShortcut(
+    'toggleRow',
+    () => {
+      if (highlightedId) toggleSelected(highlightedId);
+    },
+    {
+      preventDefault: () => highlightedId !== null,
+      ignoreWhen: (e) => activatesOnSpace(e.target),
+    },
+  );
+  useShortcut('selectAll', () => selectAll(visibleIds, true));
+  useShortcut(
+    'changeCategory',
+    () => {
+      const targetIds = keyboardTargets();
+      if (targetIds.length === 0) return;
+      const anchor =
+        (highlightedId &&
+          rowEls.current.get(highlightedId)?.querySelector('[data-category-pill]')) ||
+        searchRef.current;
+      if (anchor) openPicker(targetIds, anchor.getBoundingClientRect());
+    },
+    // The picker focuses its search box mid-keydown, so the "c" would be typed into it.
+    { preventDefault: () => keyboardTargets().length > 0 },
+  );
+  useShortcut('createRule', () => {
+    const targetIds = keyboardTargets();
+    if (targetIds.length > 0) startRuleFrom(targetIds);
+  });
+  useShortcut('clear', () => {
+    if (state.selectedIds.size > 0) clearSelection();
+    else setHighlight(null);
+  });
 
   return (
     <div className={`card ${styles.tableCard}`}>
@@ -96,6 +169,7 @@ export function TransactionTable() {
         </h2>
         <input
           className={styles.search}
+          ref={searchRef}
           type="text"
           aria-label="Search description"
           placeholder="Search descriptions…"
@@ -129,7 +203,7 @@ export function TransactionTable() {
 
       <div className={styles.scroll}>
         <table className={styles.table}>
-          <thead>
+          <thead ref={theadRef}>
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
                 {group.headers.map((header) => {
@@ -195,18 +269,22 @@ export function TransactionTable() {
                 selected={state.selectedIds.has(row.original.id)}
                 onCreateRule={() => startRuleFrom(targetsFor(row.original.id))}
                 onToggleSelect={() => toggleSelected(row.original.id)}
-                onChangeCategory={({ x, y }) => {
-                  const targetIds = targetsFor(row.original.id);
-                  setPicker({
-                    rect: new DOMRect(x, y, 0, 0),
-                    currentCategoryId: targetIds.length > 1 ? null : row.original.categoryId,
-                    targetIds,
-                    bulk: targetIds.length > 1,
-                  });
-                }}
+                onChangeCategory={({ x, y }) =>
+                  openPicker(targetsFor(row.original.id), new DOMRect(x, y, 0, 0))
+                }
               >
                 <tr
-                  className={state.selectedIds.has(row.original.id) ? styles.selected : undefined}
+                  ref={(el) => {
+                    if (el) rowEls.current.set(row.original.id, el);
+                    else rowEls.current.delete(row.original.id);
+                  }}
+                  aria-current={row.original.id === highlightedId ? 'true' : undefined}
+                  className={[
+                    state.selectedIds.has(row.original.id) && styles.selected,
+                    row.original.id === highlightedId && styles.highlighted,
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                 >
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as ColumnMeta | undefined;
@@ -250,6 +328,19 @@ export function TransactionTable() {
           onClose={() => setPicker(null)}
           onChoose={(categoryId) => {
             setOverride(picker.targetIds, categoryId);
+            if (picker.bulk) clearSelection();
+          }}
+          onCreate={(name) => {
+            const id = uniqueId(
+              name,
+              state.categories.map((c) => c.id),
+            );
+            addCategory({
+              id,
+              name,
+              color: nextPaletteColor(state.categories.map((c) => c.color)),
+            });
+            setOverride(picker.targetIds, id);
             if (picker.bulk) clearSelection();
           }}
         />

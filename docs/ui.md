@@ -4,18 +4,18 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area         | Files                                                                                            | Notes                                                                                                                                                                |
-| ------------ | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                 | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.    |
-| `dashboard`  | `Dashboard`                                                                                      | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                    |
-| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                  | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                         |
-| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`       | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                      |
-| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. |
-| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                       | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                      |
-| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                          | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                    |
-| `upload`     | `EmptyState`, `UploadZone`                                                                       | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                           |
-| `auth`       | `SignInScreen`                                                                                   | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                         |
-| `common`     | `ColorPickerPopover`, `ConfirmDialog`                                                            | Shared palette popover and a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step.                         |
+| Area         | Files                                                                                            | Notes                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                 | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                 |
+| `dashboard`  | `Dashboard`                                                                                      | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                 |
+| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                  | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                      |
+| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`       | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                   |
+| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape.              |
+| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                       | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                   |
+| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                          | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                 |
+| `upload`     | `EmptyState`, `UploadZone`                                                                       | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                        |
+| `auth`       | `SignInScreen`                                                                                   | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                      |
+| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                         | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog. |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
@@ -69,11 +69,43 @@ checklists, description/amount/date get operator inputs). Description search and
 payments/credits toggle live in the bar above.
 
 Row actions follow one rule — **acting inside a selection applies to the whole selection, otherwise
-to that row alone** (`targetsFor` in `TransactionTable.tsx`). This covers the category pill, the
+to that row alone** (`resolveActionTargets` in `src/lib/shortcuts.ts`, wrapped by `targetsFor` in
+`TransactionTable.tsx`). This covers the category pill, the
 right-click menu and "create rule from rows", which stores the ids and routes to `/rules/new`.
 
 Payments rows are excluded unless "show payments & credits" is on; the footer total reflects only
 what's visible.
+
+## Keyboard shortcuts
+
+`SHORTCUTS` in `src/lib/shortcuts.ts` is the single source of truth: each entry has an `id`, a
+`hotkey` (react-hotkeys-hook syntax), the key labels to show, a label and a scope (`global` or
+`transactions`). `ShortcutsDialog` renders straight from it, and components bind through
+`useShortcut(id, handler)` (`src/hooks/useShortcut.ts`), so the help text can't drift from what is
+bound. `?` is bound in `UserMenu` (it renders on every route and owns the dialog); the rest are bound
+in `TransactionTable`.
+
+To add one: add an entry to `SHORTCUTS` (and a `ShortcutId`), then call `useShortcut` where the
+handler's state lives. Pass `preventDefault` only for presses you actually handle, as a function
+when that depends on state, so native behavior (page scroll on Space, typing) survives otherwise.
+Punctuation uses `useKey: true` to match the produced character rather than a physical key.
+
+Shortcuts are plain unmodified keys: any ctrl/meta/alt combination never matches, so Cmd+A and
+Cmd+C keep working. `isShortcutBlocked` decides when focus owns the key instead, and replaces the
+library's own form-tag check (`enableOnFormTags: true`), which is too coarse. It blocks text-entry
+inputs, `textarea`, `select`, contenteditable, and anything inside `dialog`, `alertdialog`, `menu`,
+`listbox`, `separator`, `slider` or `combobox`. Checkboxes and buttons are deliberately _not_
+blocked: row checkboxes keep focus after a click, and blocking them would kill every shortcut right
+after selecting a row. The charts-pane resize handle (`separator`) already owns Arrow Up/Down, and
+Radix dialogs/menus and `CategoryPicker` (`dialog`) trap keys themselves. Space additionally skips
+buttons, links, checkboxes and radios (`activatesOnSpace`), which Space already activates.
+
+The table's keyboard cursor is the highlighted row. It is a transaction id in `useState` inside
+`TransactionTable`, never in the store or persisted. The index is derived from the current `rows`
+on every render, so an id that filtering or sorting removed counts as no highlight. The row gets
+`aria-current="true"` and scrolls into view with `block: 'nearest'`; its `scroll-margin-top` is
+`--charts-h` + `--table-head-h` + `--table-thead-h`, the last published by `useHeightVar` on the
+`thead`, so the row never lands under the pinned stack.
 
 ## Routes
 

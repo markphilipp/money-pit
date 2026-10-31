@@ -61,6 +61,7 @@ export function buildColumns({
             type="button"
             className={styles.catTag}
             title="Change category"
+            data-category-pill
             onClick={(e) => onPillClick(row.original, e.currentTarget)}
           >
             <span className={styles.dot} style={{ background: category?.color ?? '#8A8F98' }} />

@@ -33,7 +33,7 @@ export function RowContextMenu({
         {children}
       </ContextMenu.Trigger>
       <ContextMenu.Portal>
-        <ContextMenu.Content className={styles.menu}>
+        <ContextMenu.Content className={styles.menu} onCloseAutoFocus={(e) => e.preventDefault()}>
           <ContextMenu.Item className={styles.item} onSelect={onCreateRule}>
             Create rule from transaction
           </ContextMenu.Item>
