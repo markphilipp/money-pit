@@ -27,7 +27,7 @@ export function SuggestionsStrip() {
 
   const createRule = (proposal: RuleProposal) => {
     setRuleSources(proposal.txnIds);
-    router.push('/rules/new');
+    router.push('/settings/rules/new');
   };
 
   const dismiss = (proposal: RuleProposal) => {

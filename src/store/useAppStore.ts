@@ -49,7 +49,7 @@ export interface AppState {
   personChartMode: ChartMode;
   sort: SortState;
   selectedIds: Set<string>;
-  /** Seeds `/rules/new`; persisted so the route survives a reload rather than losing its subject. */
+  /** Seeds `/settings/rules/new`; persisted so the route survives a reload rather than losing its subject. */
   ruleSources: string[];
   /** Keys of rule proposals the user turned down (see `discoverProposals`); the proposals themselves are derived. */
   dismissedSuggestions: string[];

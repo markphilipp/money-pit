@@ -1,4 +1,4 @@
-/* Chrome shared by every /rules screen: the page frame, its heading, and the action row. */
+/* Chrome shared by the settings screens: the content frame, its heading, sections and the action row. */
 
 .screen {
   display: flex;

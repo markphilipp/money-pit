@@ -66,7 +66,7 @@ describe('SuggestionsStrip', () => {
       .filter((t) => t.description.startsWith('ZORBAMART'))
       .map((t) => t.id);
     expect([...state().ruleSources].sort()).toEqual([...zorba].sort());
-    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules/new');
   });
 
   it('dismisses a suggestion for good and keeps focus on the banner', async () => {

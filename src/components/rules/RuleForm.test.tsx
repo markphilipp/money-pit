@@ -20,7 +20,7 @@ describe('RuleForm', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(useAppStore.getState().rules.find((r) => r.id === 'grocery')?.categoryId).toBe('pets');
-    expect(routerMock.push).toHaveBeenCalledWith('/rules');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules');
   });
 
   it('creates a rule and its category when no id is given', async () => {
@@ -42,7 +42,7 @@ describe('RuleForm', () => {
     await user.click(await screen.findByRole('button', { name: 'Delete' }));
 
     expect(useAppStore.getState().rules.some((r) => r.id === 'grocery')).toBe(false);
-    expect(routerMock.push).toHaveBeenCalledWith('/rules');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules');
   });
 
   it('fixes conditions and hides delete for a built-in rule', async () => {

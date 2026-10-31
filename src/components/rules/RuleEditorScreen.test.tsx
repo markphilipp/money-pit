@@ -163,16 +163,27 @@ describe('RuleEditorScreen', () => {
     expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets']);
   });
 
-  it('routes back to the dashboard without saving', async () => {
+  it('routes back to the rules list without saving', async () => {
     const user = userEvent.setup();
     await openEditor(BAKERIES);
     render(<RuleEditorScreen />);
 
-    await user.click(screen.getByRole('button', { name: '← Back' }));
+    await user.click(screen.getByRole('button', { name: '← All rules' }));
+
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules');
+    expect(useAppStore.getState().ruleSources).toEqual([]);
+    expect(useAppStore.getState().rules.some((r) => r.id === 'blue-ridge-bakery')).toBe(false);
+  });
+
+  it('cancels back to the dashboard', async () => {
+    const user = userEvent.setup();
+    await openEditor(BAKERIES);
+    render(<RuleEditorScreen />);
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(routerMock.push).toHaveBeenCalledWith('/');
     expect(useAppStore.getState().ruleSources).toEqual([]);
-    expect(useAppStore.getState().rules.some((r) => r.id === 'blue-ridge-bakery')).toBe(false);
   });
 
   it('falls back to a hand-written rule when nothing was selected', async () => {

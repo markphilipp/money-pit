@@ -7,7 +7,7 @@ export function slugify(name: string): string {
   );
 }
 
-/** Ids can become URL segments under /rules/, where `new` is already the create route. */
+/** Ids can become URL segments under /settings/rules/, where `new` is already the create route. */
 const RESERVED = ['new'];
 
 export function uniqueId(name: string, taken: string[]): string {

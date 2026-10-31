@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { Page } from '@playwright/test';
 import { expect, test } from './account';
+import { openSettings, settingsNav } from './settings';
 
 const fixture = (name: string) => path.join(__dirname, 'fixtures', name);
 const heading = (page: Page) => page.getByRole('heading', { name: /Transactions/ });
@@ -22,10 +23,9 @@ async function uploadAndEdit(page: Page) {
     .getByRole('dialog', { name: 'Choose category' })
     .getByRole('option', { name: /Home Improvement/ })
     .click();
-  await page.getByLabel('Account menu').click();
-  await page.getByRole('menuitem', { name: 'Category rules…' }).click();
+  await openSettings(page, 'Rules');
   await page.getByLabel('Move Groceries up').click();
-  await page.getByRole('link', { name: 'Categories' }).click();
+  await settingsNav(page).getByRole('link', { name: 'Categories' }).click();
   await page.getByLabel('Rename Home Improvement').click();
   await page.getByLabel('New name for Home Improvement').fill('Renovations');
   await page.getByRole('button', { name: 'Save' }).click();
@@ -53,7 +53,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
       await again.goto('/');
       await expect(heading(again)).toContainText('(7)', { timeout: 2000 });
       await expect(pill(again)).toContainText('Renovations', { timeout: 2000 });
-      await again.goto('/rules');
+      await again.goto('/settings/rules');
       await expect(again.getByLabel(/^Edit /).first()).toHaveAttribute(
         'aria-label',
         'Edit Groceries',
@@ -107,11 +107,10 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(heading(page)).toContainText('(7)');
     await expect.poll(account.rowCount).toBe(8);
 
-    await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Categories…' }).click();
+    await openSettings(page, 'Categories');
     await page.getByRole('textbox', { name: 'New category' }).fill('Travel');
     await page.getByRole('button', { name: 'Add category' }).click();
-    await page.getByRole('link', { name: 'Done' }).click();
+    await page.getByRole('link', { name: '← Dashboard' }).click();
 
     await pill(page).click();
     await page.getByPlaceholder('Search categories…').fill('travel');
@@ -125,21 +124,20 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     const row = page.getByRole('row', { name: /Merchant Offers/ });
     await row.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
-    await expect(page).toHaveURL(/\/rules\/new$/);
+    await expect(page).toHaveURL(/\/settings\/rules\/new$/);
     await page.getByLabel('Category', { exact: true }).selectOption('travel');
     await page.getByRole('button', { name: 'Save rule' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(merchantOffersPill(page)).toContainText('Travel');
 
-    await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Categories…' }).click();
+    await openSettings(page, 'Categories');
     await page.getByLabel('Delete Travel').click();
     const dialog = page.getByRole('alertdialog');
     await expect(dialog).toContainText('will be deleted too');
     await dialog.getByRole('button', { name: /Delete category and/ }).click();
     await expect(page.getByText('Travel')).toHaveCount(0);
 
-    await page.getByRole('link', { name: 'Done' }).click();
+    await page.getByRole('link', { name: '← Dashboard' }).click();
     await expect(merchantOffersPill(page)).toContainText('Other');
     // its rule (util) was untouched by the delete, so the row it always matched wins it back
     await expect(pill(page)).toContainText('Utilities & Phone');
@@ -151,7 +149,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(pill(page)).toContainText('Utilities & Phone');
     // the manual override that pointed at the deleted category was cleared server-side too
     await expect.poll(() => account.overrideFor('DUKE-ENERGY')).toBeNull();
-    await page.goto('/categories');
+    await page.goto('/settings/categories');
     await expect(page.getByText('Travel')).toHaveCount(0);
   });
 
@@ -183,8 +181,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await page.goto('/');
     await expect(page.getByText(/saved to your account/)).toBeVisible();
 
-    await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Categories…' }).click();
+    await openSettings(page, 'Categories');
     await expect(page.getByText('Coffee')).toBeVisible();
     // the legacy record never had a Payments builtin; reading it repairs that in memory
     await expect(page.getByLabel('Delete Payments')).toBeDisabled();
@@ -211,13 +208,12 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await expect(heading(page)).toContainText('(11)');
     await expect.poll(account.rowCount).toBe(12);
 
-    await page.getByLabel('Account menu').click();
-    await page.getByRole('menuitem', { name: 'Uploaded files…' }).click();
+    await openSettings(page, 'Uploaded files');
     await page.getByLabel('Remove june.csv').click();
     await page.getByRole('alertdialog').getByRole('button', { name: 'Remove file' }).click();
     await expect.poll(account.rowCount).toBe(6);
 
-    await page.goto('/datasets');
+    await page.goto('/settings/datasets');
     await expect(page.getByLabel('Remove july.csv')).toBeVisible();
     await expect(page.getByLabel('Remove june.csv')).toHaveCount(0);
     await page.goto('/');

@@ -19,6 +19,14 @@ const csp = [
 ].join('; ');
 
 const nextConfig: NextConfig = {
+  // The settings screens used to be top-level routes; keep bookmarks and old links working.
+  async redirects() {
+    return [
+      { source: '/datasets', destination: '/settings/datasets', permanent: false },
+      { source: '/categories', destination: '/settings/categories', permanent: false },
+      { source: '/rules/:path*', destination: '/settings/rules/:path*', permanent: false },
+    ];
+  },
   async headers() {
     // dev needs the HMR websocket and eval'd sourcemaps, both of which this CSP forbids
     if (process.env.NODE_ENV !== 'production') return [];

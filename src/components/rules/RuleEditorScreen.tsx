@@ -42,7 +42,7 @@ export function RuleEditorScreen() {
   const hydrated = useHydrated();
   const sourceIds = useAppStore((s) => s.ruleSources);
 
-  if (!hydrated) return <main className="wrap" aria-busy="true" />;
+  if (!hydrated) return <div aria-busy="true" />;
   // Reached straight from the rules screen, with nothing selected to induce a rule from.
   if (sourceIds.length === 0) return <RuleForm />;
   return <RuleEditorForm key={sourceIds.join()} sourceIds={sourceIds} />;
@@ -136,9 +136,9 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
       setChoice({ ...choice, name: suggestions[index].name });
   }
 
-  function leave() {
+  function leave(to = '/') {
     setRuleSources([]);
-    router.push('/');
+    router.push(to);
   }
 
   function save() {
@@ -156,14 +156,14 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   }
 
   return (
-    <main className={`wrap ${screen.screen}`}>
+    <div className={screen.screen}>
       <div className={screen.topBar}>
-        <button type="button" className={screen.back} onClick={leave}>
-          ← Back
+        <button type="button" className={screen.back} onClick={() => leave('/settings/rules')}>
+          ← All rules
         </button>
-        <h1 className={screen.title}>
+        <h2 className={screen.title}>
           New rule from {sources.length} transaction{sources.length === 1 ? '' : 's'}
-        </h1>
+        </h2>
       </div>
 
       {suggestions.length > 0 && (
@@ -251,14 +251,14 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
           </label>
         )}
         <span className={screen.spacer} />
-        <button type="button" className="btn-clear" onClick={leave}>
+        <button type="button" className="btn-clear" onClick={() => leave()}>
           Cancel
         </button>
         <button type="button" className={screen.save} onClick={save} disabled={!canSave}>
           Save rule
         </button>
       </div>
-    </main>
+    </div>
   );
 }
 
