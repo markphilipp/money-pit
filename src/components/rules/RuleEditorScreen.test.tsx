@@ -325,7 +325,7 @@ describe('RuleEditorScreen', () => {
 
       expect(picker()).toHaveValue('Treats');
       expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
-      expect(screen.getByLabelText('Category')).toHaveValue('treats');
+      expect(screen.getByLabelText('Category')).toHaveValue('Treats');
       expect(screen.getByRole('button', { name: 'Save rule' })).toBeEnabled();
     });
 
@@ -349,7 +349,7 @@ describe('RuleEditorScreen', () => {
       await pickTreats(user);
 
       expect(screen.getByLabelText('Category')).toBeDisabled();
-      expect(screen.getByLabelText('Category')).toHaveValue('treats');
+      expect(screen.getByLabelText('Category')).toHaveValue('Treats');
       expect(screen.queryByLabelText('Category name')).not.toBeInTheDocument();
       expect(screen.getByDisplayValue('LOWES')).toBeInTheDocument();
       expect(screen.getByDisplayValue('BLUE RIDGE BAKERY')).toBeInTheDocument();

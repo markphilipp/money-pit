@@ -118,8 +118,9 @@ test('reassigns a rule to a different category on its own URL and comes back thr
   await page.getByLabel('Edit Home Improvement').click();
 
   await expect(page).toHaveURL(/\/settings\/rules\/home$/);
-  await expect(page.getByLabel('Category')).toHaveValue('home');
-  await page.getByLabel('Category').selectOption('pets');
+  await expect(page.getByLabel('Category')).toHaveValue('Home Improvement');
+  await page.getByLabel('Category').click();
+  await page.getByRole('option', { name: 'Pets' }).click();
   await page.getByRole('button', { name: 'Save' }).click();
 
   await expect(page).toHaveURL(/\/settings\/rules$/);
@@ -131,7 +132,7 @@ test('reassigns a rule to a different category on its own URL and comes back thr
   await expect(moved).toContainText('Pets');
 
   await page.goBack();
-  await expect(page.getByLabel('Category')).toHaveValue('pets');
+  await expect(page.getByLabel('Category')).toHaveValue('Pets');
 });
 
 test('renames a category from its own screen', async ({ page }) => {

@@ -43,6 +43,7 @@ interface Props<T> {
   placeholder: string;
   emptyText: string;
   placement: Placement;
+  disabled?: boolean;
 }
 
 function useAnchorPosition(ref: RefObject<HTMLElement | null>, rect: DOMRect | undefined) {
@@ -76,6 +77,7 @@ export function SearchableListbox<T>({
   placeholder,
   emptyText,
   placement,
+  disabled,
 }: Props<T>) {
   const id = useId();
   const listId = `${id}-list`;
@@ -144,6 +146,7 @@ export function SearchableListbox<T>({
       className={anchored ? styles.search : undefined}
       type="text"
       role="combobox"
+      disabled={disabled}
       autoComplete="off"
       placeholder={placeholder}
       aria-label={anchored ? label : undefined}
