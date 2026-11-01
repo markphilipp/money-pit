@@ -22,10 +22,10 @@ section, see [categories.md](categories.md).
   - a "Matches" preview section;
   - "Save rule", which is disabled while invalid and returns to `/`;
   - "Cancel", which returns to `/`;
-  - "← All rules", a button that clears the selection and goes to `/settings/rules`;
+  - a "Rules" breadcrumb link that clears the selection and goes to `/settings/rules`;
   - when manual categories shadow the rule, a "Clear N manual categor…" checkbox, ticked by default.
 - **Hand-written and edit form** (`/settings/rules/new` with no selection, and `/settings/rules/<id>`): a "Category"
-  select, "Save", "Cancel" and a "← All rules" link, no "Matches" or "Suggested rules". Save, Cancel and
+  select, "Save", "Cancel" and a "Rules" breadcrumb link, no "Matches" or "Suggested rules". Save, Cancel and
   Delete (non-builtin rules only) return to `/settings/rules`. A
   builtin's page disables the select and says "Built-in rule — conditions are fixed".
 - **Create from one row**: right-click the row, pick "Create rule from transaction", and land on
@@ -36,7 +36,7 @@ section, see [categories.md](categories.md).
   suggestions banner is expanded: its `Create rule for <label>` buttons substring-match. Right-clicking
   a selected row acts on the whole selection.
 - **Create from a dashboard suggestion:** see [suggestions.md](suggestions.md).
-- **Unknown id**: `/settings/rules/does-not-exist` shows "Rule not found" with a "← All rules" link.
+- **Unknown id**: `/settings/rules/does-not-exist` shows "Rule not found" with a "Rules" breadcrumb link.
 - **Persistence**: signed out, rules are in sessionStorage. Signed in, every change is saved to the
   account's `rule` and `category` tables, and a new account starts with the default rules.
 

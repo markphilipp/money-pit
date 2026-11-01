@@ -9,6 +9,7 @@ import { resolveCategoryChoice, type CategoryChoice } from '@/lib/categories';
 import { newRuleId } from '@/lib/rules/naming';
 import { nextPaletteColor } from '@/lib/palette';
 import { SignedInContext, useAppStore, useHydrated } from '@/store/useAppStore';
+import { Breadcrumb } from '@/components/settings/Breadcrumb';
 import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
 import { fromRqb, toRqb } from './rqbMap';
@@ -36,9 +37,7 @@ function MissingRule({ ruleId }: { ruleId: string }) {
   return (
     <div className={screen.screen}>
       <div className={screen.topBar}>
-        <Link href="/settings/rules" className={screen.back}>
-          ← All rules
-        </Link>
+        <Breadcrumb parent={{ label: 'Rules', href: '/settings/rules' }} current="Not found" />
         <h2 className={screen.title}>Rule not found</h2>
       </div>
       <section className={`card ${screen.section}`}>
@@ -96,9 +95,10 @@ function RuleFormFields({ rule }: { rule?: Rule }) {
   return (
     <div className={screen.screen}>
       <div className={screen.topBar}>
-        <Link href="/settings/rules" className={screen.back}>
-          ← All rules
-        </Link>
+        <Breadcrumb
+          parent={{ label: 'Rules', href: '/settings/rules' }}
+          current={rule ? 'Edit rule' : 'New rule'}
+        />
         <h2 className={screen.title}>{title}</h2>
       </div>
 

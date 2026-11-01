@@ -24,13 +24,11 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
 
   return (
     <main className={`wrap ${styles.shell}`}>
-      <div className={styles.topBar}>
+      <aside className={styles.sidebar}>
         <Link href="/" className={styles.exit}>
           ← Dashboard
         </Link>
         <h1 className={styles.title}>Settings</h1>
-      </div>
-      <div className={styles.body}>
         <nav aria-label="Settings" className={styles.nav}>
           {SETTINGS_SECTIONS.map(({ href, label }) => (
             <Link
@@ -43,8 +41,8 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <div className={styles.content}>{children}</div>
-      </div>
+      </aside>
+      <div className={styles.content}>{children}</div>
     </main>
   );
 }

@@ -168,9 +168,10 @@ describe('RuleEditorScreen', () => {
     await openEditor(BAKERIES);
     render(<RuleEditorScreen />);
 
-    await user.click(screen.getByRole('button', { name: '← All rules' }));
+    const crumb = screen.getByRole('link', { name: 'Rules' });
+    expect(crumb).toHaveAttribute('href', '/settings/rules');
+    await user.click(crumb);
 
-    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules');
     expect(useAppStore.getState().ruleSources).toEqual([]);
     expect(useAppStore.getState().rules.some((r) => r.id === 'blue-ridge-bakery')).toBe(false);
   });
