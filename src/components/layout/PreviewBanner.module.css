@@ -1,0 +1,53 @@
+.banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  /* The fixed account avatar sits at the top right; keep clear of it. */
+  padding: 8px 70px 8px 20px;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--accent-soft),
+    var(--accent-soft) 12px,
+    #fff3ea 12px,
+    #fff3ea 24px
+  );
+  border-bottom: 1px solid var(--accent);
+  font-size: 13px;
+}
+
+.label {
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-condensed), sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.text code {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+}
+
+.button {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--accent);
+  color: #fff;
+}
+
+.button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

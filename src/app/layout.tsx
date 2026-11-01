@@ -3,6 +3,7 @@ import { Barlow_Condensed, IBM_Plex_Mono, Inter } from 'next/font/google';
 import { currentUserId } from '@/auth/session';
 import { AccountSync } from '@/components/layout/AccountSync';
 import { Footer } from '@/components/layout/Footer';
+import { PreviewBanner } from '@/components/layout/PreviewBanner';
 import { UserMenu } from '@/components/layout/UserMenu';
 import './globals.css';
 
@@ -33,6 +34,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" className={`${inter.variable} ${condensed.variable} ${mono.variable}`}>
       <body>
+        {process.env.VERCEL_ENV === 'preview' && (
+          <PreviewBanner branch={process.env.VERCEL_GIT_COMMIT_REF} />
+        )}
         <AccountSync signedIn={signedIn}>
           <UserMenu />
           {children}
