@@ -39,9 +39,6 @@ export function SettingsShell({ children }: { children: React.ReactNode }) {
               </Link>
             ))}
           </nav>
-          <Link href="/" className={styles.done}>
-            Done<span className={styles.hidden}> and back to the dashboard</span>
-          </Link>
         </div>
       </header>
       <main className={styles.main}>{children}</main>

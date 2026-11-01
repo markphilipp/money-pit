@@ -8,6 +8,7 @@ import { nextPaletteColor } from '@/lib/palette';
 import { ColorPickerPopover } from '@/components/common/ColorPickerPopover';
 import { useTransactions } from '@/store/hooks';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
+import { SettingsHeading } from '@/components/settings/SettingsHeading';
 import screen from '@/components/rules/RuleScreen.module.css';
 import { DeleteCategoryDialog } from './DeleteCategoryDialog';
 import styles from './CategoriesScreen.module.css';
@@ -25,7 +26,7 @@ export function CategoriesScreen() {
 
   return (
     <div className={screen.screen}>
-      <h2 className={screen.title}>Categories</h2>
+      <SettingsHeading section="/settings/categories" title="Categories" />
 
       {hydrated ? (
         <CategoryList />

@@ -17,7 +17,7 @@ import { useAppState, useTransactions } from '@/store/hooks';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
 import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
-import { Breadcrumb } from '@/components/settings/Breadcrumb';
+import { SettingsHeading } from '@/components/settings/SettingsHeading';
 import { RuleForm } from './RuleForm';
 import { RulePicker } from './RulePicker';
 import { fromRqb, toRqb } from './rqbMap';
@@ -205,22 +205,20 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
 
   return (
     <div className={screen.screen}>
-      <div className={screen.topBar}>
-        <Breadcrumb
-          parent={{ label: 'Rules', href: '/settings/rules' }}
-          current={adding ? 'Add to rule' : 'New rule'}
-          onNavigate={() => setRuleSources([])}
-        />
-        <h2 className={screen.title}>
-          {adding
+      <SettingsHeading
+        section="/settings/rules"
+        current={adding ? 'Add to rule' : 'New rule'}
+        onNavigate={() => setRuleSources([])}
+        title={
+          adding
             ? `Add ${sources.length} transaction${sources.length === 1 ? '' : 's'} to ${
                 targetRule
                   ? `${state.categories.find((c) => c.id === targetRule.categoryId)?.name ?? 'the'} rule`
                   : 'an existing rule'
               }`
-            : `New rule from ${sources.length} transaction${sources.length === 1 ? '' : 's'}`}
-        </h2>
-      </div>
+            : `New rule from ${sources.length} transaction${sources.length === 1 ? '' : 's'}`
+        }
+      />
 
       {suggestions.length > 0 && (
         <section className={`card ${screen.section}`}>

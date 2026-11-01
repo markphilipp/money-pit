@@ -32,7 +32,7 @@ test('removing a file keeps the rows another file also holds, and survives a rel
   await dialog.getByRole('button', { name: 'Remove file' }).click();
   await expect(page.getByLabel('Remove june.csv')).toHaveCount(0);
 
-  await page.getByRole('link', { name: /^Done/ }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
   await expect(heading(page)).toContainText('(6)');
   await expect(page.getByRole('row', { name: /LOWES/ })).toHaveCount(1);
   await expect(page.getByRole('row', { name: /SPOTIFY/ })).toHaveCount(1);
@@ -58,7 +58,7 @@ test('removing the last file returns to the empty state with categories and rule
   await dialog.getByRole('button', { name: 'Remove file' }).click();
   await expect(page.getByText('No files uploaded yet.')).toBeVisible();
 
-  await page.getByRole('link', { name: /^Done/ }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
   await expect(page.getByText('Drop statement CSVs here')).toBeVisible();
 
   await page.goto('/settings/rules');
@@ -73,6 +73,6 @@ test('adds a file from the uploaded files page', async ({ page }) => {
   await openUploadedFiles(page);
   await page.setInputFiles('input[type=file]', [fixture('june.csv')]);
   await expect(page.getByLabel('Remove june.csv')).toBeVisible();
-  await page.getByRole('link', { name: /^Done/ }).click();
+  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
   await expect(heading(page)).toContainText('(11)');
 });

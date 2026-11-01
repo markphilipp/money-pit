@@ -56,33 +56,6 @@
   border-bottom-color: var(--accent);
 }
 
-.done {
-  font-family: var(--font-mono), monospace;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-decoration: none;
-  color: #fff;
-  background: var(--ink);
-  padding: 9px 18px;
-  border-radius: 6px;
-  margin: 0 58px 14px 0;
-}
-
-.done:hover {
-  background: var(--accent);
-}
-
-.hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .main {
   max-width: 960px;
   margin: 0 auto;
@@ -101,10 +74,6 @@
   .title {
     flex: 1;
     padding-bottom: 0;
-  }
-
-  .done {
-    margin: 0 50px 0 0;
   }
 
   .tabs {

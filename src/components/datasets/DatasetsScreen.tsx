@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { Dataset } from '@/lib/types';
 import { datasetSpan } from '@/lib/datasets';
+import { SettingsHeading } from '@/components/settings/SettingsHeading';
 import { UploadZone } from '@/components/upload/UploadZone';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
 import screen from '@/components/rules/RuleScreen.module.css';
@@ -29,7 +30,7 @@ export function DatasetsScreen() {
 
   return (
     <div className={screen.screen}>
-      <h2 className={screen.title}>Uploaded files</h2>
+      <SettingsHeading section="/settings/datasets" title="Uploaded files" />
 
       {hydrated ? (
         <DatasetList />
