@@ -51,6 +51,12 @@ describe('parseAmount', () => {
     expect(parseAmount({ ...rows[0] })).toBe(4.99);
     expect(parseAmount({ ...rows[4] })).toBe(-1500);
   });
+
+  it('reads dollar-formatted amounts', () => {
+    expect(parseAmount({ ...rows[0], debit: '$ 12.97', credit: '' })).toBe(12.97);
+    expect(parseAmount({ ...rows[0], debit: '', credit: '-$ 10.00' })).toBe(-10);
+    expect(parseAmount({ ...rows[0], debit: '$ 1,234.56', credit: '' })).toBe(1234.56);
+  });
 });
 
 describe('parseDate', () => {

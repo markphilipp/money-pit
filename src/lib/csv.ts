@@ -11,6 +11,20 @@ export class CsvFormatError extends Error {
   }
 }
 
+/**
+ * Some exports leave a thousands separator unquoted ("$ 1,234.56"), splitting the amount over two
+ * fields and shifting the rest of the row. Glue the pieces back together.
+ */
+function rejoinSplitAmount(row: string[]): string[] {
+  if (row.length <= EXPECTED_HEADER.length) return row;
+  for (let i = 3; i <= 4; i++) {
+    if (/\d$/.test(row[i]) && /^\d{3}(\.\d+)?$/.test(row[i + 1])) {
+      return [...row.slice(0, i), `${row[i]},${row[i + 1]}`, ...row.slice(i + 2)];
+    }
+  }
+  return row;
+}
+
 export function parseStatementCsv(text: string): RawStatementRow[] {
   const trimmed = text.replace(/^﻿/, '').trim();
   if (!trimmed) throw new CsvFormatError('The file is empty.');
@@ -29,7 +43,7 @@ export function parseStatementCsv(text: string): RawStatementRow[] {
     );
   }
 
-  return rows.slice(1).map((r) => ({
+  return rows.slice(1).map(rejoinSplitAmount).map((r) => ({
     status: (r[0] ?? '').trim(),
     dateStr: (r[1] ?? '').trim(),
     description: (r[2] ?? '').trim(),

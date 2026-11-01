@@ -12,9 +12,12 @@ export function matchCategory(txn: MatchTarget, rules: Rule[]): string {
   return matchRule(txn, rules)?.categoryId ?? OTHER_ID;
 }
 
+/** Some exports write amounts as "$ 12.97" or "-$ 1,234.56". */
+const toNumber = (text: string) => Number.parseFloat(text.replace(/[$,\s]/g, '')) || 0;
+
 export function parseAmount(row: RawStatementRow): number {
-  const debit = Number.parseFloat(row.debit) || 0;
-  const credit = Number.parseFloat(row.credit) || 0;
+  const debit = toNumber(row.debit);
+  const credit = toNumber(row.credit);
   return debit !== 0 ? debit : credit;
 }
 

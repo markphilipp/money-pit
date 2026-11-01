@@ -103,6 +103,13 @@ describe('periodOptions', () => {
     expect(months?.options[0].label).toBe('February 2025');
   });
 
+  it('offers only months with a shown transaction, not ones holding hidden rows', () => {
+    const datasets = [file('a', [row('09/20/2026'), row('10/03/2026')])];
+    const shown = [new Date(2026, 8, 20), new Date(2026, 7, 2)];
+    const months = group(periodOptions({ datasets, now: july, dates: shown }), 'months');
+    expect(labels(months)).toEqual(['September 2026', 'August 2026']);
+  });
+
   it('resolves recent presets to inclusive absolute dates', () => {
     const recent = group(periodOptions({ datasets: [], now: july }), 'recent')!;
     const byLabel = Object.fromEntries(recent.options.map((o) => [o.label, optionToPeriod(o)]));

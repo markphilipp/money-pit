@@ -45,6 +45,20 @@ describe('parseStatementCsv', () => {
   });
 });
 
+describe('unquoted thousands separators', () => {
+  const parse = (...lines: string[]) => parseStatementCsv([HEADER, ...lines].join('\n'));
+
+  it('rejoins a debit split by its comma', () => {
+    const [row] = parse('Cleared,10/03/2026,"RENT",$ 1,234.56,,ALEX SAMPLE');
+    expect(row).toMatchObject({ debit: '$ 1,234.56', credit: '', person: 'ALEX SAMPLE' });
+  });
+
+  it('rejoins a credit split by its comma', () => {
+    const [row] = parse('Cleared,10/03/2026,"PAYMENT",, -$ 10,000.00,ALEX SAMPLE');
+    expect(row).toMatchObject({ debit: '', credit: '-$ 10,000.00', person: 'ALEX SAMPLE' });
+  });
+});
+
 describe('mergeRows', () => {
   it('drops rows that already exist from an overlapping export', () => {
     const first = parseStatementCsv(SAMPLE_CSV);
