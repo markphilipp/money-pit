@@ -8,7 +8,7 @@ section, see [categories.md](categories.md).
 ## Sub-features
 
 - **Rules list** (`/settings/rules`, h2 "Rules", inside the Settings shell: h1 "Settings", a nav named
-  "Settings" and a "← Dashboard" link to `/`):
+  "Settings" and a "Done" link to `/`):
   - reorder with `Move <name> up` / `Move <name> down`;
   - `Edit <name>` (a link) opens `/settings/rules/<id>`;
   - `Delete <name>`, rendered but disabled for the builtin (title "Built-in rules cannot be

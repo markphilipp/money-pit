@@ -105,7 +105,7 @@ test('manages rules in settings, reached from the user menu', async ({ page }) =
   await page.getByLabel('Delete Groceries').click();
   await expect(page.getByLabel('Delete Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await page.getByRole('link', { name: /^Done/ }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -146,7 +146,7 @@ test('renames a category from its own screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await page.getByRole('link', { name: /^Done/ }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Food');
@@ -161,7 +161,7 @@ test('warns before deleting a category that rules depend on', async ({ page }) =
   await dialog.getByRole('button', { name: /Delete category and/ }).click();
 
   await expect(page.getByText('Groceries')).toHaveCount(0);
-  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await page.getByRole('link', { name: /^Done/ }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -200,7 +200,7 @@ test('switches between settings sections through the nav', async ({ page }) => {
     'page',
   );
 
-  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await page.getByRole('link', { name: /^Done/ }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 
