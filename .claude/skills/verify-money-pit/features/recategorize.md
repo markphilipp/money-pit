@@ -1,24 +1,26 @@
 # Recategorize transactions
 
 Override a row's category by hand. A manual category beats every rule, and it shows in the row's
-category pill and in the category chart.
+category pill and in the category chart. An override that points at a since-deleted category shows as
+Other.
 
 ## Sub-features
 
 - Override from the pill, from the row context menu ("Change category…"), or from the selection
   bar's "Change category" button (bulk). With several rows ticked, one choice applies to all and
-  clears the selection.
+  clears the selection. A right-click on a row that's part of the selection applies to the whole
+  selection.
 - The picker lists categories alphabetically and never offers Payments.
 - Searching the picker. A search with no match offers `Create category “<query>”`, which adds the
   category and files the targeted rows under it (Enter does the same). Payments is hidden, so
   searching `payments` shows "No matching category". Arrow keys, Enter and Escape drive it.
 - The picker's search box has focus on open, from all three entry points.
 - Overrides and the created category persist across a reload.
-- Creating a rule from selected rows can offer to clear manual categories ("Clear N manual
-  categor…" checkbox, only shown when some are shadowing the rule). Match it with a regexp, the label is plural-sensitive. See
-  [rules.md](rules.md).
-- Signed out the override lives in sessionStorage. Signed in it's the `category_override` column on
-  the row.
+- A rule edit, or a rule built from rows with overrides, can offer to clear manual categories
+  ("Clear N manual categor…" checkbox, checked by default, only shown when some are shadowing the
+  rule). Match it with a regexp, the label is plural-sensitive. See [rules.md](rules.md).
+- Persistence: signed out, overrides are in sessionStorage (they survive a reload in the same tab).
+  Signed in, they're saved to the account as `category_override` on `statement_row`.
 
 ## How to get to it (user POV)
 
@@ -32,7 +34,10 @@ the selection bar ("Selection actions" group), reaches the same dialog.
 import { expect } from '@playwright/test';
 export default async ({ page, shot, fixture }) => {
   await page.goto('/');
-  await page.setInputFiles('input[type=file]', [fixture('june.csv')]);
+  await page
+    .locator('label', { hasText: 'Drop statement CSVs here' })
+    .locator('input')
+    .setInputFiles([fixture('june.csv')]);
   const row = page.getByRole('row', { name: /DUKE-ENERGY/ });
   const pill = row.getByTitle('Change category');
   const dialog = page.getByRole('dialog', { name: 'Choose category' });
@@ -83,3 +88,4 @@ survives a reload, and the search box is focused from the pill, the context menu
   different export of the same transaction may not match. See `docs/data-model.md`.
 - Radix returns focus to the context menu's trigger as it closes. A focus assertion straight after
   the menu click is what catches a regression there.
+- Signed in, wait for the write with `account.state().overrides` before reloading.

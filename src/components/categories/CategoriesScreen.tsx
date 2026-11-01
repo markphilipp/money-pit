@@ -49,6 +49,14 @@ function CategoryList() {
     trigger: HTMLButtonElement;
   } | null>(null);
 
+  const listed = useMemo(
+    () =>
+      categories
+        .filter((c) => !c.builtin)
+        .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })),
+    [categories],
+  );
+
   const usage = useMemo(
     () => categoryUsage({ categories, rules }, transactions),
     [categories, rules, transactions],
@@ -57,12 +65,8 @@ function CategoryList() {
   return (
     <>
       <section className={`card ${screen.section}`}>
-        <p className="sub">
-          Rules file transactions into categories. Payments and Other are built in, so they can be
-          renamed and recolored but not deleted.
-        </p>
         <ul className={styles.list}>
-          {categories.map((category) => (
+          {listed.map((category) => (
             <CategoryRow
               key={category.id}
               category={category}
@@ -114,10 +118,7 @@ function CategoryRow({
         ariaLabel={`${category.name} color`}
       />
       {draft === null ? (
-        <span className={styles.name}>
-          {category.name}
-          {category.builtin && <span className={styles.badge}>built-in</span>}
-        </span>
+        <span className={styles.name}>{category.name}</span>
       ) : (
         <form
           className={styles.rename}
@@ -161,9 +162,7 @@ function CategoryRow({
             <button
               type="button"
               className={styles.iconBtn}
-              disabled={category.builtin}
               aria-label={`Delete ${category.name}`}
-              title={category.builtin ? 'Built-in categories cannot be deleted' : undefined}
               onClick={(e) => onDelete(e.currentTarget)}
             >
               Delete

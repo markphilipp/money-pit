@@ -183,8 +183,6 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
 
     await openSettings(page, 'Categories');
     await expect(page.getByText('Coffee')).toBeVisible();
-    // the legacy record never had a Payments builtin; reading it repairs that in memory
-    await expect(page.getByLabel('Delete Payments')).toBeDisabled();
     // reading the legacy table doesn't write anything until something actually changes
     expect(await account.categoryIds()).toEqual([]);
 
