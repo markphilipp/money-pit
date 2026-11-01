@@ -27,7 +27,7 @@ describe('SettingsShell', () => {
     renderAt('/settings/datasets');
 
     expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: /^done/i })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Uploaded files' })).toHaveAttribute(
       'href',
       '/settings/datasets',
