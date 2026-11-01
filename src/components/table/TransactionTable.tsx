@@ -24,7 +24,6 @@ interface PickerState {
   rect: DOMRect;
   currentCategoryId: string | null;
   targetIds: string[];
-  bulk: boolean;
 }
 
 export function TransactionTable() {
@@ -66,7 +65,6 @@ export function TransactionTable() {
             rect: anchor.getBoundingClientRect(),
             currentCategoryId: txn.categoryId,
             targetIds: [txn.id],
-            bulk: false,
           }),
       }),
     [categoriesById, state.selectedIds, toggleSelected],
@@ -108,7 +106,6 @@ export function TransactionTable() {
       currentCategoryId:
         targetIds.length > 1 ? null : (rows.find((r) => r.id === targetIds[0])?.categoryId ?? null),
       targetIds,
-      bulk: targetIds.length > 1,
     });
   };
 
@@ -193,7 +190,6 @@ export function TransactionTable() {
               rect: anchor.getBoundingClientRect(),
               currentCategoryId: null,
               targetIds: [...state.selectedIds],
-              bulk: true,
             })
           }
           onCreateRule={() => startRuleFrom([...state.selectedIds])}
@@ -328,7 +324,7 @@ export function TransactionTable() {
           onClose={() => setPicker(null)}
           onChoose={(categoryId) => {
             setOverride(picker.targetIds, categoryId);
-            if (picker.bulk) clearSelection();
+            selectAll(picker.targetIds, false);
           }}
           onCreate={(name) => {
             const id = uniqueId(
@@ -341,7 +337,7 @@ export function TransactionTable() {
               color: nextPaletteColor(state.categories.map((c) => c.color)),
             });
             setOverride(picker.targetIds, id);
-            if (picker.bulk) clearSelection();
+            selectAll(picker.targetIds, false);
           }}
         />
       )}
