@@ -17,6 +17,7 @@ import { useAppState, useTransactions } from '@/store/hooks';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
 import { CategoryField } from './CategoryField';
 import { EMPTY_QUERY, RuleConditionsEditor } from './RuleConditionsEditor';
+import { Breadcrumb } from '@/components/settings/Breadcrumb';
 import { RuleForm } from './RuleForm';
 import { RulePicker } from './RulePicker';
 import { fromRqb, toRqb } from './rqbMap';
@@ -179,9 +180,9 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
     );
   }
 
-  function leave(to = '/') {
+  function leave() {
     setRuleSources([]);
-    router.push(to);
+    router.push('/');
   }
 
   function save() {
@@ -205,9 +206,11 @@ function RuleEditorForm({ sourceIds }: { sourceIds: string[] }) {
   return (
     <div className={screen.screen}>
       <div className={screen.topBar}>
-        <button type="button" className={screen.back} onClick={() => leave('/settings/rules')}>
-          ← All rules
-        </button>
+        <Breadcrumb
+          parent={{ label: 'Rules', href: '/settings/rules' }}
+          current={adding ? 'Add to rule' : 'New rule'}
+          onNavigate={() => setRuleSources([])}
+        />
         <h2 className={screen.title}>
           {adding
             ? `Add ${sources.length} transaction${sources.length === 1 ? '' : 's'} to ${
