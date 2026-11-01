@@ -105,7 +105,7 @@ test('manages rules in settings, reached from the user menu', async ({ page }) =
   await page.getByLabel('Delete Groceries').click();
   await expect(page.getByLabel('Delete Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -147,7 +147,7 @@ test('renames a category from its own screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Food');
@@ -162,7 +162,7 @@ test('warns before deleting a category that rules depend on', async ({ page }) =
   await dialog.getByRole('button', { name: /Delete category and/ }).click();
 
   await expect(page.getByText('Groceries')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -180,7 +180,6 @@ test('serves a 404 for an unknown URL and a message for an unknown rule', async 
 test('switches between settings sections through the nav', async ({ page }) => {
   await openSettings(page, 'Uploaded files');
   await expect(page).toHaveURL(/\/settings\/datasets$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Uploaded files' })).toBeVisible();
   await expect(settingsNav(page).getByRole('link', { name: 'Uploaded files' })).toHaveAttribute(
     'aria-current',
     'page',
@@ -188,11 +187,9 @@ test('switches between settings sections through the nav', async ({ page }) => {
 
   await settingsNav(page).getByRole('link', { name: 'Categories' }).click();
   await expect(page).toHaveURL(/\/settings\/categories$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Categories' })).toBeVisible();
 
   await settingsNav(page).getByRole('link', { name: 'Rules' }).click();
   await expect(page).toHaveURL(/\/settings\/rules$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Rules' })).toBeVisible();
 
   await page.getByRole('link', { name: 'New rule' }).click();
   await expect(page).toHaveURL(/\/settings\/rules\/new$/);
@@ -201,7 +198,7 @@ test('switches between settings sections through the nav', async ({ page }) => {
     'page',
   );
 
-  await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(page).toHaveURL(/\/$/);
 });
 

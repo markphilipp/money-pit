@@ -10,11 +10,30 @@
 .barInner {
   max-width: 960px;
   margin: 0 auto;
-  padding: 0 20px;
+  padding: 14px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.back {
+  align-self: flex-start;
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+
+.back:hover {
+  color: var(--accent);
+}
+
+.row {
   display: flex;
   align-items: flex-end;
   gap: 40px;
-  height: 76px;
 }
 
 .title {
@@ -23,7 +42,7 @@
   font-size: 30px;
   line-height: 1;
   text-transform: uppercase;
-  padding-bottom: 14px;
+  padding-bottom: 12px;
 }
 
 .tabs {
@@ -63,21 +82,17 @@
 }
 
 @media (max-width: 720px) {
-  .barInner {
-    height: auto;
+  .row {
     flex-wrap: wrap;
-    align-items: center;
-    gap: 12px 20px;
-    padding-top: 18px;
+    gap: 8px 20px;
   }
 
   .title {
-    flex: 1;
+    flex: 1 0 100%;
     padding-bottom: 0;
   }
 
   .tabs {
-    order: 3;
     flex: 1 0 100%;
     overflow-x: auto;
   }

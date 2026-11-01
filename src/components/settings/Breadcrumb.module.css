@@ -1,20 +1,14 @@
-.heading {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .trail {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 4px 8px;
+  gap: 8px;
   list-style: none;
+  margin: 0;
+  padding: 0;
   font-family: var(--font-mono), monospace;
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--ink-soft);
 }
 
 .trail li + li::before {
@@ -23,23 +17,15 @@
   color: var(--line);
 }
 
-.link {
-  color: inherit;
+.parent {
+  color: var(--ink-soft);
   text-decoration: none;
 }
 
-.link:hover {
+.parent:hover {
   color: var(--accent);
 }
 
-.here {
+.current {
   color: var(--ink);
-}
-
-.title {
-  font-family: var(--font-condensed), sans-serif;
-  font-weight: 600;
-  font-size: 24px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }

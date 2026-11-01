@@ -14,7 +14,7 @@ categories. Payments and Other are built in, so they can be renamed and recolore
 - Delete (`Delete <name>`) opens a confirmation listing the rules and manual overrides that go
   with it. Builtins have a disabled Delete button.
 - Each row shows its rule and transaction counts.
-- The Settings nav switches to the other sections, and the "Dashboard" breadcrumb goes to `/`.
+- The Settings nav switches to the other sections, and "← Dashboard" goes to `/`.
 
 ## How to get to it (user POV)
 

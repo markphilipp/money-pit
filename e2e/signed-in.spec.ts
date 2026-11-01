@@ -110,7 +110,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await openSettings(page, 'Categories');
     await page.getByRole('textbox', { name: 'New category' }).fill('Travel');
     await page.getByRole('button', { name: 'Add category' }).click();
-    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await page.getByRole('link', { name: '← Dashboard' }).click();
 
     await pill(page).click();
     await page.getByPlaceholder('Search categories…').fill('travel');
@@ -138,7 +138,7 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await dialog.getByRole('button', { name: /Delete category and/ }).click();
     await expect(page.getByText('Travel')).toHaveCount(0);
 
-    await page.getByRole('link', { name: 'Dashboard', exact: true }).click();
+    await page.getByRole('link', { name: '← Dashboard' }).click();
     await expect(merchantOffersPill(page)).toContainText('Other');
     // its rule (util) was untouched by the delete, so the row it always matched wins it back
     await expect(pill(page)).toContainText('Utilities & Phone');

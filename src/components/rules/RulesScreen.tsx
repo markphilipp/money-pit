@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { ruleLabels } from '@/lib/categories';
 import { describeGroup } from '@/lib/rules/engine';
 import { useAppStore, useHydrated } from '@/store/useAppStore';
-import { SettingsHeading } from '@/components/settings/SettingsHeading';
 import screen from './RuleScreen.module.css';
 import styles from './RulesScreen.module.css';
 
@@ -23,8 +22,6 @@ export function RulesScreen() {
 
   return (
     <div className={screen.screen}>
-      <SettingsHeading section="/settings/rules" title="Rules" />
-
       <section className={`card ${screen.section}`}>
         <p className="sub">First matching rule wins — order matters.</p>
 

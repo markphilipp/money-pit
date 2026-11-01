@@ -168,9 +168,7 @@ describe('RuleEditorScreen', () => {
     await openEditor(BAKERIES);
     render(<RuleEditorScreen />);
 
-    const crumb = within(screen.getByRole('navigation', { name: 'Breadcrumb' })).getByRole('link', {
-      name: 'Rules',
-    });
+    const crumb = screen.getByRole('link', { name: 'Rules' });
     expect(crumb).toHaveAttribute('href', '/settings/rules');
     await user.click(crumb);
 
