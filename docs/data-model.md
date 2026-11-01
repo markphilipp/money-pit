@@ -51,6 +51,14 @@ existing dataset, preserving "re-uploading the same file is a no-op". Any other 
 overlaps fully, becomes its own dataset. A file with fewer copies of a repeated row than another is
 a different file.
 
+**Statement membership.** A transaction doesn't record which file it came from, since rows are
+deduped across files. `statementTxnIds(datasets, ids)` derives it: the union of the `txnId`s of the
+chosen datasets' own rows, using each dataset's own ordinals. A dataset's ids are a subset of the
+merged ids, because `mergeRows` keeps the highest per-file count of each repeated row and ordinals
+count up from zero. So a repeated same-day row belongs to every file that holds that copy, and a row
+shared by two files belongs to both. The store's `selectFiltered` caches the set (see
+[architecture.md](architecture.md#selectors--srcstoreselectorsts)); nothing about it is persisted.
+
 ## Ids — `src/lib/hash.ts`
 
 - `rowKey(row)` — `date|description|debit|credit|person`, the dedupe key.
@@ -124,6 +132,13 @@ Condition fields and operators (`types.ts`):
 - Dates compare as local midnights on both sides, so a `between` never drifts by a timezone hour.
 - `matchesColumnFilter` reuses the same operator implementations for table column filters, which is
   why filter and rule semantics can't diverge.
+- The dashboard's period filter writes the `date` column filter through `src/lib/dateRange.ts`:
+  `rangeToFilter(from, to)` writes an inclusive `between` (an empty side stays open), and
+  `filterToRange(filter)` reads `between`, `on`, `before` and `after` back as an inclusive range,
+  moving the exclusive bounds by one local calendar day. `monthRange`, `wholeMonth` and
+  `periodLabel` name whole calendar months ("June 2026"). `src/lib/periods.ts` builds the options
+  offered (statements with their `datasetSpan`, months that hold transactions, relative presets) and
+  parses shorthand like `30d`. Local arithmetic only, never `toISOString`.
 - `describeGroup` renders the one-line human summary shown in the rules manager (truncated at 80
   chars). `keywordsToGroup` builds the OR-of-contains group used by the defaults;
   `transactionsToDraftGroup` builds the literal one-condition-per-description fallback.

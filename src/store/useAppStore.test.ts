@@ -237,6 +237,98 @@ describe('filters', () => {
   });
 });
 
+describe('period filter', () => {
+  const descriptions = () => selectFiltered(state()).map((t) => t.description);
+  const range = (from: string, to = '') => ({ from, to });
+
+  beforeEach(async () => {
+    await state().uploadFiles([csvFile(SAMPLE_CSV, 'a.csv'), csvFile(SECOND_CSV, 'b.csv')]);
+  });
+
+  it('keeps only the rows of the chosen statement, shared rows included', () => {
+    const [a, b] = state().datasets;
+    state().setPeriod({ statementId: b.id });
+    expect(descriptions().sort()).toEqual(['HULU 123-456-7890 CA', 'LOWES #01111 BELMONT NC']);
+    state().setPeriod({ statementId: a.id });
+    expect(descriptions()).toContain('LOWES #01111 BELMONT NC');
+    expect(descriptions()).not.toContain('HULU 123-456-7890 CA');
+  });
+
+  it('writes a date range as the shared date column filter', () => {
+    state().setPeriod(range('2026-07-01'));
+    expect(state().filters.columnFilters.date).toEqual({
+      column: 'date',
+      operator: 'between',
+      value: '2026-07-01',
+    });
+    expect(descriptions()).toHaveLength(4);
+  });
+
+  it('replaces a date range with a statement, and back, in one update', () => {
+    const [, b] = state().datasets;
+    state().setPeriod(range('2026-07-01', '2026-07-03'));
+
+    state().setPeriod({ statementId: b.id });
+    expect(state().filters.statementIds).toEqual([b.id]);
+    expect(state().filters.columnFilters.date).toBeUndefined();
+
+    state().setPeriod(range('2026-06-29', '2026-06-29'));
+    expect(state().filters.statementIds).toEqual([]);
+    expect(state().filters.columnFilters.date).toBeDefined();
+  });
+
+  it('clears everything with null or an empty range, leaving other filters alone', () => {
+    state().togglePersonFilter('ALEX SAMPLE');
+    state().setPeriod({ statementId: state().datasets[0].id });
+    state().setPeriod(null);
+    expect(state().filters.statementIds).toEqual([]);
+
+    state().setPeriod(range('2026-07-01'));
+    state().setPeriod(range('', ''));
+    expect(state().filters.columnFilters.date).toBeUndefined();
+    expect(state().filters.columnFilters.person).toBeDefined();
+  });
+
+  it('drops a removed dataset from the selection', () => {
+    const [a, b] = state().datasets;
+    state().setPeriod({ statementId: a.id });
+    state().removeDataset(a.id);
+    expect(state().filters.statementIds).toEqual([]);
+
+    state().setPeriod({ statementId: b.id });
+    expect(state().filters.statementIds).toEqual([b.id]);
+  });
+
+  it('ignores ids that match no dataset instead of blanking the table', () => {
+    const all = selectFiltered(state()).length;
+    state().setFilter({ statementIds: ['gone'] });
+    expect(selectFiltered(state())).toHaveLength(all);
+
+    const [a] = state().datasets;
+    state().setFilter({ statementIds: ['gone', a.id] });
+    expect(selectFiltered(state())).toHaveLength(6);
+  });
+
+  it('is cleared with the other filters', () => {
+    state().setPeriod({ statementId: state().datasets[0].id });
+    state().setFilter(emptyFilters);
+    expect(state().filters.statementIds).toEqual([]);
+  });
+
+  it('gives a tab saved before the filter existed an empty selection', async () => {
+    sessionStorage.setItem(
+      'money-pit',
+      JSON.stringify({
+        state: { filters: { search: 'x', showCredits: false, columnFilters: {} } },
+        version: 0,
+      }),
+    );
+    await useAppStore.persist.rehydrate();
+    expect(state().filters.statementIds).toEqual([]);
+    expect(state().filters.search).toBe('x');
+  });
+});
+
 describe('overrides and rules', () => {
   beforeEach(async () => {
     await seedStore();

@@ -60,6 +60,8 @@ export interface Categorization {
 export interface FilterState {
   search: string;
   showCredits: boolean;
+  /** Datasets the table is narrowed to; empty means all. Ids of removed datasets are ignored on read. */
+  statementIds: string[];
   columnFilters: Partial<Record<ColumnId, ColumnFilter>>;
 }
 

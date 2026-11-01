@@ -1,6 +1,7 @@
-import type { Category, Transaction } from '@/lib/types';
+import type { Category, Dataset, Transaction } from '@/lib/types';
 import { PAYMENTS_ID } from '@/lib/types';
 import { toTransactions } from '@/lib/categorize';
+import { statementTxnIds } from '@/lib/datasets';
 import { matchesColumnFilter } from '@/lib/rules/engine';
 import { personShort } from '@/lib/format';
 import type { AppState } from './useAppStore';
@@ -29,6 +30,25 @@ export function selectTransactions(state: AppState): Transaction[] {
   return result;
 }
 
+let membershipCache: { datasets: Dataset[]; key: string; ids: Set<string> } | null = null;
+
+/**
+ * Transaction ids inside the selected statements, or null when no statement filter applies.
+ * Selected ids that no longer match a dataset are dropped first, so a stale id can't blank the table.
+ */
+function statementMembership(state: AppState): Set<string> | null {
+  const live = new Set(state.datasets.map((d) => d.id));
+  const active = state.filters.statementIds.filter((id) => live.has(id));
+  if (!active.length) return null;
+  const key = active.join('|');
+  if (membershipCache?.datasets === state.datasets && membershipCache.key === key) {
+    return membershipCache.ids;
+  }
+  const ids = statementTxnIds(state.datasets, active);
+  membershipCache = { datasets: state.datasets, key, ids };
+  return ids;
+}
+
 export interface FilterOpts {
   ignoreCategory?: boolean;
   ignorePerson?: boolean;
@@ -43,7 +63,9 @@ export function selectFiltered(state: AppState, opts: FilterOpts = {}): Transact
     if (opts.ignorePerson && f.column === 'person') return false;
     return true;
   });
+  const inStatements = statementMembership(state);
   return selectTransactions(state).filter((t) => {
+    if (inStatements && !inStatements.has(t.id)) return false;
     if (t.categoryId === PAYMENTS_ID && !showCredits) return false;
     if (needle && !t.description.toUpperCase().includes(needle)) return false;
     return active.every((f) => matchesColumnFilter(t, f, t.categoryId));

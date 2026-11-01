@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { toTransactions } from './categorize';
 import { parseStatementCsv } from './csv';
-import { addDataset, datasetImpact, datasetSpan, mergeDatasets, removeDataset } from './datasets';
+import {
+  addDataset,
+  datasetImpact,
+  datasetSpan,
+  mergeDatasets,
+  removeDataset,
+  statementTxnIds,
+} from './datasets';
 import { defaultCategorization } from './defaultRules';
 import { rowKey } from './hash';
 import type { Dataset, RawStatementRow } from './types';
@@ -193,5 +200,40 @@ describe('datasetSpan', () => {
 
   it('is null without rows', () => {
     expect(datasetSpan([])).toBeNull();
+  });
+});
+
+describe('statementTxnIds', () => {
+  const [one, two, three] = sample;
+  const merged = (ds: Dataset[]) => ids(mergeDatasets(ds));
+
+  it('is empty for no ids or unknown ids', () => {
+    const ds = [file('a', sample)];
+    expect(statementTxnIds(ds, [])).toEqual(new Set());
+    expect(statementTxnIds(ds, ['nope'])).toEqual(new Set());
+  });
+
+  it('holds exactly one file’s transactions, shared rows included', () => {
+    const ds = [file('a', sample), file('b', second)];
+    const all = merged(ds);
+    const a = statementTxnIds(ds, ['a']);
+    const b = statementTxnIds(ds, ['b']);
+    expect(a.size).toBe(sample.length);
+    expect(b.size).toBe(second.length);
+    expect([...a, ...b].every((id) => all.includes(id))).toBe(true);
+    const lowes = ids(sample).find((id, i) => sample[i].description.startsWith('LOWES'))!;
+    expect(a.has(lowes) && b.has(lowes)).toBe(true);
+  });
+
+  it('unions several files', () => {
+    const ds = [file('a', [one]), file('b', [two]), file('c', [three])];
+    expect(statementTxnIds(ds, ['a', 'c'])).toEqual(new Set(merged([ds[0], ds[2]])));
+  });
+
+  it('gives a repeated same-day row only to the file that holds each copy', () => {
+    const ds = [file('a', [one, one]), file('b', [one])];
+    const [first, second] = merged(ds);
+    expect(statementTxnIds(ds, ['a'])).toEqual(new Set([first, second]));
+    expect(statementTxnIds(ds, ['b'])).toEqual(new Set([first]));
   });
 });

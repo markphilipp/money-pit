@@ -9,7 +9,7 @@ Components, layout mechanics and styling conventions.
 | `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                                     | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                                                                                                                                                                                                                                                                           |
 | `dashboard`  | `Dashboard`                                                                                                          | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                                                                                                                                                                                                                                                                           |
 | `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                                      | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                                                                                                                                                                                                                                                                                |
-| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                                                                                                                                                                                                                             |
+| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`, `PeriodFilter`           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                                                                                                                                                                                                                             |
 | `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules.                                                                                                                                                                                                          |
 | `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                                                                                                                                                                                                                             |
 | `settings`   | `SettingsShell`                                                                                                      | The shared frame for every `/settings/*` route: one `<main>`, `<h1>Settings</h1>`, a left sidebar holding the exit link to `/`, the title and the section nav (stacked above a tab strip below 720px); sub-pages add a `Breadcrumb`. Nav entries are the `SETTINGS_SECTIONS` table; add a section there.                                                                                                                                    |
@@ -88,6 +88,31 @@ Row actions follow one rule — **acting inside a selection applies to the whole
 to that row alone** (`resolveActionTargets` in `src/lib/shortcuts.ts`, wrapped by `targetsFor` in
 `TransactionTable.tsx`). This covers the category pill, the
 right-click menu and "create rule from rows", which stores the ids and routes to `/settings/rules/new`.
+
+The bar above the table holds `PeriodFilter`, a combobox next to the search box that narrows the
+whole dashboard to one statement or one date range ("All dates" when empty). It is styled like the
+search input; when a period is active it takes the accent border and a clear (×) button
+(`aria-label="Clear date filter"`). Focusing or clicking it opens a panel under it, grouped as
+**Statements** (one per file, hint = its date span; only with 2+ files), **Months in your data**
+(newest first, at most 12; only when the data spans 2+ months), **Recent** (Last 7/30/90 days, This
+month, Last month, This year, resolved to absolute inclusive dates when chosen) and **Custom
+range…**, which swaps the panel for native From / To date inputs written live, with Back and Done.
+Typing filters the options by label substring, and `3d`, `2 weeks`, `6m` or `1y` offers a top
+"Last N …" option (Enter takes it); anything unmatched shows "No matching period" with Custom range
+still offered.
+
+It is an ARIA combobox: `role="combobox"` on the input with `aria-expanded`, `aria-controls` and
+`aria-activedescendant`, a `role="listbox"` of `role="group"`s of `role="option"`s, ArrowUp/Down,
+Home/End, Enter, Escape (which also closes the custom range), and closing on blur, an outside click
+or a choice. It is not part of `SHORTCUTS`; `isShortcutBlocked` already ignores text inputs and the
+custom range's date inputs sit inside the same container. All the logic is pure in
+`src/lib/periods.ts` (`periodOptions`, `searchPeriods`, `parseShorthand`, `describePeriod`; each
+takes `now` so tests are deterministic) and `src/lib/dateRange.ts`; the component only wires it to
+`setPeriod`. The closed input shows the file name, "June 2026" when the date filter is exactly one
+calendar month, otherwise the range text, and both joined by " · " if a statement and a date filter
+coexist. Reset uses `emptyFilters`, so it clears the period. The bar wraps and `useHeightVar`
+re-measures `--table-head-h` as it does, so no sticky offset is hardcoded; the panel is absolutely
+positioned inside the sticky bar and overlays the table rather than growing the bar.
 
 Payments rows are excluded unless "show payments & credits" is on; the footer total reflects only
 what's visible.
