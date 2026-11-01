@@ -14,7 +14,7 @@ describe('CategoriesScreen', () => {
   it('lists every category with its rule and transaction counts', async () => {
     render(<CategoriesScreen />);
 
-    expect(await screen.findByRole('heading', { name: 'Categories' })).toBeInTheDocument();
+    await screen.findAllByLabelText(/^Rename /);
     expect(row('Groceries')).toHaveTextContent('1 rule');
   });
 
@@ -22,7 +22,7 @@ describe('CategoriesScreen', () => {
     useAppStore.getState().addCategory({ id: 'aaa', name: 'apples', color: '#111' });
     render(<CategoriesScreen />);
 
-    await screen.findByRole('heading', { name: 'Categories' });
+    await screen.findAllByLabelText(/^Rename /);
     expect(screen.queryByLabelText('Rename Payments')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Rename Other')).not.toBeInTheDocument();
     const names = screen

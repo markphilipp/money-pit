@@ -25,8 +25,6 @@ export function CategoriesScreen() {
 
   return (
     <div className={screen.screen}>
-      <h2 className={screen.title}>Categories</h2>
-
       {hydrated ? (
         <CategoryList />
       ) : (

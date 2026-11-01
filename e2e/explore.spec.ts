@@ -180,7 +180,6 @@ test('serves a 404 for an unknown URL and a message for an unknown rule', async 
 test('switches between settings sections through the nav', async ({ page }) => {
   await openSettings(page, 'Uploaded files');
   await expect(page).toHaveURL(/\/settings\/datasets$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Uploaded files' })).toBeVisible();
   await expect(settingsNav(page).getByRole('link', { name: 'Uploaded files' })).toHaveAttribute(
     'aria-current',
     'page',
@@ -188,11 +187,9 @@ test('switches between settings sections through the nav', async ({ page }) => {
 
   await settingsNav(page).getByRole('link', { name: 'Categories' }).click();
   await expect(page).toHaveURL(/\/settings\/categories$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Categories' })).toBeVisible();
 
   await settingsNav(page).getByRole('link', { name: 'Rules' }).click();
   await expect(page).toHaveURL(/\/settings\/rules$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Rules' })).toBeVisible();
 
   await page.getByRole('link', { name: 'New rule' }).click();
   await expect(page).toHaveURL(/\/settings\/rules\/new$/);

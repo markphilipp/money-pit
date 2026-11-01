@@ -29,8 +29,6 @@ export function DatasetsScreen() {
 
   return (
     <div className={screen.screen}>
-      <h2 className={screen.title}>Uploaded files</h2>
-
       {hydrated ? (
         <DatasetList />
       ) : (
