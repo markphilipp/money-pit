@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   describeGroup,
+  describeGroupFull,
   keywordsToGroup,
   matchesColumnFilter,
   matchesGroup,
@@ -213,5 +214,13 @@ describe('describeGroup', () => {
     );
     expect(long).toHaveLength(80);
     expect(long.endsWith('…')).toBe(true);
+  });
+});
+
+describe('describeGroupFull', () => {
+  it('keeps the whole summary where describeGroup truncates', () => {
+    const group = keywordsToGroup(Array.from({ length: 20 }, (_, i) => `MERCHANT${i}`));
+    expect(describeGroupFull(group)).toContain('MERCHANT19');
+    expect(describeGroup(group)).not.toContain('MERCHANT19');
   });
 });

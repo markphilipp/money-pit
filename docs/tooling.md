@@ -43,6 +43,10 @@ Runs on every PR and on push to `main`:
   `expires_at` (two hours out) is the backstop if that step never runs. It branches off `dev`, not
   `main`, so production data never reaches CI. It needs the `NEON_API_KEY` repo secret and the
   `NEON_PROJECT_ID` repo variable, and is skipped while the variable is unset.
+- **neon-cleanup** (`neon-cleanup.yml`) — on PR close, merged or not, deletes the
+  `preview/<head branch>` Neon branch the Vercel integration created. Without it those accumulate
+  to the free-plan branch cap and `e2e-signed-in` fails at `create-branch` with a 422. Skips fork
+  PRs, and ignores a missing branch.
 
 ## Deploy — Vercel
 
