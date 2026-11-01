@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { filterToRange } from '@/lib/dateRange';
 import {
   describePeriod,
@@ -13,6 +13,8 @@ import { useAppStore } from '@/store/useAppStore';
 import styles from './PeriodFilter.module.css';
 
 type Mode = 'list' | 'custom';
+
+const PANEL_WIDTH = 340;
 
 export function PeriodFilter() {
   const id = useId();
@@ -31,6 +33,16 @@ export function PeriodFilter() {
   const rootRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const skipOpenOnFocus = useRef(false);
+
+  // The panel is wider than the field, so slide it left when it would run off the viewport.
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!open || !root) return;
+    const { left } = root.getBoundingClientRect();
+    const room = document.documentElement.clientWidth - 12 - left;
+    const shift = Math.max(0, Math.min(PANEL_WIDTH - room, left - 12));
+    root.style.setProperty('--panel-shift', `${-shift}px`);
+  }, [open, mode]);
 
   const base = useMemo(() => periodOptions({ datasets, now }), [datasets, now]);
   const groups = useMemo(() => searchPeriods(base, query ?? '', now), [base, query, now]);
