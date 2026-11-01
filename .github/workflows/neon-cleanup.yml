@@ -1,0 +1,22 @@
+name: Cleanup Neon preview branch
+
+# The Vercel–Neon integration creates preview/<git-branch> per preview deployment and never
+# removes it. On the free plan those pile up to the branch cap and CI's create-branch step 422s.
+# `closed` fires for both merged and unmerged-closed PRs.
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  delete-branch:
+    # Fork PRs get no secrets, and a fork's head_ref could collide with a real branch name.
+    if: vars.NEON_PROJECT_ID != '' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Best-effort: a PR closed before Vercel built a preview has no branch to delete.
+    continue-on-error: true
+    steps:
+      - uses: neondatabase/delete-branch-action@v3
+        with:
+          project_id: ${{ vars.NEON_PROJECT_ID }}
+          branch: preview/${{ github.head_ref }}
+          api_key: ${{ secrets.NEON_API_KEY }}
