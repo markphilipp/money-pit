@@ -14,9 +14,10 @@ describe('RuleForm', () => {
     render(<RuleForm ruleId="grocery" />);
 
     const select = await screen.findByLabelText('Category');
-    expect(select).toHaveValue('grocery');
+    expect(select).toHaveValue('Groceries');
 
-    await user.selectOptions(select, 'pets');
+    await user.click(select);
+    await user.click(screen.getByRole('option', { name: /Pets/ }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(useAppStore.getState().rules.find((r) => r.id === 'grocery')?.categoryId).toBe('pets');

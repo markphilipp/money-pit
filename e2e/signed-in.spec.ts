@@ -125,7 +125,8 @@ test.describe('signed in', { tag: '@signed-in' }, () => {
     await row.click({ button: 'right' });
     await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
     await expect(page).toHaveURL(/\/settings\/rules\/new$/);
-    await page.getByLabel('Category', { exact: true }).selectOption('travel');
+    await page.getByLabel('Category', { exact: true }).click();
+    await page.getByRole('option', { name: 'Travel' }).click();
     await page.getByRole('button', { name: 'Save rule' }).click();
     await expect(page).toHaveURL(/\/$/);
     await expect(merchantOffersPill(page)).toContainText('Travel');

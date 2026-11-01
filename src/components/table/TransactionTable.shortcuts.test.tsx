@@ -199,6 +199,18 @@ describe('table keyboard shortcuts', () => {
     expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets', 'pets']);
   });
 
+  it('c on a lone selected row deselects it once the pick moves it out of the filter', async () => {
+    const user = setup();
+    await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+    await user.click(document.body);
+    expect(selectedIds().size).toBe(1);
+
+    await user.keyboard('c');
+    await user.keyboard('pets{Enter}');
+
+    expect(selectedIds().size).toBe(0);
+  });
+
   it('c with a highlighted row outside the selection targets that row alone', async () => {
     const user = setup();
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));

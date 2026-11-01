@@ -239,6 +239,53 @@ describe('TransactionTable', () => {
     expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
   });
 
+  describe('a selected row that leaves the category filter once recategorized', () => {
+    async function filterToGroceriesAndSelect(user: ReturnType<typeof userEvent.setup>) {
+      render(<TransactionTable />);
+      await openMenu(user, 'Category');
+      await user.click(screen.getByRole('checkbox', { name: 'Groceries' }));
+      await user.keyboard('{Escape}');
+      expect(bodyRows()).toHaveLength(1);
+      await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+      expect(screen.getByText('1 selected')).toBeInTheDocument();
+    }
+
+    it('drops out of the selection when changed from the bulk bar', async () => {
+      const user = userEvent.setup();
+      await filterToGroceriesAndSelect(user);
+
+      await user.click(screen.getByRole('button', { name: 'Change category' }));
+      await user.click(screen.getByRole('option', { name: /^Pets/ }));
+
+      expect(screen.getByText(/No transactions match these filters/)).toBeInTheDocument();
+      expect(useAppStore.getState().selectedIds.size).toBe(0);
+      expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
+    });
+
+    it('drops out of the selection when changed from its pill', async () => {
+      const user = userEvent.setup();
+      await filterToGroceriesAndSelect(user);
+
+      await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+      await user.click(screen.getByRole('option', { name: /^Pets/ }));
+
+      expect(useAppStore.getState().selectedIds.size).toBe(0);
+      expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
+    });
+
+    it('drops out of the selection when the new category is created in the picker', async () => {
+      const user = userEvent.setup();
+      await filterToGroceriesAndSelect(user);
+
+      await user.click(screen.getByRole('button', { name: 'Change category' }));
+      await user.keyboard('Gym');
+      await user.click(screen.getByRole('button', { name: /Create category “Gym”/ }));
+
+      expect(useAppStore.getState().selectedIds.size).toBe(0);
+      expect(screen.queryByText(/selected/)).not.toBeInTheDocument();
+    });
+  });
+
   it('clears the selection from the bulk bar', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
