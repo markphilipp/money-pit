@@ -99,11 +99,10 @@ function spanHint(rows: Dataset['rows']): string {
     : rangeLabel({ from, to });
 }
 
-/** Every calendar month holding a transaction, newest first. */
-function monthsWithData(datasets: Dataset[]): { year: number; month: number }[] {
+/** Every calendar month holding a transaction date, newest first. */
+function monthsWithData(dates: Date[]): { year: number; month: number }[] {
   const seen = new Map<number, { year: number; month: number }>();
-  for (const row of mergeDatasets(datasets)) {
-    const d = parseDate(row.dateStr);
+  for (const d of dates) {
     if (Number.isNaN(d.getTime())) continue;
     seen.set(d.getFullYear() * 12 + d.getMonth(), { year: d.getFullYear(), month: d.getMonth() });
   }
@@ -114,9 +113,12 @@ function monthsWithData(datasets: Dataset[]): { year: number; month: number }[] 
 export function periodOptions({
   datasets,
   now,
+  dates = mergeDatasets(datasets).map((row) => parseDate(row.dateStr)),
 }: {
   datasets: Dataset[];
   now: Date;
+  /** Dates of the transactions the table can show; a month only offers itself if one lands in it. */
+  dates?: Date[];
 }): PeriodGroup[] {
   const groups: PeriodGroup[] = [];
 
@@ -134,7 +136,7 @@ export function periodOptions({
     });
   }
 
-  const months = monthsWithData(datasets);
+  const months = monthsWithData(dates);
   if (months.length >= 2) {
     groups.push({
       id: 'months',

@@ -9,7 +9,9 @@ import {
   searchPeriods,
   type PeriodOption,
 } from '@/lib/periods';
+import { PAYMENTS_ID } from '@/lib/types';
 import { useAppStore } from '@/store/useAppStore';
+import { useTransactions } from '@/store/hooks';
 import styles from './PeriodFilter.module.css';
 
 type Mode = 'list' | 'custom';
@@ -32,7 +34,16 @@ export function PeriodFilter() {
   const inputRef = useRef<HTMLInputElement>(null);
   const skipOpenOnFocus = useRef(false);
 
-  const base = useMemo(() => periodOptions({ datasets, now }), [datasets, now]);
+  const transactions = useTransactions();
+  const showCredits = useAppStore((s) => s.filters.showCredits);
+  const dates = useMemo(
+    () =>
+      transactions
+        .filter((t) => showCredits || t.categoryId !== PAYMENTS_ID)
+        .map((t) => t.date),
+    [transactions, showCredits],
+  );
+  const base = useMemo(() => periodOptions({ datasets, now, dates }), [datasets, now, dates]);
   const groups = useMemo(() => searchPeriods(base, query ?? '', now), [base, query, now]);
   const flat = useMemo(() => groups.flatMap((g) => g.options), [groups]);
   const display = describePeriod(datasets, statementIds, dateFilter);
