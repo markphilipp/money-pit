@@ -16,6 +16,7 @@ import { emptyFilters, useAppStore } from '@/store/useAppStore';
 import { BulkBar } from './BulkBar';
 import { CategoryPicker } from './CategoryPicker';
 import { ColumnMenu } from './ColumnMenu';
+import { PeriodFilter } from './PeriodFilter';
 import { RowContextMenu } from './RowContextMenu';
 import { buildColumns, type ColumnMeta } from './columns';
 import styles from './Table.module.css';
@@ -173,6 +174,7 @@ export function TransactionTable() {
           value={state.filters.search}
           onChange={(e) => setFilter({ search: e.target.value })}
         />
+        <PeriodFilter />
         <button
           className="btn-clear"
           onClick={() => {

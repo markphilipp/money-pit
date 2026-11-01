@@ -64,6 +64,16 @@ Actions worth knowing before you add one:
   every render, which is how an upload re-checks them. `resetAll` clears them with everything else.
 - `clearOverrides(ids)` — hands rows back to the rules. Used when saving a rule that would otherwise
   be shadowed by manual categories on the very rows it was induced from.
+- `setPeriod(period)` — the dashboard's single period filter, one atomic update. `{ statementId }`
+  sets `filters.statementIds` to that one id and removes the `date` column filter; `{ from, to }`
+  sets the `date` filter (via `rangeToFilter`) and empties `statementIds`; `null` clears both. A
+  statement and a date range are alternative ways to name a slice, so the action never leaves both
+  set (the Date column menu still can, and the period input then shows both). `removeDataset`
+  strips the removed id from `statementIds`. `filters` (persisted, and the one slice kept in the tab
+  when signed in) is `{ search, showCredits, statementIds, columnFilters }`; the date range is the
+  `date` entry of `columnFilters`, so the column menu and the period input edit one value, and no
+  field was added for relative presets, which persist as the absolute dates they resolved to. A tab
+  saved before `statementIds` existed hydrates it as `[]`, since `merge` spreads `emptyFilters`.
 - `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
   `filters.columnFilters` entirely when they go empty, so `columnFilters` only ever holds live
   filters. Use `checklistValues()` from `src/lib/rules/engine.ts` to read them back; the map is
@@ -151,7 +161,11 @@ Pure functions taking `AppState`. `selectTransactions` memoizes on the identity 
 `(rawRows, categories, rules, overrides)` in a module-level cache, because deriving transactions
 walks every row on every render. Keep store updates immutable or the cache silently goes stale.
 
-- `selectFiltered(state, opts)` — applies search, the payments exclusion and column filters.
+- `selectFiltered(state, opts)` — applies search, the payments exclusion, the statement selection
+  and column filters. Statement ids that match no dataset are ignored, and with none left no
+  statement filter applies, so a stale id (a removed file, or a tab that outlived an account
+  reload) can never blank the table. The membership set (`statementTxnIds`) is cached module-level
+  on the identity of `datasets` plus the active ids.
   `opts.ignoreCategory` / `ignorePerson` let a chart exclude its _own_ dimension, which is why
   clicking a donut slice dims the others instead of collapsing the chart to one slice.
 - `selectCategoryTotals` / `selectPersonTotals` / `selectStats` — all drop `PAYMENTS_ID` rows.

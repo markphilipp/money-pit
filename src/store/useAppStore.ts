@@ -18,6 +18,8 @@ import { CsvFormatError, parseStatementCsv } from '@/lib/csv';
 import { addDataset, mergeDatasets, removeDataset as dropDataset } from '@/lib/datasets';
 import { defaultCategories, defaultRules } from '@/lib/defaultRules';
 import { removeCategory, upgradeLegacyRules, type LegacyRule } from '@/lib/categories';
+import { rangeToFilter } from '@/lib/dateRange';
+import type { Period } from '@/lib/periods';
 import { checklistValues } from '@/lib/rules/engine';
 import { MAX_DISMISSED } from '@/lib/rules/discover';
 
@@ -29,6 +31,7 @@ export interface UploadResult {
 export const emptyFilters: FilterState = {
   search: '',
   showCredits: false,
+  statementIds: [],
   columnFilters: {},
 };
 
@@ -71,6 +74,7 @@ export interface AppState {
   setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
   togglePersonFilter: (person: string) => void;
+  setPeriod: (period: Period) => void;
   setChartMode: (mode: ChartMode) => void;
   setPersonChartMode: (mode: ChartMode) => void;
   setSort: (key: SortKey, dir?: 1 | -1) => void;
@@ -220,11 +224,14 @@ export const useAppStore = create<AppState>()(
             return {
               ...next,
               selectedIds: new Set<string>(),
-              filters: withChecklist(
-                s.filters,
-                'person',
-                currentChecklist(s.filters, 'person').filter((p) => persons.has(p)),
-              ),
+              filters: {
+                ...withChecklist(
+                  s.filters,
+                  'person',
+                  currentChecklist(s.filters, 'person').filter((p) => persons.has(p)),
+                ),
+                statementIds: s.filters.statementIds.filter((sid) => sid !== id),
+              },
             };
           }),
 
@@ -345,6 +352,20 @@ export const useAppStore = create<AppState>()(
                 values.includes(person) ? values.filter((p) => p !== person) : [...values, person],
               ),
             };
+          }),
+
+        // One period at a time: a statement and a date range are alternative ways to say "this slice".
+        setPeriod: (period) =>
+          set((s) => {
+            const columnFilters = { ...s.filters.columnFilters };
+            delete columnFilters.date;
+            let statementIds: string[] = [];
+            if (period && 'statementId' in period) statementIds = [period.statementId];
+            else if (period) {
+              const date = rangeToFilter(period.from, period.to);
+              if (date) columnFilters.date = date;
+            }
+            return { filters: { ...s.filters, statementIds, columnFilters } };
           }),
 
         setChartMode: (chartMode) => set({ chartMode }),

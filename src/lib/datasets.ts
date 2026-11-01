@@ -46,6 +46,20 @@ const txnIds = (rows: RawStatementRow[]) =>
   new Set(withOrdinals(rows).map((row) => txnId(row, row.ordinal)));
 
 /**
+ * Transaction ids contributed by the given datasets. Transactions don't carry the file they came
+ * from (rows are deduped across files), so membership is recomputed: a dataset's own ordinal ids
+ * are a subset of the merged ids, which makes this exact for overlapping files too.
+ */
+export function statementTxnIds(datasets: Dataset[], ids: string[]): Set<string> {
+  const wanted = new Set(ids);
+  const result = new Set<string>();
+  for (const d of datasets) {
+    if (wanted.has(d.id)) for (const key of txnIds(d.rows)) result.add(key);
+  }
+  return result;
+}
+
+/**
  * Drops one dataset, and with it the overrides of any row that no other dataset still holds. The
  * account does the same: those rows are deleted along with their `category_override` column.
  */
