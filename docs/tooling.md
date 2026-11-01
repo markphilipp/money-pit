@@ -67,6 +67,15 @@ branch. Development's two URLs are set by hand to the Neon `dev` branch, and the
 `bunx vercel env pull .env.local` (pull into a fresh file: `pull` keeps keys it no longer serves).
 `src/db` reads the env on first query, not at import, so `bun run build` needs no database.
 
+### Preview banner
+
+When `VERCEL_ENV === 'preview'`, the root layout renders `PreviewBanner` above everything: a striped
+"Preview · Not production" strip with the git branch (`VERCEL_GIT_COMMIT_REF`) and a **Load sample
+data** button. The button uploads three synthetic statements from `src/lib/sampleData.ts` through
+`uploadFiles`, so it behaves like a normal upload: `sessionStorage` when signed out, the account
+when signed in. Clicking it again is a no-op. Production and local builds never render it, and the
+sample module is dynamically imported, so it ships nowhere else.
+
 ### Migrations run in the production build
 
 `vercel-build` runs `bun run db:migrate` before `next build` when `VERCEL_ENV=production`, and
