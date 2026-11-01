@@ -63,15 +63,16 @@
   letter-spacing: 0.06em;
   text-transform: uppercase;
   padding: 5px 10px;
-  border: 1px dashed var(--ink-soft);
+  border: 1px solid var(--ink);
   border-radius: 6px;
-  background: none;
-  color: var(--ink-soft);
+  background: var(--card);
+  color: var(--ink);
   cursor: pointer;
 }
 
 .addBtn:hover {
   border-color: var(--accent);
+  background: var(--accent-soft);
   color: var(--accent);
 }
 
