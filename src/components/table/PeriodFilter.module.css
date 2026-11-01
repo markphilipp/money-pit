@@ -48,7 +48,7 @@
 .panel {
   position: absolute;
   top: 100%;
-  left: 0;
+  left: var(--panel-shift, 0px);
   z-index: 32;
   width: 340px;
   max-width: calc(100vw - 24px);
