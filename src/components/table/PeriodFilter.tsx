@@ -38,10 +38,15 @@ export function PeriodFilter() {
   useLayoutEffect(() => {
     const root = rootRef.current;
     if (!open || !root) return;
-    const { left } = root.getBoundingClientRect();
-    const room = document.documentElement.clientWidth - 12 - left;
-    const shift = Math.max(0, Math.min(PANEL_WIDTH - room, left - 12));
-    root.style.setProperty('--panel-shift', `${-shift}px`);
+    const place = () => {
+      const { left } = root.getBoundingClientRect();
+      const room = document.documentElement.clientWidth - 12 - left;
+      const shift = Math.max(0, Math.min(PANEL_WIDTH - room, left - 12));
+      root.style.setProperty('--panel-shift', `${-shift}px`);
+    };
+    place();
+    window.addEventListener('resize', place);
+    return () => window.removeEventListener('resize', place);
   }, [open, mode]);
 
   const base = useMemo(() => periodOptions({ datasets, now }), [datasets, now]);
