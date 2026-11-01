@@ -223,7 +223,7 @@ describe('table keyboard shortcuts', () => {
 
     const { ruleSources } = useAppStore.getState();
     expect(ruleSources).toHaveLength(1);
-    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules/new');
   });
 
   it('r starts a rule from the selection when it contains the highlighted row', async () => {
@@ -235,7 +235,7 @@ describe('table keyboard shortcuts', () => {
     const { ruleSources, selectedIds: selected } = useAppStore.getState();
     expect(ruleSources).toEqual([...selected]);
     expect(ruleSources).toHaveLength(2);
-    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules/new');
   });
 
   it('Esc clears the selection first, then the highlight', async () => {

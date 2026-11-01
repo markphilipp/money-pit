@@ -99,7 +99,7 @@ export function TransactionTable() {
 
   const startRuleFrom = (ids: string[]) => {
     setRuleSources(ids);
-    router.push('/rules/new');
+    router.push('/settings/rules/new');
   };
 
   const openPicker = (targetIds: string[], rect: DOMRect) => {

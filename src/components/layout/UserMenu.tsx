@@ -82,13 +82,7 @@ export function UserMenu() {
               </>
             )}
             <DropdownMenu.Item className={styles.item} asChild>
-              <Link href="/datasets">Uploaded files…</Link>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item className={styles.item} asChild>
-              <Link href="/categories">Categories…</Link>
-            </DropdownMenu.Item>
-            <DropdownMenu.Item className={styles.item} asChild>
-              <Link href="/rules">Category rules…</Link>
+              <Link href="/settings">Settings…</Link>
             </DropdownMenu.Item>
             <DropdownMenu.Item className={styles.item} onSelect={() => setShortcutsOpen(true)}>
               Keyboard shortcuts

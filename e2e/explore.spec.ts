@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import path from 'node:path';
+import { openSettings, settingsNav } from './settings';
 
 const fixture = (name: string) => path.join(__dirname, 'fixtures', name);
 
@@ -57,7 +58,7 @@ test('creates a rule from a row and applies it immediately', async ({ page }) =>
   await row.click({ button: 'right' });
   await page.getByRole('menuitem', { name: 'Create rule from transaction' }).click();
 
-  await expect(page).toHaveURL(/\/rules\/new$/);
+  await expect(page).toHaveURL(/\/settings\/rules\/new$/);
   await expect(page.getByRole('heading', { name: 'New rule from 1 transaction' })).toBeVisible();
   await expect(page.getByTestId('value-editor')).toHaveValue('Merchant Offers');
   await page.getByLabel('Category name').fill('Merchant Credits');
@@ -95,17 +96,16 @@ test('suggests a merchant rule from several selected rows', async ({ page }) => 
   ).toContainText('Blue Ridge Bakery');
 });
 
-test('manages rules on their own route, reached from the user menu', async ({ page }) => {
-  await page.getByLabel('Account menu').click();
-  await page.getByRole('menuitem', { name: 'Category rules…' }).click();
+test('manages rules in settings, reached from the user menu', async ({ page }) => {
+  await openSettings(page, 'Rules');
 
-  await expect(page).toHaveURL(/\/rules$/);
+  await expect(page).toHaveURL(/\/settings\/rules$/);
   await expect(page.getByText(/description contains LOWE/)).toBeVisible();
 
   await page.getByLabel('Delete Groceries').click();
   await expect(page.getByLabel('Delete Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Done' }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -114,15 +114,15 @@ test('manages rules on their own route, reached from the user menu', async ({ pa
 test('reassigns a rule to a different category on its own URL and comes back through history', async ({
   page,
 }) => {
-  await page.goto('/rules');
+  await page.goto('/settings/rules');
   await page.getByLabel('Edit Home Improvement').click();
 
-  await expect(page).toHaveURL(/\/rules\/home$/);
+  await expect(page).toHaveURL(/\/settings\/rules\/home$/);
   await expect(page.getByLabel('Category')).toHaveValue('home');
   await page.getByLabel('Category').selectOption('pets');
   await page.getByRole('button', { name: 'Save' }).click();
 
-  await expect(page).toHaveURL(/\/rules$/);
+  await expect(page).toHaveURL(/\/settings\/rules$/);
   const moved = page.locator('li', { hasText: 'description contains LOWE' });
   await expect(moved).toContainText('Pets');
 
@@ -135,10 +135,9 @@ test('reassigns a rule to a different category on its own URL and comes back thr
 });
 
 test('renames a category from its own screen', async ({ page }) => {
-  await page.getByLabel('Account menu').click();
-  await page.getByRole('menuitem', { name: 'Categories…' }).click();
+  await openSettings(page, 'Categories');
 
-  await expect(page).toHaveURL(/\/categories$/);
+  await expect(page).toHaveURL(/\/settings\/categories$/);
   const groceriesRow = page.locator('li', { has: page.getByLabel('Rename Groceries') });
   await expect(groceriesRow).toContainText('1 rule · 1 transaction');
 
@@ -147,15 +146,14 @@ test('renames a category from its own screen', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByText('Groceries')).toHaveCount(0);
 
-  await page.getByRole('link', { name: 'Done' }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Food');
 });
 
 test('warns before deleting a category that rules depend on', async ({ page }) => {
-  await page.getByLabel('Account menu').click();
-  await page.getByRole('menuitem', { name: 'Categories…' }).click();
+  await openSettings(page, 'Categories');
 
   await page.getByLabel('Delete Groceries').click();
   const dialog = page.getByRole('alertdialog');
@@ -163,7 +161,7 @@ test('warns before deleting a category that rules depend on', async ({ page }) =
   await dialog.getByRole('button', { name: /Delete category and/ }).click();
 
   await expect(page.getByText('Groceries')).toHaveCount(0);
-  await page.getByRole('link', { name: 'Done' }).click();
+  await page.getByRole('link', { name: '← Dashboard' }).click();
   await expect(
     page.getByRole('row', { name: /WALMART/ }).getByTitle('Change category'),
   ).toContainText('Other');
@@ -174,8 +172,49 @@ test('serves a 404 for an unknown URL and a message for an unknown rule', async 
   expect(missing?.status()).toBe(404);
   await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
 
-  await page.goto('/rules/not-a-rule');
+  await page.goto('/settings/rules/not-a-rule');
   await expect(page.getByRole('heading', { name: 'Rule not found' })).toBeVisible();
+});
+
+test('switches between settings sections through the nav', async ({ page }) => {
+  await openSettings(page, 'Uploaded files');
+  await expect(page).toHaveURL(/\/settings\/datasets$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'Uploaded files' })).toBeVisible();
+  await expect(settingsNav(page).getByRole('link', { name: 'Uploaded files' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+
+  await settingsNav(page).getByRole('link', { name: 'Categories' }).click();
+  await expect(page).toHaveURL(/\/settings\/categories$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'Categories' })).toBeVisible();
+
+  await settingsNav(page).getByRole('link', { name: 'Rules' }).click();
+  await expect(page).toHaveURL(/\/settings\/rules$/);
+  await expect(page.getByRole('heading', { level: 2, name: 'Rules' })).toBeVisible();
+
+  await page.getByRole('link', { name: 'New rule' }).click();
+  await expect(page).toHaveURL(/\/settings\/rules\/new$/);
+  await expect(settingsNav(page).getByRole('link', { name: 'Rules' })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
+
+  await page.getByRole('link', { name: '← Dashboard' }).click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test('redirects the old top-level URLs into settings', async ({ page }) => {
+  await page.goto('/rules');
+  await expect(page).toHaveURL(/\/settings\/rules$/);
+  await page.goto('/rules/home');
+  await expect(page).toHaveURL(/\/settings\/rules\/home$/);
+  await page.goto('/categories');
+  await expect(page).toHaveURL(/\/settings\/categories$/);
+  await page.goto('/datasets');
+  await expect(page).toHaveURL(/\/settings\/datasets$/);
+  await page.goto('/settings');
+  await expect(page).toHaveURL(/\/settings\/rules$/);
 });
 
 test('bulk-selects rows and rewrites their category', async ({ page }) => {

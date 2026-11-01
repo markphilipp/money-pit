@@ -258,7 +258,7 @@ describe('TransactionTable', () => {
     await user.click(screen.getByRole('menuitem', { name: 'Create rule from transaction' }));
 
     expect(useAppStore.getState().ruleSources).toHaveLength(1);
-    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules/new');
   });
 
   it('routes to the rule editor with the whole selection from the bulk bar', async () => {
@@ -272,7 +272,7 @@ describe('TransactionTable', () => {
     const { ruleSources, selectedIds } = useAppStore.getState();
     expect(ruleSources).toEqual([...selectedIds]);
     expect(ruleSources).toHaveLength(2);
-    expect(routerMock.push).toHaveBeenCalledWith('/rules/new');
+    expect(routerMock.push).toHaveBeenCalledWith('/settings/rules/new');
   });
 
   it('selects a row from its context menu', async () => {

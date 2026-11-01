@@ -35,7 +35,7 @@ test('suggests a rule, keeps a dismissal across an overlapping upload, and re-ch
   await page
     .getByRole('button', { name: /^Create rule for contains “COPPER KETTLE ROASTERS”/ })
     .click();
-  await expect(page).toHaveURL(/\/rules\/new$/);
+  await expect(page).toHaveURL(/\/settings\/rules\/new$/);
   await expect(
     page.getByRole('button', { name: /contains “COPPER KETTLE ROASTERS”/ }),
   ).toHaveAttribute('aria-pressed', 'true');

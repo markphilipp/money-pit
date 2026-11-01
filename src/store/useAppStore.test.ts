@@ -361,7 +361,7 @@ describe('selection and sorting', () => {
     expect(state().selectedIds.size).toBe(0);
   });
 
-  it('persists the rule editor sources so /rules/new survives a reload', () => {
+  it('persists the rule editor sources so /settings/rules/new survives a reload', () => {
     const ids = selectFiltered(state())
       .slice(0, 2)
       .map((t) => t.id);

@@ -7,7 +7,7 @@ in Postgres. Every local server uses the `dev` branch. The only personal data ke
 ## Sub-features
 
 - **Account menu** ("Account menu" avatar, top right of every page):
-  - always: "Uploaded files…", "Categories…", "Category rules…" and "Keyboard shortcuts";
+  - always: "Settings…" and "Keyboard shortcuts";
   - with data (none of these on the empty state): "Add statement", and "Start over". "Start over"
     opens an alertdialog titled "Start over?" with "Cancel" and a "Start over" button. Cancel keeps
     every row. Confirming clears rows, rule edits and overrides (`resetAll`) and lands on the empty
@@ -65,8 +65,7 @@ export default async ({ page, browser, baseURL, shot, fixture, log, account }) =
   await page.goto('/');
   await expect(signedOut).toBeVisible();
   await page.getByLabel('Account menu').click();
-  await expect(menu('Categories…')).toBeVisible();
-  await expect(menu('Category rules…')).toBeVisible();
+  await expect(menu('Settings…')).toBeVisible();
   await expect(menu('Sign in…')).toBeEnabled();
   await expect(menu('Sign out')).toHaveCount(0);
   await shot('menu-signed-out');

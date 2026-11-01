@@ -47,7 +47,7 @@ test('offers the account menu on the empty state', async ({ page }) => {
   await expect(page.getByText('Drop statement CSVs here')).toBeVisible();
 
   await page.getByLabel('Account menu').click();
-  await expect(page.getByRole('menuitem', { name: 'Category rules…' })).toBeVisible();
+  await expect(page.getByRole('menuitem', { name: 'Settings…' })).toBeVisible();
   await page.getByRole('menuitem', { name: 'Sign in…' }).click();
 
   await expect(page).toHaveURL(/\/sign-in$/);

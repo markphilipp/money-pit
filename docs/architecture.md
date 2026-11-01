@@ -56,9 +56,9 @@ Actions worth knowing before you add one:
   has no rule to pin). First matching rule wins, so a new rule placed after `payments` could never
   match.
 - `deleteRule` — removes one rule; its category and any other rules filing into it are untouched.
-- `setRuleSources(ids)` — seeds `/rules/new` with the transactions to induce a rule from. The
+- `setRuleSources(ids)` — seeds `/settings/rules/new` with the transactions to induce a rule from. The
   _route_ decides which screen shows; this only carries its subject. It is inside `partialize`, so
-  reloading `/rules/new` keeps working instead of landing on a screen with no subject.
+  reloading `/settings/rules/new` keeps working instead of landing on a screen with no subject.
 - `dismissSuggestion(key)` — remembers a proposal key from `discoverProposals` so it stops showing.
   Idempotent. Only the keys are stored: the proposals themselves are derived from the transactions
   every render, which is how an upload re-checks them. `resetAll` clears them with everything else.
@@ -83,7 +83,7 @@ The server renders with empty state — `sessionStorage` only exists in the brow
 runs with `skipHydration: true` and `useHydrated()` rehydrates after mount via
 `useSyncExternalStore`. Every screen renders an `aria-busy` placeholder until then. Reading store
 state before hydration gives you the initial state, not the session's — anything that must see
-persisted data belongs below that gate. This is why `/rules/[id]` resolves its rule _after_
+persisted data belongs below that gate. This is why `/settings/rules/[id]` resolves its rule _after_
 hydration rather than on the server: which rule an id refers to is not knowable there.
 
 A tab saved before datasets existed has `rawRows` and no `datasets`. `merge` hydrates that as a

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import type { Dataset } from '@/lib/types';
 import { datasetSpan } from '@/lib/datasets';
 import { UploadZone } from '@/components/upload/UploadZone';
@@ -29,13 +28,8 @@ export function DatasetsScreen() {
   const hydrated = useHydrated();
 
   return (
-    <main className={`wrap ${screen.screen}`}>
-      <div className={screen.topBar}>
-        <Link href="/" className={screen.back}>
-          ← Back
-        </Link>
-        <h1 className={screen.title}>Uploaded files</h1>
-      </div>
+    <div className={screen.screen}>
+      <h2 className={screen.title}>Uploaded files</h2>
 
       {hydrated ? (
         <DatasetList />
@@ -46,14 +40,7 @@ export function DatasetsScreen() {
           </p>
         </section>
       )}
-
-      <div className={screen.actions}>
-        <span className={screen.spacer} />
-        <Link href="/" className="btn-clear">
-          Done
-        </Link>
-      </div>
-    </main>
+    </div>
   );
 }
 

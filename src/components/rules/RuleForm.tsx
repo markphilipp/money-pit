@@ -15,7 +15,7 @@ import { fromRqb, toRqb } from './rqbMap';
 import screen from './RuleScreen.module.css';
 
 /**
- * Writes one rule by hand — `/rules/[id]` to edit an existing one, or `/rules/new` when there is
+ * Writes one rule by hand — `/settings/rules/[id]` to edit an existing one, or `/settings/rules/new` when there is
  * no selection to induce a rule from. Rules only exist in sessionStorage, so which rule an id
  * refers to is not knowable until after hydration.
  */
@@ -23,7 +23,7 @@ export function RuleForm({ ruleId }: { ruleId?: string }) {
   const hydrated = useHydrated();
   const rules = useAppStore((s) => s.rules);
 
-  if (!hydrated) return <main className="wrap" aria-busy="true" />;
+  if (!hydrated) return <div aria-busy="true" />;
 
   const rule = ruleId ? rules.find((r) => r.id === ruleId) : undefined;
   if (ruleId && !rule) return <MissingRule ruleId={ruleId} />;
@@ -34,12 +34,12 @@ export function RuleForm({ ruleId }: { ruleId?: string }) {
 function MissingRule({ ruleId }: { ruleId: string }) {
   const signedIn = useContext(SignedInContext);
   return (
-    <main className={`wrap ${screen.screen}`}>
+    <div className={screen.screen}>
       <div className={screen.topBar}>
-        <Link href="/rules" className={screen.back}>
+        <Link href="/settings/rules" className={screen.back}>
           ← All rules
         </Link>
-        <h1 className={screen.title}>Rule not found</h1>
+        <h2 className={screen.title}>Rule not found</h2>
       </div>
       <section className={`card ${screen.section}`}>
         <p className={screen.empty}>
@@ -47,7 +47,7 @@ function MissingRule({ ruleId }: { ruleId: string }) {
           {signedIn ? 'different account' : 'different session — rules live in this tab only'}.
         </p>
       </section>
-    </main>
+    </div>
   );
 }
 
@@ -90,16 +90,16 @@ function RuleFormFields({ rule }: { rule?: Rule }) {
         conditions: fromRqb(query),
       });
     }
-    router.push('/rules');
+    router.push('/settings/rules');
   }
 
   return (
-    <main className={`wrap ${screen.screen}`}>
+    <div className={screen.screen}>
       <div className={screen.topBar}>
-        <Link href="/rules" className={screen.back}>
+        <Link href="/settings/rules" className={screen.back}>
           ← All rules
         </Link>
-        <h1 className={screen.title}>{title}</h1>
+        <h2 className={screen.title}>{title}</h2>
       </div>
 
       <section className={`card ${screen.section}`}>
@@ -125,20 +125,20 @@ function RuleFormFields({ rule }: { rule?: Rule }) {
             className={screen.danger}
             onClick={() => {
               deleteRule(rule.id);
-              router.push('/rules');
+              router.push('/settings/rules');
             }}
           >
             Delete
           </button>
         )}
         <span className={screen.spacer} />
-        <Link href="/rules" className="btn-clear">
+        <Link href="/settings/rules" className="btn-clear">
           Cancel
         </Link>
         <button type="button" className={screen.save} onClick={save} disabled={!resolved}>
           Save
         </button>
       </div>
-    </main>
+    </div>
   );
 }

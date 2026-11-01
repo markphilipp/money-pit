@@ -1,7 +1,7 @@
 # Categories
 
 Categories are separate from rules: a category is what a row is filed under, a rule is what files
-it there. The category list is its own screen at `/categories`: rename, recolor, add and delete
+it there. The category list is its own Settings section at `/settings/categories`: rename, recolor, add and delete
 categories. Payments and Other are built in, so they can be renamed and recolored but not deleted.
 
 ## Sub-features
@@ -14,11 +14,12 @@ categories. Payments and Other are built in, so they can be renamed and recolore
 - Delete (`Delete <name>`) opens a confirmation listing the rules and manual overrides that go
   with it. Builtins have a disabled Delete button.
 - Each row shows its rule and transaction counts.
-- "Rules" links to `/rules`, "Done" and "← Back" go to `/`.
+- The Settings nav switches to the other sections, and "← Dashboard" goes to `/`.
 
 ## How to get to it (user POV)
 
-Account menu, then "Categories…". Also the "Categories" link on `/rules`, or the URL directly.
+Account menu, then "Settings…" (lands on `/settings/rules`), then "Categories" in the Settings nav.
+Or `/settings/categories` directly; `/categories` redirects there.
 
 ## Driving it with drive.mjs
 
@@ -28,8 +29,13 @@ export default async ({ page, shot, fixture }) => {
   await page.goto('/');
   await page.setInputFiles('input[type=file]', [fixture('june.csv')]);
   await page.getByLabel('Account menu').click();
-  await page.getByRole('menuitem', { name: 'Categories…' }).click();
-  await expect(page).toHaveURL(/\/categories$/);
+  await page.getByRole('menuitem', { name: 'Settings…' }).click();
+  await expect(page).toHaveURL(/\/settings\/rules$/);
+  await page
+    .getByRole('navigation', { name: 'Settings' })
+    .getByRole('link', { name: 'Categories' })
+    .click();
+  await expect(page).toHaveURL(/\/settings\/categories$/);
   await expect(page.getByRole('heading', { name: 'Categories' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Delete Other' })).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Delete Payments' })).toBeDisabled();

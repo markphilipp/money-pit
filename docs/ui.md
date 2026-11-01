@@ -12,6 +12,7 @@ Components, layout mechanics and styling conventions.
 | `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                                                                                                                                                                                                                             |
 | `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules.                                                                                                                                                                                                          |
 | `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                                                                                                                                                                                                                             |
+| `settings`   | `SettingsShell`                                                                                                      | The shared frame for every `/settings/*` route: one `<main>`, `<h1>Settings</h1>`, an exit link to `/` and a left nav (a tab strip below 720px). Nav entries are the `SETTINGS_SECTIONS` table; add a section there.                                                                                                                                                                                                                        |
 | `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                                              | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                                                                                                                                                                                                                                                                           |
 | `upload`     | `EmptyState`, `UploadZone`                                                                                           | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                                                                                                                                                                                                                                                                                  |
 | `auth`       | `SignInScreen`                                                                                                       | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                                                                                                                                                                                                                                                                                |
@@ -66,7 +67,7 @@ Collapsed it is one line, "N rule suggestions for Other", a button with `aria-ex
 shows up to five cards, largest first, each with the rule's label, "Covers N rows in Other", up to
 three sample descriptions and two buttons whose accessible names carry the label ("Create rule for
 …", "Dismiss …"). **Create rule** calls `setRuleSources` with the proposal's `txnIds` and routes to
-`/rules/new`, where the editor takes over exactly as it does for a table selection. **Dismiss**
+`/settings/rules/new`, where the editor takes over exactly as it does for a table selection. **Dismiss**
 stores the proposal's key and moves focus to the banner button, because the card that had it is
 gone.
 
@@ -86,7 +87,7 @@ payments/credits toggle live in the bar above.
 Row actions follow one rule — **acting inside a selection applies to the whole selection, otherwise
 to that row alone** (`resolveActionTargets` in `src/lib/shortcuts.ts`, wrapped by `targetsFor` in
 `TransactionTable.tsx`). This covers the category pill, the
-right-click menu and "create rule from rows", which stores the ids and routes to `/rules/new`.
+right-click menu and "create rule from rows", which stores the ids and routes to `/settings/rules/new`.
 
 Payments rows are excluded unless "show payments & credits" is on; the footer total reflects only
 what's visible.
@@ -124,32 +125,39 @@ on every render, so an id that filtering or sorting removed counts as no highlig
 
 ## Routes
 
-| Route         | Screen             | Notes                                                                                          |
-| ------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `/`           | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
-| `/datasets`   | `DatasetsScreen`   | Uploaded files: add, remove. Reached from the account menu.                                    |
-| `/categories` | `CategoriesScreen` | Add, rename, recolor and delete categories. Reached from the account menu.                     |
-| `/rules`      | `RulesScreen`      | Reorder, edit, delete. Reached from the account menu.                                          |
-| `/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
-| `/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
-| `/sign-in`    | `SignInScreen`     | Google / GitHub via `authClient.signIn.social`. Redirects to `/` when already signed in.       |
-| `/privacy`    | `LegalPage`        | Privacy policy. Google's OAuth consent screen links to it, so keep it true to what's stored.   |
-| `/terms`      | `LegalPage`        | Terms of service, also linked from the consent screen. Both are linked from `Footer`.          |
+| Route                  | Screen             | Notes                                                                                          |
+| ---------------------- | ------------------ | ---------------------------------------------------------------------------------------------- |
+| `/`                    | `Dashboard`        | Charts + table. Hydrated from `sessionStorage`, or from the account snapshot when signed in.   |
+| `/settings`            | —                  | Redirects to `/settings/rules`.                                                                |
+| `/settings/datasets`   | `DatasetsScreen`   | Uploaded files: add, remove.                                                                   |
+| `/settings/categories` | `CategoriesScreen` | Add, rename, recolor and delete categories.                                                    |
+| `/settings/rules`      | `RulesScreen`      | Reorder, edit, delete.                                                                         |
+| `/settings/rules/new`  | `RuleEditorScreen` | Suggestion-driven when there is a selection, blank `RuleForm` when not.                        |
+| `/settings/rules/[id]` | `RuleForm`         | Edit one rule. **Dynamic** — ids are minted in the browser, so there is nothing to pre-render. |
+| `/sign-in`             | `SignInScreen`     | Google / GitHub via `authClient.signIn.social`. Redirects to `/` when already signed in.       |
+| `/privacy`             | `LegalPage`        | Privacy policy. Google's OAuth consent screen links to it, so keep it true to what's stored.   |
+| `/terms`               | `LegalPage`        | Terms of service, also linked from the consent screen. Both are linked from `Footer`.          |
+
+All `/settings/*` routes render inside `src/app/settings/layout.tsx`, which wraps them in
+`SettingsShell`; the screens themselves render no `<main>`, back link or exit button, only an `<h2>`
+and their sections. The account menu has a single "Settings…" entry to `/settings`. `next.config.ts`
+redirects the former `/datasets`, `/categories` and `/rules/*` URLs (temporary, `permanent: false`).
 
 `new` is a reserved category id (`src/lib/rules/naming.ts`, `uniqueId`) — a holdover from when a
-rule's own id doubled as its category id and could collide with the static `/rules/new` route. A new
+rule's own id doubled as its category id and could collide with the static `/settings/rules/new` route. A new
 rule's own id is minted separately (`newRuleId`, random) and never reaches that check. `not-found.tsx`
 and `error.tsx` cover unknown URLs and render errors; an id that matches no rule is _not_ a 404 —
 rules are session-scoped, so the screen explains that instead.
 
-Screens share their chrome through `RuleScreen.module.css` (frame, heading, action row); each keeps
-only what is genuinely its own.
+Screens share their content chrome through `RuleScreen.module.css` (frame, heading, sections, action
+row); each keeps only what is genuinely its own. The rule editor and form pages keep a contextual
+"← All rules" link back to `/settings/rules`.
 
 ## Rule editor screen — `RuleEditorScreen`
 
-"Create rule" from the table calls `setRuleSources(ids)` and routes to `/rules/new`. The route
+"Create rule" from the table calls `setRuleSources(ids)` and routes to `/settings/rules/new`. The route
 decides that the screen is showing; the store only carries which transactions the rule is being
-induced from. `ruleSources` _is_ persisted, so reloading `/rules/new` resumes rather than stranding
+induced from. `ruleSources` _is_ persisted, so reloading `/settings/rules/new` resumes rather than stranding
 the screen with no subject.
 
 Three stacked sections:
@@ -245,7 +253,7 @@ screen while categories and rules stay. Confirming calls the store's `removeData
 ## Account menu — `UserMenu`
 
 Rendered from `layout.tsx` (fixed, top-right) so it's available on the empty state as well. Holds
-**Add statement**, **Start over** (confirms in a modal), **Uploaded files…**, **Categories…**, **Category rules…**, and
+**Add statement**, **Start over** (confirms in a modal), **Settings…**, and
 **Sign in…** (a link to `/sign-in`). Add statement and Start over only appear once there's data.
 Signed in, Start over also removes the account's datasets and resets its categories and rules, but
 keeps the account. Sign in becomes **Sign out** and **Delete account…** (same modal), which calls the

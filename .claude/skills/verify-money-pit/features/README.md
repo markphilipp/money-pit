@@ -9,10 +9,10 @@ points, a proof covers all of them.
 | Upload statements            | [upload.md](upload.md)             | Empty-state drop zone / file input, account menu "Add statement" (once data is loaded)                                                                             |
 | Explore the table and charts | [explore.md](explore.md)           | Column menus (filter and sort), search box, per-chart mode toggles, chart click-to-filter, charts pane hide/resize, bulk selection, Reset, reload persistence      |
 | Recategorize transactions    | [recategorize.md](recategorize.md) | Category pill on a row, row context menu "Change category…", selection bar "Change category"                                                                       |
-| Categories                   | [categories.md](categories.md)     | Account menu "Categories…", "Categories" link on `/rules`, `/categories`                                                                                           |
-| Category rules               | [rules.md](rules.md)               | Account menu "Category rules…", `/rules`, row context menu, multi-select "Create rule", `/rules/new`, `/rules/[id]`                                                |
+| Categories                   | [categories.md](categories.md)     | Account menu "Settings…" then nav "Categories", `/settings/categories`                                                                                             |
+| Rules                        | [rules.md](rules.md)               | Account menu "Settings…" (lands on it), `/settings/rules`, row context menu, multi-select "Create rule", `/settings/rules/new`, `/settings/rules/[id]`             |
 | Rule suggestions             | [suggestions.md](suggestions.md)   | Dashboard banner "N rule suggestions for Other", its Create rule and Dismiss buttons                                                                               |
-| Uploaded files (datasets)    | [datasets.md](datasets.md)         | Account menu "Uploaded files…", `/datasets` (also has a drop zone)                                                                                                 |
+| Uploaded files (datasets)    | [datasets.md](datasets.md)         | Account menu "Settings…" then nav "Uploaded files", `/settings/datasets` (also has a drop zone)                                                                    |
 | Account, sign-in and sync    | [account-auth.md](account-auth.md) | Account menu (Start over, Sign in…, Sign out, Delete account…), `/sign-in`, claim dialog on sign-in, signed-in sync, footer `/privacy` and `/terms`, `/api/auth/*` |
 
 Update this map in the same change that adds, removes or renames a user-facing feature.

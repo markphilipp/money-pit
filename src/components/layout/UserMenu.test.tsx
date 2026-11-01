@@ -15,20 +15,16 @@ beforeEach(async () => {
 });
 
 describe('UserMenu', () => {
-  it('links to the rules route from the menu', async () => {
+  it('links to settings from the menu', async () => {
     const user = userEvent.setup();
     render(<UserMenu />);
 
     await user.click(screen.getByLabelText('Account menu'));
     expect(screen.getByRole('menuitem', { name: 'Sign in…' })).toHaveAttribute('href', '/sign-in');
 
-    expect(screen.getByRole('menuitem', { name: 'Category rules…' })).toHaveAttribute(
+    expect(screen.getByRole('menuitem', { name: 'Settings…' })).toHaveAttribute(
       'href',
-      '/rules',
-    );
-    expect(screen.getByRole('menuitem', { name: 'Uploaded files…' })).toHaveAttribute(
-      'href',
-      '/datasets',
+      '/settings',
     );
   });
 

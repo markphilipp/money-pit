@@ -21,13 +21,8 @@ export function RulesScreen() {
   const colors = useMemo(() => new Map(categories.map((c) => [c.id, c.color])), [categories]);
 
   return (
-    <main className={`wrap ${screen.screen}`}>
-      <div className={screen.topBar}>
-        <Link href="/" className={screen.back}>
-          ← Back
-        </Link>
-        <h1 className={screen.title}>Category rules</h1>
-      </div>
+    <div className={screen.screen}>
+      <h2 className={screen.title}>Rules</h2>
 
       <section className={`card ${screen.section}`}>
         <p className="sub">First matching rule wins — order matters.</p>
@@ -67,7 +62,7 @@ export function RulesScreen() {
                     </button>
                     <Link
                       className={styles.iconBtn}
-                      href={`/rules/${encodeURIComponent(rule.id)}`}
+                      href={`/settings/rules/${encodeURIComponent(rule.id)}`}
                       aria-label={`Edit ${name}`}
                     >
                       Edit
@@ -90,18 +85,11 @@ export function RulesScreen() {
       </section>
 
       <div className={screen.actions}>
-        <Link href="/categories" className="btn-clear">
-          Categories
-        </Link>
         {/* A hand-written rule has no source transactions; drop any left over from the table. */}
-        <Link href="/rules/new" className={screen.save} onClick={() => setRuleSources([])}>
+        <Link href="/settings/rules/new" className={screen.save} onClick={() => setRuleSources([])}>
           New rule
         </Link>
-        <span className={screen.spacer} />
-        <Link href="/" className="btn-clear">
-          Done
-        </Link>
       </div>
-    </main>
+    </div>
   );
 }

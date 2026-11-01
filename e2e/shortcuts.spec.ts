@@ -72,7 +72,7 @@ test('c recategorizes the highlighted row without typing the key into the picker
 test('r opens the rule editor for the highlighted row', async ({ page }) => {
   await page.keyboard.press('l');
   await page.keyboard.press('r');
-  await page.waitForURL('**/rules/new');
+  await page.waitForURL('**/settings/rules/new');
 });
 
 test('the highlighted row never hides under the pinned header while stepping through a short window', async ({

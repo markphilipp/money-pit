@@ -15,8 +15,8 @@ changing shape, so don't mine it for detail or expand it without being asked.
 
 Next.js 16 App Router, server-rendered on Vercel, React 19, Zustand, Drizzle over Neon Postgres,
 Better Auth,
-CSS Modules over tokens in `src/app/globals.css`. Routes are real routes — `/`, `/categories`, `/datasets`,
-`/rules`, `/rules/new`, `/rules/[id]`, `/sign-in`, `/privacy`, `/terms` — not screens swapped by store state. Chart.js 4 via react-chartjs-2, TanStack Table v8,
+CSS Modules over tokens in `src/app/globals.css`. Routes are real routes — `/`, `/settings/datasets`,
+`/settings/categories`, `/settings/rules`, `/settings/rules/new`, `/settings/rules/[id]`, `/sign-in`, `/privacy`, `/terms` — not screens swapped by store state. Chart.js 4 via react-chartjs-2, TanStack Table v8,
 react-querybuilder, Radix UI. Vitest + React Testing Library, Playwright for e2e. **bun** is the
 package manager.
 
@@ -57,9 +57,9 @@ src/lib/          pure domain logic: CSV parsing, datasets (merge/remove), categ
 src/store/        Zustand store, selectors, React hooks, signed-in sync subscriber
 src/db/           Drizzle client (lazy getDb()), schema/ and queries/; SQL migrations live in drizzle/
 src/auth/         Better Auth server instance (lazy getAuth()), session lookup, browser client
-src/components/   by feature area: charts, table, rules, upload, layout, common
+src/components/   by feature area: charts, table, rules, settings (shared shell), upload, layout, common
 src/hooks/        shared React hooks (sticky-offset measurement)
-src/app/          App Router routes (/, /categories, /datasets, /rules, /rules/new, /rules/[id], /sign-in, /privacy, /terms), actions/, global tokens
+src/app/          App Router routes (/, /settings/{datasets,categories,rules,rules/new,rules/[id]}, /sign-in, /privacy, /terms), actions/, global tokens
 e2e/              Playwright specs + synthetic CSV fixtures
 prototype/        original single-file dashboard, kept for visual reference only
 docs/             the sub-documents below

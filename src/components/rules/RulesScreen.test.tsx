@@ -14,8 +14,11 @@ describe('RulesScreen', () => {
   it('lists every rule with a link to its own page', async () => {
     render(<RulesScreen />);
 
-    expect(await screen.findByRole('heading', { name: 'Category rules' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Edit Groceries')).toHaveAttribute('href', '/rules/grocery');
+    expect(await screen.findByRole('heading', { name: 'Rules' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Edit Groceries')).toHaveAttribute(
+      'href',
+      '/settings/rules/grocery',
+    );
     expect(row('Groceries')).toHaveTextContent(/description contains/i);
   });
 
