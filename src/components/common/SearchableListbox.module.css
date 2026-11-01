@@ -1,4 +1,4 @@
-.picker {
+.anchored {
   position: fixed;
   z-index: 50;
   background: var(--card);
@@ -7,6 +7,12 @@
   box-shadow: 0 8px 24px rgba(30, 42, 38, 0.18);
   width: 240px;
   overflow: hidden;
+}
+
+.inline {
+  position: relative;
+  flex: 1;
+  min-width: 240px;
 }
 
 .search {
@@ -24,6 +30,20 @@
   padding: 4px;
   margin: 0;
   list-style: none;
+}
+
+.inline .list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin-top: 4px;
+  max-height: 280px;
+  background: var(--card);
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(30, 42, 38, 0.18);
 }
 
 .item {

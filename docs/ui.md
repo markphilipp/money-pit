@@ -4,18 +4,18 @@ Components, layout mechanics and styling conventions.
 
 ## Component map — `src/components/`
 
-| Area         | Files                                                                                                                | Notes                                                                                                                                                                                                                              |
-| ------------ | -------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                                     | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                                                                  |
-| `dashboard`  | `Dashboard`                                                                                                          | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                                                                  |
-| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                                      | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                                                                       |
-| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                    |
-| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules. |
-| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                    |
-| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                                              | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                                                                  |
-| `upload`     | `EmptyState`, `UploadZone`                                                                                           | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                                                                         |
-| `auth`       | `SignInScreen`                                                                                                       | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                                                                       |
-| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`                                                             | Shared palette popover, a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog.                                                  |
+| Area         | Files                                                                                                                | Notes                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `layout`     | `Masthead`, `Header`, `UserMenu`, `StatsStrip`, `AccountSync`, `SaveStatusToast`                                     | `Masthead` sets the `Header` lockup left of the three `StatsStrip` cards (stacked above 900px down). `Header` is the lockup only; all actions live in `UserMenu`.                                                                                                                                                                                                                                                                           |
+| `dashboard`  | `Dashboard`                                                                                                          | The `/` screen. `page.tsx` is a server component that renders it.                                                                                                                                                                                                                                                                                                                                                                           |
+| `charts`     | `CategoryChart`, `PersonChart`, `ChartModeToggle`, `chartSetup`                                                      | `chartSetup` registers Chart.js elements — import it once, from `Dashboard`.                                                                                                                                                                                                                                                                                                                                                                |
+| `table`      | `TransactionTable`, `columns`, `ColumnMenu`, `CategoryPicker`, `BulkBar`, `RowContextMenu`                           | TanStack Table headless; sorting/filtering are `manual*` and live in the store.                                                                                                                                                                                                                                                                                                                                                             |
+| `rules`      | `RulesScreen`, `RuleForm`, `RuleEditorScreen`, `RuleConditionsEditor`, `CategoryField`, `rqbMap`, `SuggestionsStrip` | One screen per route; `CategoryField` picks the category a rule files into or names a new one; `rqbMap` converts between `RuleGroup` and react-querybuilder's shape. `SuggestionsStrip` is the dashboard banner of proposed rules.                                                                                                                                                                                                          |
+| `categories` | `CategoriesScreen`, `DeleteCategoryDialog`                                                                           | Add, rename, recolor and delete categories. The delete dialog warns before it takes any rules filing into the category with it.                                                                                                                                                                                                                                                                                                             |
+| `datasets`   | `DatasetsScreen`, `RemoveDatasetDialog`                                                                              | List uploaded files, add more, remove one. The dialog states what removal does before it happens.                                                                                                                                                                                                                                                                                                                                           |
+| `upload`     | `EmptyState`, `UploadZone`                                                                                           | Landing page + drop target. The privacy line reads `SignedInContext` and matches the mode.                                                                                                                                                                                                                                                                                                                                                  |
+| `auth`       | `SignInScreen`                                                                                                       | Provider buttons for `/sign-in`, and what signing in stores.                                                                                                                                                                                                                                                                                                                                                                                |
+| `common`     | `ColorPickerPopover`, `ConfirmDialog`, `ShortcutsDialog`, `SearchableListbox`                                        | Shared palette popover, `SearchableListbox` (the search-and-pick combobox behind `CategoryPicker` and `RulePicker`: filtering, arrow/Enter/Escape keys, active-option tracking, listbox ARIA and option styling, placed either `anchored` to a rect or `inline` under its field), a Radix `AlertDialog` wrapper (title, body, cancel/confirm) for anything that needs a confirm-before-acting step, and the keyboard-shortcuts help dialog. |
 
 Every component with state or event handlers needs `'use client'`. The route files under
 `src/app/` are server components that do nothing but pick a screen and set `metadata` — keep them
@@ -160,7 +160,9 @@ Three stacked sections:
    pre-fills the new category's name, unless the user has already typed one. The active card is
    marked `aria-pressed` and tagged **edited** once the builder diverges from it.
 2. **Rule** — `CategoryField` (existing category, or a new one named and colored here) and
-   `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`).
+   `RuleConditionsEditor` (the react-querybuilder setup shared with `RuleForm`). When at least one
+   non-builtin rule exists, a **New rule | Add to existing rule** radio group sits on top. Choosing
+   the second option shows `RulePicker`. See _Adding to an existing rule_ below.
 3. **Matches** — recomputed on every builder change.
 
 The match preview is the guardrail, and it is deliberately honest about three things:
@@ -174,6 +176,38 @@ The match preview is the guardrail, and it is deliberately honest about three th
 - **Manual overrides beat every rule.** A selected row with an override is tagged
   _manual category wins_, and saving offers to clear those overrides — otherwise "applies to
   everything it matches" would silently skip exactly the rows the user hand-corrected.
+
+### Adding to an existing rule
+
+The target is a `RuleTarget` (`{ kind: 'new' } | { kind: 'existing'; ruleId: string | null }`).
+Choosing "Add to existing rule" starts with **no rule chosen** (`ruleId: null`), never a silent
+default. In that state the heading reads "Add N transactions to an existing rule", the category
+field is replaced by a note, the builder stays on the plain suggestion seed, and Save is disabled.
+Switching back to "New rule" restores the new-rule seed. A chosen rule that has since vanished
+falls back to the unchosen state.
+
+`RulePicker` is a thin wrapper over the shared `common/SearchableListbox` in its `inline` placement
+(`CategoryPicker` uses the same component `anchored`). It takes focus with its list open when it
+appears, so the choice is one keystroke away. Typing filters the non-builtin rules through `searchRules`
+([data-model.md](data-model.md#searching-rules--srclibrulessearchts)); ArrowUp/ArrowDown move the
+highlight, Enter chooses it, Escape or blur closes the list. Each option (`role="option"` in a
+`role="listbox"`) shows the category colour dot, the rule's
+label and its truncated condition summary, and an empty search shows "No matching rule". Once
+chosen, the input shows the rule's label.
+
+With a rule R chosen:
+
+- The category is locked to R's (`CategoryField` disabled, as `RuleForm` does for builtins), and the
+  heading reads "Add N transactions to ‹Category› rule".
+- The builder is seeded from `mergeConditions(R.conditions, suggestion.group)`
+  ([data-model.md](data-model.md#merging-into-an-existing-rule--srclibrulesmergets)). Picking another
+  suggestion card, or switching target, re-seeds it and overwrites manual edits, exactly as picking a
+  card does for a new rule. What is in the builder at Save is the rule's new conditions.
+- The preview puts the draft in R's slot of the precedence order instead of before the builtins, so
+  _stays in ‹category›_ stays honest. "Also newly matches N other transactions" lists only rows the
+  draft matches that R did not already match.
+- Save calls `setRule(R.id, { conditions })`. No category or rule is added. The clear-overrides
+  checkbox and the redirect behave as for a new rule.
 
 An emptied builder means "no rule yet", not "a rule that excludes everything" — `fromRqb` drops
 half-finished conditions, so mid-edit the group is briefly empty and flagging every row would be
