@@ -164,6 +164,30 @@ describe('matchesColumnFilter', () => {
   });
 });
 
+describe('matchesColumnFilter exclusion', () => {
+  it('hides excluded values and keeps the rest', () => {
+    const exclude = true;
+    expect(
+      matchesColumnFilter(txn(), { column: 'category', values: ['grocery'], exclude }, 'grocery'),
+    ).toBe(false);
+    expect(
+      matchesColumnFilter(txn(), { column: 'category', values: ['grocery'], exclude }, 'pets'),
+    ).toBe(true);
+    expect(
+      matchesColumnFilter(txn(), { column: 'person', values: ['ALEX SAMPLE'], exclude }, 'x'),
+    ).toBe(false);
+    expect(
+      matchesColumnFilter(txn(), { column: 'person', values: ['JAMIE SAMPLE'], exclude }, 'x'),
+    ).toBe(true);
+  });
+
+  it('treats an empty excluded list as no filter', () => {
+    expect(matchesColumnFilter(txn(), { column: 'category', values: [], exclude: true }, 'x')).toBe(
+      true,
+    );
+  });
+});
+
 describe('group builders', () => {
   it('turns keywords into an OR of description-contains, dropping blanks', () => {
     expect(keywordsToGroup(['LOWE', ' ', 'HOME DEPOT'])).toEqual({

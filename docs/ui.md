@@ -74,8 +74,24 @@ gone.
 ## Charts
 
 Both charts read `useFiltered({ ignoreCategory })` / `{ ignorePerson }`, so a chart never filters
-itself away: clicking a slice toggles that value in the checklist filter, and unselected slices dim
-(`shade()` appends the `40` alpha suffix) rather than disappearing, so they stay clickable.
+itself away: clicking a slice toggles that value in the checklist filter, and slices the filter
+hides dim (`shade()` appends the `40` alpha suffix, decided by `checklistIncludes`) rather than
+disappearing, so they stay clickable. In include mode that dims everything unselected; in exclude
+mode only the excluded slices dim.
+
+Right-clicking a slice or bar in either chart (donut and bar) opens `ChartContextMenu`, a Radix
+context menu around the chart box. The shared mechanism is `useChartHitTest(items, checklist)`
+(`src/components/charts/useChartHitTest.ts`), which owns the `Bar` and `Doughnut` refs and resolves
+the hit through the Chart.js instance (`getElementsAtEventForMode`, `nearest`, `intersect: true`)
+into `{ id, name, excluded }`, deriving `excluded` once from the `Checklist`. A miss (empty space,
+the donut hole) prevents the default so no empty menu opens. Each chart supplies its `items`
+(`{ id, name }`), its checklist, `onToggleExclusion`, `onShowAll` and `showAllLabel`. The menu offers
+`Exclude "<name>"` (or `Include "<name>"` when that value is already excluded), which calls
+`toggleCategoryExclusion` / `togglePersonExclusion`, and, while the chart's filter is active,
+`Show all categories` / `Show all cardholders`, which clears it. Person values are the raw `person`
+string and the menu names them by their chart label. The column menu shows "Checked categories are
+hidden." / "Checked cardholders are hidden." above its checklist when the filter is an exclusion,
+and its checkboxes keep the filter's mode.
 `chartMode` and `personChartMode` ('donut' | 'bar') are independent, one per chart, and persist for the session (and the account). The cards have no visible title or helper text; the Donut/Bars toggle is overlaid in the card's top-right corner and each chart is labelled through its canvas `aria-label`.
 
 ## Table

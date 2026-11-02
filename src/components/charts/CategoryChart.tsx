@@ -3,29 +3,33 @@
 import { useMemo } from 'react';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { checklistValues } from '@/lib/rules/engine';
+import { checklistIncludes, readChecklist } from '@/lib/checklist';
 import { selectCategoryTotals } from '@/store/selectors';
 import { useAppState, useFiltered } from '@/store/hooks';
 import { useAppStore } from '@/store/useAppStore';
+import { ChartContextMenu } from './ChartContextMenu';
 import { ChartModeToggle } from './ChartModeToggle';
+import { useChartHitTest } from './useChartHitTest';
 import { BAR_LAYOUT, BAR_SCALES, pctLabel, shade } from './chartSetup';
 import styles from './Chart.module.css';
 
 export function CategoryChart() {
   const state = useAppState();
   const toggleCategoryFilter = useAppStore((s) => s.toggleCategoryFilter);
+  const toggleCategoryExclusion = useAppStore((s) => s.toggleCategoryExclusion);
+  const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setChartMode = useAppStore((s) => s.setChartMode);
   const source = useFiltered({ ignoreCategory: true });
   const totals = useMemo(
     () => selectCategoryTotals(source, state.categories),
     [source, state.categories],
   );
-  const selected = checklistValues(state.filters.columnFilters, 'category');
+  const checked = readChecklist(state.filters.columnFilters, 'category');
   const isBar = state.chartMode === 'bar';
+  const items = totals.map((c) => ({ id: c.id, name: c.name }));
+  const { barRef, donutRef, hitTest } = useChartHitTest(items, checked);
 
-  const colors = totals.map((c) =>
-    shade(c.color, selected.length === 0 || selected.includes(c.id)),
-  );
+  const colors = totals.map((c) => shade(c.color, checklistIncludes(checked, c.id)));
   const values = totals.map((c) => c.total);
 
   const labels = totals.map((c) => c.name);
@@ -100,19 +104,33 @@ export function CategoryChart() {
   return (
     <div className={`card ${styles.card}`}>
       <ChartModeToggle mode={state.chartMode} onChange={setChartMode} label="Category chart type" />
-      <div className={styles.box}>
-        {totals.length === 0 ? (
-          <p className={styles.empty}>No spending matches these filters.</p>
-        ) : isBar ? (
-          <Bar data={barData} options={barOptions} aria-label="Spending by category, bar chart" />
-        ) : (
-          <Doughnut
-            data={donutData}
-            options={donutOptions}
-            aria-label="Spending by category, donut chart"
-          />
-        )}
-      </div>
+      <ChartContextMenu
+        hitTest={hitTest}
+        checklist={checked}
+        onToggleExclusion={toggleCategoryExclusion}
+        onShowAll={() => setColumnFilter('category', null)}
+        showAllLabel="Show all categories"
+      >
+        <div className={styles.box}>
+          {totals.length === 0 ? (
+            <p className={styles.empty}>No spending matches these filters.</p>
+          ) : isBar ? (
+            <Bar
+              ref={barRef}
+              data={barData}
+              options={barOptions}
+              aria-label="Spending by category, bar chart"
+            />
+          ) : (
+            <Doughnut
+              ref={donutRef}
+              data={donutData}
+              options={donutOptions}
+              aria-label="Spending by category, donut chart"
+            />
+          )}
+        </div>
+      </ChartContextMenu>
     </div>
   );
 }

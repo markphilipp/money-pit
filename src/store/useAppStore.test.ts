@@ -230,6 +230,86 @@ describe('filters', () => {
     expect(state().filters.columnFilters.category).toBeUndefined();
   });
 
+  it('excludes a category from rows and totals but lets the chart still see it', () => {
+    const all = selectFiltered(state());
+    state().toggleCategoryExclusion('grocery');
+
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['grocery'],
+      exclude: true,
+    });
+    const rows = selectFiltered(state());
+    expect(rows.length).toBeLessThan(all.length);
+    expect(rows.some((t) => t.categoryId === 'grocery')).toBe(false);
+    expect(selectVisibleTotal(rows)).toBeCloseTo(251.47 - 118.37, 2);
+    expect(
+      selectFiltered(state(), { ignoreCategory: true }).some((t) => t.categoryId === 'grocery'),
+    ).toBe(true);
+  });
+
+  it('switches between include and exclude without mixing the two', () => {
+    state().toggleCategoryFilter('amazon');
+    state().toggleCategoryFilter('pets');
+    state().toggleCategoryExclusion('grocery');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['grocery'],
+      exclude: true,
+    });
+
+    state().toggleCategoryExclusion('home');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['grocery', 'home'],
+      exclude: true,
+    });
+
+    state().toggleCategoryFilter('home');
+    state().toggleCategoryFilter('grocery');
+    expect(state().filters.columnFilters.category).toBeUndefined();
+
+    state().toggleCategoryExclusion('grocery');
+    state().toggleCategoryFilter('amazon');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['amazon'],
+    });
+  });
+
+  it('excludes a person from rows while the chart can still see them', () => {
+    state().togglePersonExclusion('JAMIE SAMPLE');
+    expect(state().filters.columnFilters.person).toEqual({
+      column: 'person',
+      values: ['JAMIE SAMPLE'],
+      exclude: true,
+    });
+    expect(selectFiltered(state()).some((t) => t.person === 'JAMIE SAMPLE')).toBe(false);
+    expect(selectFiltered(state()).length).toBeGreaterThan(0);
+    expect(
+      selectFiltered(state(), { ignorePerson: true }).some((t) => t.person === 'JAMIE SAMPLE'),
+    ).toBe(true);
+
+    state().togglePersonExclusion('JAMIE SAMPLE');
+    expect(state().filters.columnFilters.person).toBeUndefined();
+  });
+
+  it('switches a person filter between include and exclude without mixing the two', () => {
+    state().togglePersonFilter('ALEX SAMPLE');
+    state().togglePersonExclusion('JAMIE SAMPLE');
+    expect(state().filters.columnFilters.person).toEqual({
+      column: 'person',
+      values: ['JAMIE SAMPLE'],
+      exclude: true,
+    });
+
+    state().togglePersonFilter('ALEX SAMPLE');
+    expect(state().filters.columnFilters.person).toEqual({
+      column: 'person',
+      values: ['ALEX SAMPLE'],
+    });
+  });
+
   it('totals only the visible rows', () => {
     expect(selectVisibleTotal(selectFiltered(state()))).toBeCloseTo(251.47, 2);
     state().setColumnFilter('category', { column: 'category', values: ['grocery'] });
@@ -383,6 +463,27 @@ describe('overrides and rules', () => {
     state().deleteCategory('travel');
     expect(state().categories.some((c) => c.id === 'travel')).toBe(false);
     expect(state().rules.some((r) => r.categoryId === 'travel')).toBe(false);
+  });
+
+  it('keeps an exclusion as an exclusion when a deleted category leaves others in it', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().toggleCategoryExclusion('travel');
+    state().toggleCategoryExclusion('pets');
+
+    state().deleteCategory('travel');
+    expect(state().filters.columnFilters.category).toEqual({
+      column: 'category',
+      values: ['pets'],
+      exclude: true,
+    });
+  });
+
+  it('drops an exclusion that empties out when its category is deleted', () => {
+    state().addCategory({ id: 'travel', name: 'Travel', color: '#111' });
+    state().toggleCategoryExclusion('travel');
+
+    state().deleteCategory('travel');
+    expect(state().filters.columnFilters.category).toBeUndefined();
   });
 
   it('strips a deleted category from the category checklist', () => {
