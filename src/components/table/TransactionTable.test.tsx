@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@/store/useAppStore';
-import { resetStore, seedStore } from '@/test/fixtures';
+import { HEADER, resetStore, seedStore } from '@/test/fixtures';
 import { routerMock } from '@/test/router';
 import { TransactionTable } from './TransactionTable';
 
@@ -380,10 +380,36 @@ describe('TransactionTable', () => {
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));
     expect(bodyRows()).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
 
     expect(bodyRows()).toHaveLength(6);
     expect(useAppStore.getState().selectedIds.size).toBe(0);
+  });
+
+  it('shows the reset button only while filtered', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+    expect(screen.queryByRole('button', { name: 'Reset filters' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Search description'), 'lowes');
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
+    expect(screen.queryByRole('button', { name: 'Reset filters' })).not.toBeInTheDocument();
+  });
+
+  it('puts the rule suggestions callout in the head when Other has a pattern', async () => {
+    await resetStore();
+    await seedStore(
+      [
+        HEADER,
+        ...['0001', '0002', '0003'].map(
+          (n, i) => `Cleared,07/0${i + 1}/2026,"ZORBAMART #${n} CHARLOTTE NC",9.99,,ALEX SAMPLE`,
+        ),
+      ].join('\n'),
+    );
+    render(<TransactionTable />);
+    expect(screen.getByRole('button', { name: '1 rule suggestion' })).toBeInTheDocument();
   });
 
   it('always hides payments', () => {

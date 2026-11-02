@@ -66,7 +66,7 @@ inducing a merchant rule from several selected rows (`merchants.csv` — three s
 merchant), removing an uploaded file (`datasets.spec.ts`: shared rows survive, the last removal
 lands on the empty state with rules intact), managing rules on `/settings/rules`, switching settings sections and the redirects from the old URLs, editing a rule on its own
 URL and returning through browser history, the 404 status for an unknown URL, bulk selection, the
-dashboard's rule suggestions (`suggestions-a.csv` and `suggestions-b.csv`, which overlap): dismiss
+the table header's rule suggestions dialog (`suggestions-a.csv` and `suggestions-b.csv`, which overlap): dismiss
 one, upload the second file, and see it stay gone while a newly eligible merchant appears, and
 keyboard shortcuts (focus after a checkbox click, `?` as a real browser produces it, the highlighted
 row clearing the sticky header).

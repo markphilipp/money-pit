@@ -34,7 +34,7 @@ test('filters through the column menus and survives a reload', async ({ page }) 
   ).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('heading', { name: /Transactions/ })).toContainText('(1)');
 
-  await page.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: 'Reset filters' }).click();
   await expect(page.getByRole('heading', { name: /Transactions/ })).toContainText('(7)');
 });
 
