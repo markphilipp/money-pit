@@ -20,7 +20,7 @@ a reload.
     `Bars` locator to one group: unscoped it matches both buttons and Playwright throws.
   - Clicking a slice or bar toggles that category or person filter. Each chart ignores its own
     filter, so unselected slices dim instead of disappearing.
-- Charts pane: the "Hide charts" / "Show charts" button collapses it (it becomes `inert` and
+- Charts pane: the "Charts" disclosure row (`aria-expanded`) collapses it (it becomes `inert` and
   `aria-hidden`), and the "Resize charts" separator drags or steps with Arrow Up/Down by 20px. Both
   persist in `localStorage` (`money-pit:charts-pane`). Below 820px the pane is static and the bar is
   hidden.
@@ -28,7 +28,7 @@ a reload.
 - Payments are hidden by default (7 of `june.csv`'s 8 rows show).
 - Bulk selection: "Select all visible rows" and per-row "Select <description>" open a bar with
   "N selected", "Change category" and "Create rule". Selection doesn't survive a reload.
-- "Reset" clears every filter, the search box and the selection. It does not reset chart modes or
+- The X "Reset filters" button (shown only while filtered) clears every filter, the search box and the selection. It does not reset chart modes or
   sort.
 - Persistence: signed out, filters, sort and both chart modes are in sessionStorage. Signed in, only
   filters are. Chart modes and sort are saved to the account (`setPreference`) and come back from it.
@@ -79,7 +79,7 @@ export default async ({ page, shot, fixture }) => {
   await expect(count).toContainText('(1)');
   await expect(page.getByRole('button', { name: 'Amount column menu' })).toContainText('▲');
   await shot('after-reload');
-  await page.getByRole('button', { name: 'Hide charts' }).click();
+  await page.getByRole('button', { name: 'Charts' }).click();
   await expect(page.getByRole('button', { name: 'Show charts' })).toBeVisible();
   await page.getByRole('button', { name: 'Show charts' }).click();
   const handle = page.getByRole('separator', { name: 'Resize charts' });
@@ -87,7 +87,7 @@ export default async ({ page, shot, fixture }) => {
   await handle.focus();
   await page.keyboard.press('ArrowUp');
   expect(Number(await handle.getAttribute('aria-valuenow'))).toBe(before - 20);
-  await page.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: 'Reset filters' }).click();
   await expect(count).toContainText('(7)');
   await expect(categoryBars).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('checkbox', { name: 'Select all visible rows' }).check();

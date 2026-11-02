@@ -119,6 +119,23 @@ describe('SuggestionsCallout', () => {
     await waitFor(() => expect(onEmpty).toHaveBeenCalledOnce());
   });
 
+  it('stays closed when new suggestions appear after the last one was dismissed', async () => {
+    const user = userEvent.setup();
+    await seedStore(SUGGESTIBLE_CSV);
+    render(<SuggestionsCallout />);
+    await user.click(pill());
+    await user.click(screen.getByRole('button', { name: /^Dismiss contains “ZORBAMART”/ }));
+    await user.click(
+      screen.getByRole('button', { name: /^Dismiss contains “QUILLFEATHER SUPPLY”/ }),
+    );
+
+    const more = [HEADER, ...merchantRows('BLUEHERON CAFE', ['0301', '0302', '0303'])].join('\n');
+    await act(() => state().uploadFiles([csvFile(more, 'more.csv')]));
+
+    await waitFor(() => expect(pill()).toHaveTextContent('1 rule suggestion'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
   it('keeps a dismissal after an upload that adds more of the same merchant', async () => {
     const user = userEvent.setup();
     await seedStore(SUGGESTIBLE_CSV);

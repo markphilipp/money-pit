@@ -37,8 +37,10 @@ export function SuggestionsCallout({ onEmpty }: Props) {
 
   const dismiss = (proposal: RuleProposal) => {
     dismissSuggestion(proposal.key);
-    if (proposals.length === 1) setTimeout(() => onEmpty?.(), 0);
-    else contentRef.current?.focus();
+    if (proposals.length === 1) {
+      setOpen(false);
+      setTimeout(() => onEmpty?.(), 0);
+    } else contentRef.current?.focus();
   };
 
   const shown = proposals.slice(0, MAX_SHOWN);

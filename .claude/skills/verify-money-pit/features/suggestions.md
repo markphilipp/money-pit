@@ -5,8 +5,8 @@ every render from the loaded rows, so an upload re-checks for free. Only dismiss
 
 ## Sub-features
 
-- **Banner:** `section` "Rule suggestions" with a toggle button reading "N rule suggestion(s) for
-  Other" (`aria-expanded`). It renders nothing when there are no suggestions.
+- **Callout:** a pill in the Transactions header reading "N rule suggestion(s)" that opens a dialog
+  "Rule suggestions for Other". It renders nothing when there are no suggestions.
 - **Cards** (expanded, at most 5, then "Showing the 5 largest of N."): the label (`contains “…”`,
   curly quotes), "Covers N rows in Other", up to 3 sample descriptions, `Create rule for <label>`
   and `Dismiss <label>`.
@@ -20,8 +20,8 @@ every render from the loaded rows, so an upload re-checks for free. Only dismiss
 
 ## How to get to it (user POV)
 
-Upload a statement with a recurring unrecognised merchant. The banner sits between the charts and
-the transactions table.
+Upload a statement with a recurring unrecognised merchant. The pill sits in the Transactions header,
+right after the title.
 
 ## Driving it with drive.mjs
 
@@ -34,8 +34,8 @@ export default async ({ page, shot, fixture, baseURL, log }) => {
   });
   await page.goto('/');
   await page.setInputFiles('input[type=file]', [fixture('suggestions-a.csv')]);
-  const banner = page.getByRole('button', { name: /rule suggestions? for Other/ });
-  await expect(banner).toHaveText(/1 rule suggestion for Other/);
+  const banner = page.getByRole('button', { name: /^\d+ rule suggestions?$/ });
+  await expect(banner).toHaveText(/1 rule suggestion/);
   await banner.click();
   await expect(page.getByText('Covers 3 rows in Other')).toBeVisible();
   await shot('expanded');
@@ -48,7 +48,7 @@ export default async ({ page, shot, fixture, baseURL, log }) => {
 
   await page.setInputFiles('input[type=file]', [fixture('suggestions-b.csv')]);
   await expect(page.getByRole('row', { name: /PINE HOLLOW FEED STORE #0044/ })).toBeVisible();
-  await expect(banner).toHaveText(/1 rule suggestion for Other/);
+  await expect(banner).toHaveText(/1 rule suggestion/);
   await banner.click();
   await expect(page.getByRole('button', { name: /PINE HOLLOW/ })).toHaveCount(0);
   await shot('rechecked');
