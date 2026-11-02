@@ -52,6 +52,10 @@ Actions worth knowing before you add one:
   every rule that files into it, and every override pointing at it, then strips the id out of the
   active category checklist filter so the table never filters on a category that's gone. Refuses a
   builtin. This is the operation the delete-warning dialog confirms before calling.
+- `restoreOverrides(snapshot)` — puts each snapshotted row back to its prior override, deleting the
+  ones that had none (`snapshotOverrides` / `applyOverrideSnapshot` in `src/lib/overrides.ts`). Backs
+  the table's undo toast; the snapshot lives in component state. Sync sees an ordinary override
+  change, so cleared overrides reach the account like any other.
 - `addRule` / `reorderRules` — the builtin `payments` rule is always re-pinned to the bottom (`other`
   has no rule to pin). First matching rule wins, so a new rule placed after `payments` could never
   match.
