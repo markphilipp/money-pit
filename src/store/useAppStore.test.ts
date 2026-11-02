@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { parseStatementCsv } from '@/lib/csv';
 import { keywordsToGroup } from '@/lib/rules/engine';
+import { snapshotOverrides } from '@/lib/overrides';
 import { emptyFilters, useAppStore } from './useAppStore';
 import {
   selectCategoryTotals,
@@ -353,6 +354,16 @@ describe('overrides and rules', () => {
     expect(state().overrides).toEqual({});
     const byId = new Map(selectTransactions(state()).map((t) => [t.id, t]));
     expect(ids.some((id) => byId.get(id)?.categoryId === 'pets')).toBe(false);
+  });
+
+  it('restores a snapshot over later changes, deleting overrides that did not exist', () => {
+    const [a, b] = selectTransactions(state()).map((t) => t.id);
+    state().setOverride([a], 'dining');
+    const snapshot = snapshotOverrides(state().overrides, [a, b]);
+    state().setOverride([a, b], 'pets');
+    state().restoreOverrides(snapshot);
+
+    expect(state().overrides).toEqual({ [a]: 'dining' });
   });
 
   it('re-categorizes when a rule gains a condition, leaving overrides alone', () => {

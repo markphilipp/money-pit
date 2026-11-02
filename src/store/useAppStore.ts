@@ -18,6 +18,7 @@ import { CsvFormatError, parseStatementCsv } from '@/lib/csv';
 import { addDataset, mergeDatasets, removeDataset as dropDataset } from '@/lib/datasets';
 import { defaultCategories, defaultRules } from '@/lib/defaultRules';
 import { removeCategory, upgradeLegacyRules, type LegacyRule } from '@/lib/categories';
+import { applyOverrideSnapshot, type OverrideSnapshot } from '@/lib/overrides';
 import { rangeToFilter } from '@/lib/dateRange';
 import type { Period } from '@/lib/periods';
 import { checklistValues } from '@/lib/rules/engine';
@@ -68,6 +69,7 @@ export interface AppState {
   reorderRules: (id: string, direction: -1 | 1) => void;
   setOverride: (ids: string[], categoryId: string) => void;
   clearOverrides: (ids: string[]) => void;
+  restoreOverrides: (snapshot: OverrideSnapshot) => void;
   setRuleSources: (ids: string[]) => void;
   dismissSuggestion: (key: string) => void;
   setFilter: (patch: Partial<FilterState>) => void;
@@ -310,6 +312,9 @@ export const useAppStore = create<AppState>()(
             for (const id of ids) delete overrides[id];
             return { overrides };
           }),
+
+        restoreOverrides: (snapshot) =>
+          set((s) => ({ overrides: applyOverrideSnapshot(s.overrides, snapshot) })),
 
         setRuleSources: (ids) => set({ ruleSources: ids }),
 
