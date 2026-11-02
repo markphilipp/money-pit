@@ -8,6 +8,7 @@ import { fmtMoney, personShort } from '@/lib/format';
 import { activatesOnSpace, moveHighlight, resolveActionTargets } from '@/lib/shortcuts';
 import { useHeightVar } from '@/hooks/useHeightVar';
 import { useShortcut } from '@/hooks/useShortcut';
+import { snapshotOverrides, type OverrideSnapshot } from '@/lib/overrides';
 import { nextPaletteColor } from '@/lib/palette';
 import { uniqueId } from '@/lib/rules/naming';
 import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
@@ -18,6 +19,7 @@ import { CategoryPicker } from './CategoryPicker';
 import { ColumnMenu } from './ColumnMenu';
 import { PeriodFilter } from './PeriodFilter';
 import { RowContextMenu } from './RowContextMenu';
+import { UndoToast } from './UndoToast';
 import { buildColumns, type ColumnMeta } from './columns';
 import styles from './Table.module.css';
 
@@ -27,6 +29,15 @@ interface PickerState {
   targetIds: string[];
 }
 
+interface UndoState {
+  id: number;
+  message: string;
+  previous: OverrideSnapshot;
+}
+
+const categorizedMessage = (count: number, name: string) =>
+  `Categorized ${count} ${count === 1 ? 'transaction' : 'transactions'} as ${name}`;
+
 export function TransactionTable() {
   const state = useAppState();
   const rows = useSortedFiltered();
@@ -35,6 +46,7 @@ export function TransactionTable() {
   const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setSort = useAppStore((s) => s.setSort);
   const setOverride = useAppStore((s) => s.setOverride);
+  const restoreOverrides = useAppStore((s) => s.restoreOverrides);
   const addCategory = useAppStore((s) => s.addCategory);
   const toggleSelected = useAppStore((s) => s.toggleSelected);
   const selectAll = useAppStore((s) => s.selectAll);
@@ -42,6 +54,8 @@ export function TransactionTable() {
   const setRuleSources = useAppStore((s) => s.setRuleSources);
   const router = useRouter();
   const [picker, setPicker] = useState<PickerState | null>(null);
+  const [undo, setUndo] = useState<UndoState | null>(null);
+  const undoSeq = useRef(0);
   const selectAllRef = useRef<HTMLInputElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const rowEls = useRef(new Map<string, HTMLTableRowElement>());
@@ -107,6 +121,17 @@ export function TransactionTable() {
       currentCategoryId:
         targetIds.length > 1 ? null : (rows.find((r) => r.id === targetIds[0])?.categoryId ?? null),
       targetIds,
+    });
+  };
+
+  const categorize = (targetIds: string[], categoryId: string, categoryName: string) => {
+    const previous = snapshotOverrides(state.overrides, targetIds);
+    setOverride(targetIds, categoryId);
+    selectAll(targetIds, false);
+    setUndo({
+      id: ++undoSeq.current,
+      message: categorizedMessage(targetIds.length, categoryName),
+      previous,
     });
   };
 
@@ -324,10 +349,13 @@ export function TransactionTable() {
           currentCategoryId={picker.currentCategoryId}
           categories={state.categories}
           onClose={() => setPicker(null)}
-          onChoose={(categoryId) => {
-            setOverride(picker.targetIds, categoryId);
-            selectAll(picker.targetIds, false);
-          }}
+          onChoose={(categoryId) =>
+            categorize(
+              picker.targetIds,
+              categoryId,
+              categoriesById.get(categoryId)?.name ?? categoryId,
+            )
+          }
           onCreate={(name) => {
             const id = uniqueId(
               name,
@@ -338,9 +366,19 @@ export function TransactionTable() {
               name,
               color: nextPaletteColor(state.categories.map((c) => c.color)),
             });
-            setOverride(picker.targetIds, id);
-            selectAll(picker.targetIds, false);
+            categorize(picker.targetIds, id, name);
           }}
+        />
+      )}
+      {undo && (
+        <UndoToast
+          key={undo.id}
+          message={undo.message}
+          onUndo={() => {
+            restoreOverrides(undo.previous);
+            setUndo(null);
+          }}
+          onDismiss={() => setUndo(null)}
         />
       )}
     </div>

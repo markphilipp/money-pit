@@ -119,6 +119,46 @@ describe('TransactionTable', () => {
     expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets']);
   });
 
+  it('offers an undo after a bulk change and restores each row’s previous category', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+    const pills = () => bodyRows().map((r) => within(r).getByTitle('Change category').textContent);
+    const untouched = pills().slice(2);
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    await user.click(screen.getByRole('option', { name: /^Dining/ }));
+    const overridesBefore = { ...useAppStore.getState().overrides };
+    expect(pills()[0]).toBe('Dining & Fast Food');
+
+    await user.click(within(bodyRows()[0]).getByRole('checkbox'));
+    await user.click(within(bodyRows()[1]).getByRole('checkbox'));
+    await user.click(screen.getByRole('button', { name: 'Change category' }));
+    await user.click(screen.getByRole('option', { name: /^Pets/ }));
+
+    expect(screen.getByRole('status')).toHaveTextContent('Categorized 2 transactions as Pets');
+    expect(pills().slice(0, 2)).toEqual(['Pets', 'Pets']);
+
+    await user.click(screen.getByRole('button', { name: 'Undo' }));
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(useAppStore.getState().overrides).toEqual(overridesBefore);
+    expect(pills()[0]).toBe('Dining & Fast Food');
+    expect(pills().slice(2)).toEqual(untouched);
+  });
+
+  it('words a single change in the singular and lets the toast be dismissed', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    await user.click(within(bodyRows()[0]).getByTitle('Change category'));
+    await user.click(screen.getByRole('option', { name: /^Pets/ }));
+    expect(screen.getByRole('status')).toHaveTextContent('Categorized 1 transaction as Pets');
+
+    await user.click(screen.getByRole('button', { name: 'Dismiss' }));
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(Object.values(useAppStore.getState().overrides)).toEqual(['pets']);
+  });
+
   it('drives the picker from the keyboard and never offers Payments', async () => {
     const user = userEvent.setup();
     render(<TransactionTable />);
