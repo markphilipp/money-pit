@@ -33,7 +33,7 @@ test('right-click excludes a category from the bar chart and Reset restores it',
   await page.reload();
   await expect(heading).not.toContainText('(7)');
 
-  await page.getByRole('button', { name: 'Reset' }).click();
+  await page.getByRole('button', { name: 'Reset filters' }).click();
   await expect(heading).toContainText('(7)');
 });
 

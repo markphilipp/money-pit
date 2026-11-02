@@ -79,7 +79,7 @@
   right: calc(20px + var(--removed-body-scroll-bar-size, 0px));
   z-index: 30;
   max-width: min(340px, calc(100vw - 40px));
-  border: 1px dashed var(--accent);
+  border: 1px solid var(--accent);
   background: var(--accent-soft);
   border-radius: 8px;
   padding: 10px 14px;

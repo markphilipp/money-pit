@@ -9,10 +9,12 @@ import { activatesOnSpace, moveHighlight, resolveActionTargets } from '@/lib/sho
 import { useHeightVar } from '@/hooks/useHeightVar';
 import { useShortcut } from '@/hooks/useShortcut';
 import { nextPaletteColor } from '@/lib/palette';
+import { isFiltered } from '@/lib/filters';
 import { uniqueId } from '@/lib/rules/naming';
 import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
 import { emptyFilters, useAppStore } from '@/store/useAppStore';
+import { SuggestionsCallout } from '@/components/rules/SuggestionsCallout';
 import { BulkBar } from './BulkBar';
 import { CategoryPicker } from './CategoryPicker';
 import { ColumnMenu } from './ColumnMenu';
@@ -165,6 +167,7 @@ export function TransactionTable() {
         <h2>
           Transactions <span className={styles.count}>({rows.length})</span>
         </h2>
+        <SuggestionsCallout onEmpty={() => searchRef.current?.focus()} />
         <input
           className={styles.search}
           ref={searchRef}
@@ -175,15 +178,31 @@ export function TransactionTable() {
           onChange={(e) => setFilter({ search: e.target.value })}
         />
         <PeriodFilter />
-        <button
-          className="btn-clear"
-          onClick={() => {
-            setFilter(emptyFilters);
-            clearSelection();
-          }}
-        >
-          Reset
-        </button>
+        {isFiltered(state.filters) && (
+          <button
+            type="button"
+            className={styles.reset}
+            aria-label="Reset filters"
+            title="Reset filters"
+            onClick={() => {
+              setFilter(emptyFilters);
+              clearSelection();
+            }}
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              aria-hidden="true"
+            >
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
+          </button>
+        )}
 
         <BulkBar
           count={state.selectedIds.size}

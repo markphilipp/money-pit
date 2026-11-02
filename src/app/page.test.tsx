@@ -91,7 +91,7 @@ describe('page', () => {
     await user.type(screen.getByLabelText('Search description'), 'lowes');
     expect(tableRows()).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
     expect(tableRows()).toHaveLength(6);
     expect(screen.getByLabelText('Search description')).toHaveValue('');
   });
