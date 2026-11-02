@@ -290,5 +290,5 @@ unioned. Claiming the same session twice changes nothing.
 ## Formatting & color
 
 - `format.ts` — `fmtMoney` (US, minus sign is U+2212), `personShort` (first name, title-cased).
-- `palette.ts` — 20-color category palette; `nextPaletteColor(used)` picks the first unused one.
+- `palette.ts` — 40-color category palette; `nextPaletteColor(used)` picks the first unused one, then generates golden-angle hues so colors never repeat.
 - Cardholder colors are separate (`PERSON_COLORS` in `src/store/selectors.ts`).
