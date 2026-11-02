@@ -10,29 +10,32 @@ test('suggests a rule, keeps a dismissal across an overlapping upload, and re-ch
   await page.setInputFiles('input[type=file]', [fixture('suggestions-a.csv')]);
   await expect(page.getByRole('heading', { name: /Transactions/ })).toBeVisible();
 
-  const banner = page.getByRole('button', { name: /rule suggestions? for Other/ });
-  await expect(banner).toHaveText(/1 rule suggestion for Other/);
-  await banner.click();
-  await expect(page.getByText('Covers 3 rows in Other')).toBeVisible();
+  const pill = page.getByRole('button', { name: /^\d+ rule suggestions?$/ });
+  const dialog = page.getByRole('dialog', { name: 'Rule suggestions for Other' });
+  await expect(pill).toHaveText(/1 rule suggestion/);
+  await pill.click();
+  await expect(dialog.getByText('Covers 3 rows in Other')).toBeVisible();
 
-  await page.getByRole('button', { name: /^Dismiss contains “PINE HOLLOW FEED STORE”/ }).click();
-  await expect(banner).toBeHidden();
+  await dialog.getByRole('button', { name: /^Dismiss contains “PINE HOLLOW FEED STORE”/ }).click();
+  await expect(dialog).toBeHidden();
+  await expect(pill).toBeHidden();
 
   // B repeats one of A's rows, adds more Pine Hollow, and brings Copper Kettle up to three.
   await page.setInputFiles('input[type=file]', [fixture('suggestions-b.csv')]);
   await expect(page.getByRole('row', { name: /PINE HOLLOW FEED STORE #0044/ })).toBeVisible();
-  await expect(banner).toHaveText(/1 rule suggestion for Other/);
-  await expect(banner).toHaveAttribute('aria-expanded', 'true');
+  await expect(pill).toHaveText(/1 rule suggestion/);
+  await pill.click();
   await expect(
-    page.getByRole('button', { name: /^Dismiss contains “COPPER KETTLE ROASTERS”/ }),
+    dialog.getByRole('button', { name: /^Dismiss contains “COPPER KETTLE ROASTERS”/ }),
   ).toBeVisible();
-  await expect(page.getByRole('button', { name: /PINE HOLLOW/ })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: /PINE HOLLOW/ })).toHaveCount(0);
+  await dialog.getByRole('button', { name: 'Close' }).click();
 
   await page.reload();
-  await expect(banner).toHaveText(/1 rule suggestion for Other/);
+  await expect(pill).toHaveText(/1 rule suggestion/);
 
-  await banner.click();
-  await page
+  await pill.click();
+  await dialog
     .getByRole('button', { name: /^Create rule for contains “COPPER KETTLE ROASTERS”/ })
     .click();
   await expect(page).toHaveURL(/\/settings\/rules\/new$/);

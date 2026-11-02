@@ -57,7 +57,6 @@ export function ChartsPane({ children }: { children: ReactNode }) {
   const height = clampPaneHeight(state.height, viewportHeight);
 
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    if (state.minimized) return;
     e.currentTarget.setPointerCapture(e.pointerId);
     drag.current = { startY: e.clientY, startHeight: height };
   };
@@ -89,6 +88,30 @@ export function ChartsPane({ children }: { children: ReactNode }) {
 
   return (
     <div ref={wrapperRef} className={styles.wrapper}>
+      <button
+        type="button"
+        className={styles.header}
+        aria-expanded={!state.minimized}
+        aria-controls="charts-pane"
+        onClick={toggle}
+      >
+        <svg
+          className={styles.chevron}
+          width="14"
+          height="14"
+          viewBox="0 0 16 16"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M4 6l4 4 4-4" />
+        </svg>
+        <span className={styles.label}>Charts</span>
+        <span className={styles.rule} aria-hidden="true" />
+      </button>
       <div
         id="charts-pane"
         className={styles.pane}
@@ -100,36 +123,28 @@ export function ChartsPane({ children }: { children: ReactNode }) {
       >
         {children}
       </div>
-      <div className={styles.bar}>
-        <div
-          role="separator"
-          aria-orientation="horizontal"
-          aria-label="Resize charts"
-          aria-controls="charts-pane"
-          aria-valuemin={MIN_PANE_HEIGHT}
-          aria-valuemax={maxPaneHeight(viewportHeight)}
-          aria-valuenow={state.minimized ? 0 : height}
-          tabIndex={state.minimized ? -1 : 0}
-          className={styles.handle}
-          data-minimized={state.minimized}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={endDrag}
-          onPointerCancel={endDrag}
-          onKeyDown={onKeyDown}
-        >
-          <span className={styles.grip} />
+      {!state.minimized && (
+        <div className={styles.bar}>
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Resize charts"
+            aria-controls="charts-pane"
+            aria-valuemin={MIN_PANE_HEIGHT}
+            aria-valuemax={maxPaneHeight(viewportHeight)}
+            aria-valuenow={height}
+            tabIndex={0}
+            className={styles.handle}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onKeyDown={onKeyDown}
+          >
+            <span className={styles.grip} />
+          </div>
         </div>
-        <button
-          type="button"
-          className={styles.toggle}
-          aria-expanded={!state.minimized}
-          aria-controls="charts-pane"
-          onClick={toggle}
-        >
-          {state.minimized ? 'Show charts' : 'Hide charts'}
-        </button>
-      </div>
+      )}
     </div>
   );
 }

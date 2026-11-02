@@ -1,7 +1,7 @@
 .zone {
   display: block;
   width: 100%;
-  border: 2px dashed var(--line);
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   background: #fff;
   padding: 28px 20px;
@@ -45,7 +45,7 @@
 
 .errors {
   margin-top: 12px;
-  border: 1px dashed var(--accent);
+  border: 1px solid var(--accent);
   background: var(--accent-soft);
   border-radius: 8px;
   padding: 10px 14px;

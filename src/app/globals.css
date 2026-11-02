@@ -83,7 +83,7 @@ select {
   font-weight: 600;
   letter-spacing: 0.06em;
   background: none;
-  border: 1px dashed var(--ink-soft);
+  border: 1px solid var(--ink-soft);
   color: var(--ink-soft);
   padding: 8px 14px;
   border-radius: 6px;
