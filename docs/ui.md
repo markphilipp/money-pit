@@ -45,9 +45,11 @@ Constraints that are easy to break by accident:
   belong to the table and stay behind while the sticky cell moves; shadows travel with the cell.
 - The pinned charts region (`ChartsPane`) is user-resizable. A `role="separator"` handle under it
   drags (pointer) or steps (Arrow Up/Down, Shift for bigger, Home/End) its height between
-  `MIN_PANE_HEIGHT` and 60% of the viewport (`src/lib/chartsPane.ts`); a Hide/Show charts button
-  collapses it to zero and restores the previous height. The wrapper height, handle included, feeds
-  `--charts-h`, so the table header keeps pinning. Height and minimized state persist in
+  `MIN_PANE_HEIGHT` and 60% of the viewport (`src/lib/chartsPane.ts`). The
+  region's top row is a disclosure button ("Charts": chevron, mono label, hairline, `aria-expanded`)
+  that collapses the pane to zero and restores the previous height; collapsed, the resize handle is
+  not rendered and the wrapper shrinks to that row. Both the row and the handle are hidden below
+  820px. The wrapper height feeds `--charts-h`, so the table header keeps pinning. Height and minimized state persist in
   `localStorage` (`money-pit:charts-pane`), a view preference and not statement data. The
   chart cards flex to fill the pane (`.charts`/`.box` in `Chart.module.css`), and Chart.js
   reflows via `responsive` + `maintainAspectRatio: false`. A community splitter

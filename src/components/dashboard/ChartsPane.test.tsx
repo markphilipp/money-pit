@@ -21,19 +21,24 @@ describe('ChartsPane', () => {
     expect(sep.getAttribute('aria-valuenow')).toBe(sep.getAttribute('aria-valuemax'));
   });
 
-  it('minimizes and restores the previous height', () => {
+  it('collapses to the header and restores the previous height', () => {
     render(
       <ChartsPane>
         <p>charts</p>
       </ChartsPane>,
     );
-    const sep = screen.getByRole('separator');
-    fireEvent.keyDown(sep, { key: 'Home' });
-    const before = sep.getAttribute('aria-valuenow');
-    fireEvent.click(screen.getByRole('button', { name: 'Hide charts' }));
-    expect(sep.getAttribute('aria-valuenow')).toBe('0');
-    fireEvent.click(screen.getByRole('button', { name: 'Show charts' }));
-    expect(sep.getAttribute('aria-valuenow')).toBe(before);
+    fireEvent.keyDown(screen.getByRole('separator'), { key: 'Home' });
+    const before = screen.getByRole('separator').getAttribute('aria-valuenow');
+    const toggle = screen.getByRole('button', { name: 'Charts' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('separator')).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('separator').getAttribute('aria-valuenow')).toBe(before);
   });
 
   it('persists across mounts', () => {
