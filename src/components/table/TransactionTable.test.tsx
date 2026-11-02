@@ -340,10 +340,22 @@ describe('TransactionTable', () => {
     await user.click(within(bodyRows()[0]).getByRole('checkbox'));
     expect(bodyRows()).toHaveLength(1);
 
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
 
     expect(bodyRows()).toHaveLength(6);
     expect(useAppStore.getState().selectedIds.size).toBe(0);
+  });
+
+  it('shows the reset button only while filtered', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+    expect(screen.queryByRole('button', { name: 'Reset filters' })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText('Search description'), 'lowes');
+    expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
+    expect(screen.queryByRole('button', { name: 'Reset filters' })).not.toBeInTheDocument();
   });
 
   it('always hides payments', () => {

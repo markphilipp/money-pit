@@ -192,7 +192,7 @@ describe('PeriodFilter', () => {
     render(<TransactionTable />);
     await user.click(combobox());
     await user.click(option(/^second\.csv/));
-    await user.click(screen.getByRole('button', { name: 'Reset' }));
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
 
     expect(bodyRows()).toHaveLength(7);
     expect(combobox()).toHaveValue('');

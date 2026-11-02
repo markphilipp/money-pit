@@ -110,7 +110,7 @@ custom range's date inputs sit inside the same container. All the logic is pure 
 takes `now` so tests are deterministic) and `src/lib/dateRange.ts`; the component only wires it to
 `setPeriod`. The closed input shows the file name, "June 2026" when the date filter is exactly one
 calendar month, otherwise the range text, and both joined by " · " if a statement and a date filter
-coexist. Reset uses `emptyFilters`, so it clears the period. The bar wraps and `useHeightVar`
+coexist. The reset control is an icon-only X ("Reset filters") that appears only while `isFiltered` (`src/lib/filters.ts`) is true; it applies `emptyFilters`, so it clears the period. The bar wraps and `useHeightVar`
 re-measures `--table-head-h` as it does, so no sticky offset is hardcoded; the panel is absolutely
 positioned inside the sticky bar and overlays the table rather than growing the bar.
 
