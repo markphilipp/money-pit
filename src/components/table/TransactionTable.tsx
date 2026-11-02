@@ -14,6 +14,7 @@ import { uniqueId } from '@/lib/rules/naming';
 import { useAppState, usePersons, useSortedFiltered } from '@/store/hooks';
 import { selectVisibleTotal } from '@/store/selectors';
 import { emptyFilters, useAppStore } from '@/store/useAppStore';
+import { SuggestionsCallout } from '@/components/rules/SuggestionsCallout';
 import { BulkBar } from './BulkBar';
 import { CategoryPicker } from './CategoryPicker';
 import { ColumnMenu } from './ColumnMenu';
@@ -166,6 +167,7 @@ export function TransactionTable() {
         <h2>
           Transactions <span className={styles.count}>({rows.length})</span>
         </h2>
+        <SuggestionsCallout onEmpty={() => searchRef.current?.focus()} />
         <input
           className={styles.search}
           ref={searchRef}
