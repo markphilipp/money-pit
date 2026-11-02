@@ -3,28 +3,32 @@
 import { useMemo } from 'react';
 import type { ChartData, ChartOptions, TooltipItem } from 'chart.js';
 import { Bar, Doughnut } from 'react-chartjs-2';
-import { checklistValues } from '@/lib/rules/engine';
+import { checklistIncludes, readChecklist } from '@/lib/checklist';
 import { selectPersonTotals } from '@/store/selectors';
 import { useAppState, useFiltered, usePersonColors } from '@/store/hooks';
 import { useAppStore } from '@/store/useAppStore';
+import { ChartContextMenu } from './ChartContextMenu';
 import { ChartModeToggle } from './ChartModeToggle';
+import { useChartHitTest } from './useChartHitTest';
 import { BAR_LAYOUT, BAR_SCALES, pctLabel, shade } from './chartSetup';
 import styles from './Chart.module.css';
 
 export function PersonChart() {
   const state = useAppState();
   const togglePersonFilter = useAppStore((s) => s.togglePersonFilter);
+  const togglePersonExclusion = useAppStore((s) => s.togglePersonExclusion);
+  const setColumnFilter = useAppStore((s) => s.setColumnFilter);
   const setPersonChartMode = useAppStore((s) => s.setPersonChartMode);
   const personColors = usePersonColors();
   const source = useFiltered({ ignorePerson: true });
   const totals = useMemo(() => selectPersonTotals(source, personColors), [source, personColors]);
-  const selected = checklistValues(state.filters.columnFilters, 'person');
+  const checked = readChecklist(state.filters.columnFilters, 'person');
   const values = totals.map((p) => p.total);
+  const items = totals.map((p) => ({ id: p.person, name: p.label }));
+  const { barRef, donutRef, hitTest } = useChartHitTest(items, checked);
 
   const labels = totals.map((p) => p.label);
-  const colors = totals.map((p) =>
-    shade(p.color, selected.length === 0 || selected.includes(p.person)),
-  );
+  const colors = totals.map((p) => shade(p.color, checklistIncludes(checked, p.person)));
 
   const donutData: ChartData<'doughnut', number[], string> = {
     labels,
@@ -96,19 +100,33 @@ export function PersonChart() {
         onChange={setPersonChartMode}
         label="Person chart type"
       />
-      <div className={styles.box}>
-        {totals.length === 0 ? (
-          <p className={styles.empty}>No spending matches these filters.</p>
-        ) : state.personChartMode === 'bar' ? (
-          <Bar data={barData} options={barOptions} aria-label="Spending by cardholder, bar chart" />
-        ) : (
-          <Doughnut
-            data={donutData}
-            options={donutOptions}
-            aria-label="Spending by cardholder, donut chart"
-          />
-        )}
-      </div>
+      <ChartContextMenu
+        hitTest={hitTest}
+        checklist={checked}
+        onToggleExclusion={togglePersonExclusion}
+        onShowAll={() => setColumnFilter('person', null)}
+        showAllLabel="Show all cardholders"
+      >
+        <div className={styles.box}>
+          {totals.length === 0 ? (
+            <p className={styles.empty}>No spending matches these filters.</p>
+          ) : state.personChartMode === 'bar' ? (
+            <Bar
+              ref={barRef}
+              data={barData}
+              options={barOptions}
+              aria-label="Spending by cardholder, bar chart"
+            />
+          ) : (
+            <Doughnut
+              ref={donutRef}
+              data={donutData}
+              options={donutOptions}
+              aria-label="Spending by cardholder, donut chart"
+            />
+          )}
+        </div>
+      </ChartContextMenu>
     </div>
   );
 }

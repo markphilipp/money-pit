@@ -131,7 +131,9 @@ Condition fields and operators (`types.ts`):
   rule yet," not "a rule that excludes everything."
 - Dates compare as local midnights on both sides, so a `between` never drifts by a timezone hour.
 - `matchesColumnFilter` reuses the same operator implementations for table column filters, which is
-  why filter and rule semantics can't diverge.
+  why filter and rule semantics can't diverge. The person and category checklists are
+  `{ values, exclude? }`: `checklistIncludes` (`src/lib/checklist.ts`) keeps listed values when
+  including and drops them when excluding, and an empty list matches everything in either mode.
 - The dashboard's period filter writes the `date` column filter through `src/lib/dateRange.ts`:
   `rangeToFilter(from, to)` writes an inclusive `between` (an empty side stays open), and
   `filterToRange(filter)` reads `between`, `on`, `before` and `after` back as an inclusive range,

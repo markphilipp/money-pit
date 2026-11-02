@@ -140,6 +140,51 @@ describe('ColumnMenu', () => {
     expect(onFilter).toHaveBeenLastCalledWith(null);
   });
 
+  it('keeps the exclusion when a category is toggled and explains it', async () => {
+    const { user, onFilter, label } = setup({
+      columnId: 'category',
+      filter: { column: 'category', values: ['pets'], exclude: true },
+      options: [
+        { value: 'pets', label: 'Pets' },
+        { value: 'grocery', label: 'Groceries' },
+      ],
+    });
+    await open(user, label);
+
+    expect(screen.getByText('Checked categories are hidden.')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: 'Pets' })).toBeChecked();
+
+    await user.click(screen.getByRole('checkbox', { name: 'Groceries' }));
+    expect(onFilter).toHaveBeenLastCalledWith({
+      column: 'category',
+      values: ['pets', 'grocery'],
+      exclude: true,
+    });
+
+    await user.click(screen.getByRole('checkbox', { name: 'Pets' }));
+    expect(onFilter).toHaveBeenLastCalledWith(null);
+  });
+
+  it('words the exclusion hint for cardholders on the person column', async () => {
+    const { user, label } = setup({
+      columnId: 'person',
+      filter: { column: 'person', values: ['ALEX SAMPLE'], exclude: true },
+      options: [{ value: 'ALEX SAMPLE', label: 'Alex' }],
+    });
+    await open(user, label);
+    expect(screen.getByText('Checked cardholders are hidden.')).toBeInTheDocument();
+  });
+
+  it('shows no exclusion hint for an include filter', async () => {
+    const { user, label } = setup({
+      columnId: 'category',
+      filter: { column: 'category', values: ['pets'] },
+      options: [{ value: 'pets', label: 'Pets' }],
+    });
+    await open(user, label);
+    expect(screen.queryByText('Checked categories are hidden.')).toBeNull();
+  });
+
   it('clears an active filter from the menu', async () => {
     const { user, onFilter, label } = setup({
       filter: { column: 'description', operator: 'contains', value: 'a' },

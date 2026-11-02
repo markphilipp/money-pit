@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useAppStore } from '@/store/useAppStore';
 import { HEADER, resetStore, seedStore } from '@/test/fixtures';
@@ -344,6 +344,23 @@ describe('TransactionTable', () => {
 
     expect(bodyRows()).toHaveLength(6);
     expect(useAppStore.getState().selectedIds.size).toBe(0);
+  });
+
+  it('resets category and person exclusions from the header', async () => {
+    const user = userEvent.setup();
+    render(<TransactionTable />);
+
+    act(() => {
+      useAppStore.getState().toggleCategoryExclusion('grocery');
+      useAppStore.getState().togglePersonExclusion('JAMIE SAMPLE');
+    });
+    expect(bodyRows().length).toBeLessThan(6);
+
+    await user.click(screen.getByRole('button', { name: 'Reset filters' }));
+
+    expect(useAppStore.getState().filters.columnFilters.category).toBeUndefined();
+    expect(useAppStore.getState().filters.columnFilters.person).toBeUndefined();
+    expect(bodyRows()).toHaveLength(6);
   });
 
   it('shows the reset button only while filtered', async () => {

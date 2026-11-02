@@ -9,6 +9,7 @@ import type {
   NumberOperator,
   TextOperator,
 } from '@/lib/rules/types';
+import { checklistOf, toColumnFilter } from '@/lib/checklist';
 import styles from './ColumnMenu.module.css';
 
 interface ColumnMenuProps {
@@ -138,15 +139,20 @@ function Checklist({
   onFilter,
   options = [],
 }: { column: 'person' | 'category' } & Omit<FilterSectionProps, 'columnId'>) {
-  const values = filter && 'values' in filter ? filter.values : [];
+  const { values, exclude } = checklistOf(filter);
 
   const toggle = (value: string) => {
     const next = values.includes(value) ? values.filter((v) => v !== value) : [...values, value];
-    onFilter(next.length ? { column, values: next } : null);
+    onFilter(toColumnFilter(column, { values: next, exclude }));
   };
 
   return (
     <div className={styles.checklist}>
+      {exclude && (
+        <p className={styles.hint}>
+          Checked {column === 'person' ? 'cardholders' : 'categories'} are hidden.
+        </p>
+      )}
       {options.length === 0 && <p className={styles.hint}>Nothing to filter yet.</p>}
       {options.map((option) => (
         <label key={option.value} className={styles.check}>

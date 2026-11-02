@@ -20,7 +20,14 @@ import { defaultCategories, defaultRules } from '@/lib/defaultRules';
 import { removeCategory, upgradeLegacyRules, type LegacyRule } from '@/lib/categories';
 import { rangeToFilter } from '@/lib/dateRange';
 import type { Period } from '@/lib/periods';
-import { checklistValues } from '@/lib/rules/engine';
+import {
+  readChecklist,
+  toColumnFilter,
+  toggleExclude,
+  toggleInclude,
+  type Checklist,
+  type ChecklistColumn,
+} from '@/lib/checklist';
 import { MAX_DISMISSED } from '@/lib/rules/discover';
 
 export interface UploadResult {
@@ -73,7 +80,9 @@ export interface AppState {
   setFilter: (patch: Partial<FilterState>) => void;
   setColumnFilter: (column: ColumnId, filter: ColumnFilter | null) => void;
   toggleCategoryFilter: (id: string) => void;
+  toggleCategoryExclusion: (id: string) => void;
   togglePersonFilter: (person: string) => void;
+  togglePersonExclusion: (person: string) => void;
   setPeriod: (period: Period) => void;
   setChartMode: (mode: ChartMode) => void;
   setPersonChartMode: (mode: ChartMode) => void;
@@ -142,17 +151,23 @@ const storage = createJSONStorage<Partial<PersistedState>>(() =>
 /** Checklist filters drop out entirely once empty so `columnFilters` stays a set of live filters. */
 function withChecklist(
   filters: FilterState,
-  column: 'category' | 'person',
-  values: string[],
+  column: ChecklistColumn,
+  list: Checklist,
 ): FilterState {
   const columnFilters = { ...filters.columnFilters };
-  if (values.length) columnFilters[column] = { column, values };
+  const filter = toColumnFilter(column, list);
+  if (filter) columnFilters[column] = filter;
   else delete columnFilters[column];
   return { ...filters, columnFilters };
 }
 
-const currentChecklist = (filters: FilterState, column: 'category' | 'person') =>
-  checklistValues(filters.columnFilters, column);
+const withToggled = (
+  filters: FilterState,
+  column: ChecklistColumn,
+  toggle: (list: Checklist, value: string) => Checklist,
+  value: string,
+): FilterState =>
+  withChecklist(filters, column, toggle(readChecklist(filters.columnFilters, column), value));
 
 /**
  * Keeps `rawRows` equal to `mergeDatasets(datasets)` however `datasets` changes: an action, a
@@ -221,15 +236,15 @@ export const useAppStore = create<AppState>()(
             // Datasets and their persons can both vanish; a filter or selection on one would otherwise
             // outlive every row it could match.
             const persons = new Set(mergeDatasets(next.datasets).map((r) => r.person));
+            const checked = readChecklist(s.filters.columnFilters, 'person');
             return {
               ...next,
               selectedIds: new Set<string>(),
               filters: {
-                ...withChecklist(
-                  s.filters,
-                  'person',
-                  currentChecklist(s.filters, 'person').filter((p) => persons.has(p)),
-                ),
+                ...withChecklist(s.filters, 'person', {
+                  ...checked,
+                  values: checked.values.filter((p) => persons.has(p)),
+                }),
                 statementIds: s.filters.statementIds.filter((sid) => sid !== id),
               },
             };
@@ -253,15 +268,15 @@ export const useAppStore = create<AppState>()(
           set((s) => {
             const next = removeCategory(s, id);
             if (next === s) return s;
+            const checked = readChecklist(s.filters.columnFilters, 'category');
             return {
               categories: next.categories,
               rules: next.rules,
               overrides: next.overrides,
-              filters: withChecklist(
-                s.filters,
-                'category',
-                currentChecklist(s.filters, 'category').filter((c) => c !== id),
-              ),
+              filters: withChecklist(s.filters, 'category', {
+                ...checked,
+                values: checked.values.filter((c) => c !== id),
+              }),
             };
           }),
 
@@ -331,28 +346,16 @@ export const useAppStore = create<AppState>()(
           }),
 
         toggleCategoryFilter: (id) =>
-          set((s) => {
-            const values = currentChecklist(s.filters, 'category');
-            return {
-              filters: withChecklist(
-                s.filters,
-                'category',
-                values.includes(id) ? values.filter((c) => c !== id) : [...values, id],
-              ),
-            };
-          }),
+          set((s) => ({ filters: withToggled(s.filters, 'category', toggleInclude, id) })),
+
+        toggleCategoryExclusion: (id) =>
+          set((s) => ({ filters: withToggled(s.filters, 'category', toggleExclude, id) })),
 
         togglePersonFilter: (person) =>
-          set((s) => {
-            const values = currentChecklist(s.filters, 'person');
-            return {
-              filters: withChecklist(
-                s.filters,
-                'person',
-                values.includes(person) ? values.filter((p) => p !== person) : [...values, person],
-              ),
-            };
-          }),
+          set((s) => ({ filters: withToggled(s.filters, 'person', toggleInclude, person) })),
+
+        togglePersonExclusion: (person) =>
+          set((s) => ({ filters: withToggled(s.filters, 'person', toggleExclude, person) })),
 
         // One period at a time: a statement and a date range are alternative ways to say "this slice".
         setPeriod: (period) =>

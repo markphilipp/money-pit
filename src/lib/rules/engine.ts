@@ -1,7 +1,7 @@
 import type { Transaction } from '@/lib/types';
+import { checklistIncludes } from '@/lib/checklist';
 import type {
   ColumnFilter,
-  ColumnId,
   Condition,
   DateOperator,
   NumberOperator,
@@ -152,19 +152,10 @@ export function matchesColumnFilter(
     case 'date':
       return matchesDate(txn.date, filter.operator, filter.value, filter.value2);
     case 'person':
-      return filter.values.length === 0 || filter.values.includes(txn.person);
+      return checklistIncludes(filter, txn.person);
     case 'category':
-      return filter.values.length === 0 || filter.values.includes(categoryId);
+      return checklistIncludes(filter, categoryId);
   }
-}
-
-/** `columnFilters` is keyed by column but typed as the whole union, so narrow checklists here. */
-export function checklistValues(
-  columnFilters: Partial<Record<ColumnId, ColumnFilter>>,
-  column: 'person' | 'category',
-): string[] {
-  const filter = columnFilters[column];
-  return filter && 'values' in filter ? filter.values : [];
 }
 
 export function keywordsToGroup(keywords: string[]): RuleGroup {

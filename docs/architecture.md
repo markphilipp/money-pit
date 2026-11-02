@@ -74,10 +74,20 @@ Actions worth knowing before you add one:
   `date` entry of `columnFilters`, so the column menu and the period input edit one value, and no
   field was added for relative presets, which persist as the absolute dates they resolved to. A tab
   saved before `statementIds` existed hydrates it as `[]`, since `merge` spreads `emptyFilters`.
-- `toggleCategoryFilter` / `togglePersonFilter` — checklist filters are removed from
-  `filters.columnFilters` entirely when they go empty, so `columnFilters` only ever holds live
-  filters. Use `checklistValues()` from `src/lib/rules/engine.ts` to read them back; the map is
-  typed as the whole `ColumnFilter` union and needs narrowing.
+- `toggleCategoryFilter` / `toggleCategoryExclusion` / `togglePersonFilter` / `togglePersonExclusion` — person and category each
+  hold one checklist filter, `{ column, values, exclude? }`. `exclude` omitted means include, so
+  filters saved before exclusion existed keep their meaning, and it is never written as `false`. The
+  two modes are mutually exclusive per column. The pure helpers live in `src/lib/checklist.ts`.
+  The `*Filter` actions (`toggleInclude`) toggle a value in include mode; in exclude mode they remove
+  an excluded value (staying in exclude mode) or switch to include mode on that one value. The
+  `*Exclusion` actions (`toggleExclude`) toggle a value in exclude mode, or switch include mode to
+  exclude mode on that one value, dropping the include set. Person values are the raw `person`
+  string. The table's Reset writes `emptyFilters`, which clears both exclusions. Checklist filters are removed from `filters.columnFilters` entirely when they go empty, in
+  either mode, so `columnFilters` only ever holds live filters. Read one back with `readChecklist()`
+  from `src/lib/checklist.ts` (the map is typed as the whole `ColumnFilter` union and needs
+  narrowing), and test a value against it with `checklistIncludes()`, which `matchesColumnFilter` and
+  the charts' dim decision both use. `deleteCategory` and `removeDataset` strip vanished ids from the
+  list and keep its mode, dropping the filter if nothing is left.
 
 ### Derived `rawRows`
 

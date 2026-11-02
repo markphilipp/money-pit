@@ -21,5 +21,4 @@ export type ColumnFilter =
   | { column: 'description'; operator: TextOperator; value: string }
   | { column: 'amount'; operator: NumberOperator; value: number; value2?: number }
   | { column: 'date'; operator: DateOperator; value: string; value2?: string }
-  | { column: 'person'; values: string[] }
-  | { column: 'category'; values: string[] };
+  | { column: 'person' | 'category'; values: string[]; exclude?: boolean };
